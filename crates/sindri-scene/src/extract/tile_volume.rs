@@ -1,7 +1,7 @@
 //! Stackable tile volumes, resolved into their visible baked faces.
 
 use glam::{Mat4, Vec3};
-use sindri_core::{SpriteRef, TileFace, TileSetDocument, World};
+use sindri_core::{SpriteRef, TileDefinition, TileFace, TileSetDocument, World};
 use sindri_grid::GridCoord3;
 use sindri_render::{SpriteInstance, TransparentOrder};
 
@@ -63,7 +63,7 @@ impl SceneExtractor {
                     .cell_to_local(coord)
                     .expect("a validated grid projects finite integer cells");
                 for (face_index, (face, visual)) in definition.faces.iter().enumerate() {
-                    if face_is_occluded(&volume, tile_set, coord, face)? {
+                    if face_is_occluded(&volume, tile_set, coord, face, definition)? {
                         continue;
                     }
                     let reference = SpriteRef::parse(&visual.sprite)?;
@@ -96,11 +96,18 @@ impl SceneExtractor {
     }
 }
 
+/// Whether a neighbouring cell hides this face completely.
+///
+/// "Completely" is the word doing the work once tiles have heights. A face is
+/// only dropped when nothing of it could be seen: a neighbour shorter than the
+/// face it abuts leaves the rest of that face exposed, which is exactly what
+/// makes a slab beside a block read as a slab rather than as a block.
 fn face_is_occluded(
     volume: &TileVolumeComponent,
     tile_set: &TileSetDocument,
     coord: GridCoord3,
     face: TileFace,
+    definition: &TileDefinition,
 ) -> Result<bool, SceneExtractError> {
     let [x, y, z] = face.neighbour_offset();
     let Some(neighbour) = coord.checked_offset(x, y, z) else {
@@ -109,11 +116,22 @@ fn face_is_occluded(
     let Some(tile) = volume.tile(neighbour) else {
         return Ok(false);
     };
-    let definition = tile_set
+    let neighbour = tile_set
         .tile(tile)
         .ok_or_else(|| SceneExtractError::UnknownTile {
             tile_set: volume.tileset.clone(),
             tile: tile.to_owned(),
         })?;
-    Ok(definition.occludes)
+    Ok(match face {
+        // The cell above starts at this cell's ceiling, so it can only cover a
+        // top face that reaches the ceiling. A slab's top sits below it, with
+        // the gap an isometric camera looks into.
+        TileFace::Top => neighbour.occludes && definition.fills_cell(),
+        // Symmetrically, the cell below only reaches this floor when it is
+        // full: a slab underneath leaves this cell's underside exposed.
+        TileFace::Bottom => neighbour.occludes && neighbour.fills_cell(),
+        TileFace::North | TileFace::West | TileFace::East | TileFace::South => {
+            neighbour.hides_side_of(definition.height)
+        }
+    })
 }

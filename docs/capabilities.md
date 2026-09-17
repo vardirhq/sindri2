@@ -521,6 +521,35 @@ still edit projection, tile size, tint, render layer, and space. Screen-space
 tilemaps render and remain editable as data, but direct painting is deliberately
 limited to world space until the Game view has an authoring-input contract.
 
+**A tile volume stacks cells instead of filling one plane.** `sindri.tile_grid`
+carries the geometry — columns, rows, cell size, projection, and the screen step
+one level costs — and `sindri.tile_volume` carries sparse cells at integer
+`(column, row, level)` coordinates naming tiles in a reusable `.tileset.json`
+asset. Empty is absence rather than a reserved ID, so an empty sky costs nothing
+to store. A tile says what its faces look like, whether it hides a neighbour's
+shared face, whether it is solid, and how much of its cell it fills; the
+renderer resolves each occupied cell into only the faces nothing covers, so a
+column two blocks taller than its neighbour exposes two side faces without a
+cliff case and removing a lower block opens a real hole.
+
+**A tile can be shorter than its cell.** `height` is a fraction of a cell
+measured from its floor, defaulting to one, so every tile written before heights
+existed means what it always did. A half is a slab. The value is logical: it
+decides what the tile hides and, later, how high something standing on it
+stands, and says nothing about the art — a slab carries its own baked faces the
+way a slab in a voxel game is a separate block rather than a squashed one.
+Anything taller than one cell is refused when the asset decodes, because
+occlusion and occupancy both assume a cell's contents stay inside it, and
+something two blocks tall is two cells.
+
+Occlusion then has to answer *completely* rather than *at all*. A neighbour
+hides a side face only when it is at least as tall as the face it abuts, so a
+full block beside a slab hides the slab's side while a slab beside a block
+leaves the block's upper half showing — which is the whole reason a slab reads
+as a slab. A top face survives a block placed above it unless the tile fills its
+cell, because a slab's top sits below that block's floor with a gap an isometric
+camera looks into.
+
 An animated sprite whose reference names no part of its sheet draws the first
 frame of the clip it is playing rather than the whole sheet, so a scene shows a
 pose before anything has run it — in a game's opening frame, in an offscreen
@@ -1000,11 +1029,12 @@ settings gear.
 
 ### Engine
 
-- **No reusable tileset asset model yet.** Tile System 2 now has renderer-free
-  integer XYZ coordinates, explicit level projection, validated tile-grid
-  geometry, and sparse `sindri.tile_volume` cell data. Tile semantics, reusable
-  tile metadata, visible-face rendering, and the editor workflow remain to be
-  built; the accepted contract is in `docs/tile-system-2.md`.
+- **Tile System 2 has blocks but not yet terrain.** Volumes store, render,
+  cull, and author stacked cells at whole and partial heights, and the grid
+  half is shared with the flat map. Terrain-name painting, automatic supporting
+  strata, side-face picking, slice views, and collision and navigation derived
+  from occupied cells remain; the accepted contract is in
+  `docs/tile-system-2.md`.
 - World-space text, rich spans, and font fallback are missing. Screen text has
   authored alignment and wrapping, including Weave-controlled wrapping
 - **One mesh primitive: `Cube`.** No quad, sphere, or glTF import

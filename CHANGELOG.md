@@ -11,6 +11,9 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Tile set tiles can declare how much of their cell they fill, so half-height
+  slabs and other partial blocks are logical cells rather than art tricks.
+  Face culling now hides a face only when a neighbour covers it completely.
 - Grid position, placement, pathfinding and navigation now accept a floor
   carrying `sindri.tile_grid` instead of `sindri.tilemap`, so a scene can move
   onto a stackable tile volume without its scripts, walls or occupants moving
