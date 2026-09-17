@@ -249,4 +249,7 @@ load, and must produce exactly the version 2 document the migration promises.
   argues for quads. Decide when there is a reason to, not before
 - Where collision layers are defined — project settings, the scene, or both
 - How the editor presents a Z that matters for depth but not for gameplay,
-  which is a real authoring problem Unity has never fully solved
+  which is a real authoring problem Unity has never fully solved.
+  `docs/2d-depth-and-placement.md` proposes an answer for anything standing on
+  a grid: the author states a cell and the transform is derived from it, Z
+  included, so there is no depth to present separately
