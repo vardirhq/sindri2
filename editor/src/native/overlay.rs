@@ -10,6 +10,7 @@ use eframe::egui::{self, Align2, Color32, FontId, Pos2, Rect, Shape, Stroke, Str
 use glam::{Mat4, Vec3};
 
 use crate::gizmo::{self, Axis};
+use crate::occlusion::FaultMark;
 use crate::ui::theme::{color, hairline, metric, radius, text};
 
 /// The colour an axis is drawn in, so an arm and the inspector's X field are
@@ -20,6 +21,60 @@ const fn axis_colour(axis: Axis) -> Color32 {
         Axis::Y => color::AXIS_Y,
         Axis::Z => color::AXIS_Z,
     }
+}
+
+/// Where the ground draws over what stands on it.
+///
+/// Three marks per fault, because the fault is a relationship and drawing only
+/// the broken cell would leave an author guessing which of its neighbours it is
+/// broken against. The ground stood on is filled, the cell covering it is
+/// outlined, and a line joins the two so a run of faults along one plot edge
+/// reads as one cause rather than as scattered damage.
+///
+/// A fault nothing accounts for is drawn in danger rather than warning. The
+/// others are a case the rule declines and says so; that one is the rule being
+/// wrong somewhere nobody has stood yet.
+pub(super) fn paint_occlusion_faults(painter: &egui::Painter, rect: Rect, marks: &[FaultMark]) {
+    let place = |point: [f32; 2]| {
+        Pos2::new(
+            rect.min.x + point[0] * rect.width(),
+            rect.min.y + point[1] * rect.height(),
+        )
+    };
+    for mark in marks {
+        let tint = if mark.blocked_by.is_some() {
+            color::WARNING
+        } else {
+            color::DANGER
+        };
+        let standing: Vec<Pos2> = mark.standing.iter().copied().map(place).collect();
+        let covering: Vec<Pos2> = mark.covering.iter().copied().map(place).collect();
+        painter.add(Shape::convex_polygon(
+            standing.clone(),
+            tint.gamma_multiply(0.22),
+            Stroke::NONE,
+        ));
+        painter.add(Shape::closed_line(covering.clone(), Stroke::new(1.5, tint)));
+        if let (Some(from), Some(to)) = (centre(&standing), centre(&covering)) {
+            painter.line_segment([from, to], Stroke::new(1.0, tint.gamma_multiply(0.7)));
+        }
+        if let Some(blocked) = mark.blocked_by {
+            let wall: Vec<Pos2> = blocked.iter().copied().map(place).collect();
+            painter.add(Shape::closed_line(wall, Stroke::new(1.0, color::FORGE_DIM)));
+        }
+    }
+}
+
+fn centre(points: &[Pos2]) -> Option<Pos2> {
+    if points.is_empty() {
+        return None;
+    }
+    #[allow(clippy::cast_precision_loss)]
+    let count = points.len() as f32;
+    let sum = points
+        .iter()
+        .fold(Vec2::ZERO, |sum, point| sum + point.to_vec2());
+    Some(Pos2::new(sum.x / count, sum.y / count))
 }
 
 pub(super) fn paint_transform_gizmo(

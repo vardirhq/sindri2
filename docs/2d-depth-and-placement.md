@@ -203,8 +203,27 @@ The probe is a size and an anchor rather than a sprite, because how far an actor
 reaches decides which cells can reach it back. A sweep run with the wrong actor
 proves something about a different game.
 
-On Gather: 387 standable columns, the corner reached in 22 of them, all of them
-a walker beside the raised edge of a plot.
+The sweep is a property of a grid and a volume rather than of any game: it takes
+a world, whichever projection the grid is in, and an actor's bounds. What it
+does not cover is a scene with no volume in it — a game whose props are sprites
+on no grid has nothing to stand on and gets an empty report rather than a
+guarantee.
+
+Gather is where it is exercised, as the capability rule requires: 387 standable
+columns, the corner reached in 22 of them, all of them a walker beside the
+raised edge of a plot. That count lives in the game's own test, not in the
+engine.
+
+## Seeing it
+
+The editor draws the report on the grid it is about, under Build → Ordering: the
+ground stood on is filled, the cell covering it outlined, and a line joins them.
+On the grid rather than in the view's chrome, because a fault is a fact about two
+cells and projects through the volume's own transform, so moving the grid moves
+the marks. Amber is the wall corner; red is a fault nothing accounts for.
+
+A list of coordinates is not worth reading. Seeing that all of them lie along
+one edge of one plot is what says there is a single cause.
 
 ## What one point per sprite cannot do
 

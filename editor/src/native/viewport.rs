@@ -313,6 +313,7 @@ impl EditorApp {
             Color32::WHITE,
         );
         if editing {
+            self.sweep_occlusion_overlay();
             // Measured before the chrome is drawn, because measuring a string
             // shapes it and the painter takes only a shared borrow.
             let text_rect = self.selected_text_rect(camera);
@@ -482,6 +483,7 @@ impl EditorApp {
             Some(PaintHover::TileVolume(hover)) => self.paint_tile_volume_hover(ui, hover),
             None => {}
         }
+        self.paint_occlusion_overlay(ui, rect, camera);
         if !painting {
             paint_selection_marks(ui.painter(), &self.selection_marks(rect, camera));
             if let Some((_, _, visual)) = self.gizmo_visual(rect, camera) {

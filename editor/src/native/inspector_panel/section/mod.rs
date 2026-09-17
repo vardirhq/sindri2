@@ -127,7 +127,7 @@ pub(super) fn components_sections(
             tilemap_section(ui, payload, assets_root, tools.tilemap);
         }
         if name == crate::tile_volume::TYPE_NAME {
-            tile_volume_section(ui, payload, assets_root, tools.tile_volume);
+            tile_volume_section(ui, payload, assets_root, tools.tile_volume, tools.occlusion);
         }
         if name == GRID_NAVIGATION_COMPONENT {
             grid_navigation_section(ui, payload, grid_size);

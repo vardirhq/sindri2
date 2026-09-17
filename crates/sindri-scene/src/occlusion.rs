@@ -58,8 +58,13 @@ impl Default for OcclusionProbe {
 /// One place where something drew over an actor that it could not cover.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct OcclusionFinding {
+    /// The volume this happened in, so a caller with several can tell them
+    /// apart and project each through its own grid.
+    pub volume: EntityId,
     /// The column the probe was standing in.
     pub standing: GridCoord,
+    /// The cell whose top the probe was standing on.
+    pub standing_cell: GridCoord3,
     /// How high the ground under the probe was.
     pub feet: f32,
     /// The cell whose face was drawn over it.
@@ -171,7 +176,7 @@ pub fn sweep_occlusion(
 }
 
 fn sweep_volume(
-    _entity: EntityId,
+    entity: EntityId,
     grid: &TileGridComponent,
     volume: &TileVolumeComponent,
     tile_sets: &TileSetBindings,
@@ -224,6 +229,9 @@ fn sweep_volume(
     }
 
     for (standing, feet) in surfaces.columns() {
+        let Some(standing_cell) = surfaces.top(standing) else {
+            continue;
+        };
         let at = (f64::from(standing.x), f64::from(standing.y));
         let Some(origin) = grid.point_to_local_at_height(at.0, at.1, feet) else {
             continue;
@@ -245,7 +253,9 @@ fn sweep_volume(
             report.faces += 1;
             if *depth > actor_depth {
                 report.findings.push(OcclusionFinding {
+                    volume: entity,
                     standing,
+                    standing_cell,
                     feet,
                     cell: *cell,
                     surface: surfaces.height(column).unwrap_or_default(),
