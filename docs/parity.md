@@ -1,6 +1,6 @@
 # Parity
 
-Last audited against `main`: **2026-09-09**.
+Last audited against `main`: **2026-09-17**.
 
 What a game engine is expected to do, what Sindri actually does, and the
 distance between them. This file replaces `function-matrix.md` and
@@ -126,7 +126,7 @@ is why it earns a section rather than a footnote.
 | Reusable data profiles | ✅ | ✅ | ✅ | ✅ | **Ahead** | Unity has no native equivalent; ScriptableObject is close but needs code per asset. Optional schemas when a second catalog proves the shape |
 | Transform | ✅ | ✅ | 🟡 | ✅ | **Par** | No structured vector or rotation value in Decay |
 | Scene save / load | ✅ | ✅ | — | ✅ | **Par** | Readable single file, which is **Ahead**; see the advantages table |
-| **Multiple scenes / additive loading** | ✅ | 🟡 | ✅ | ✅ | **Behind** | `World::add_scene` loads a scene beside the ones a world already holds; `LoadedScenes` keeps which one is played and switches between them, leaving everything a scene holds as the player left it. `Scene.go`/`Scene.current` let a script ask, `[project] scenes` declares them and the exporter walks each one for its own assets. The editor carries the list through a save but offers no way to edit it, and a world holding several scenes does not round-trip through `to_scene` |
+| **Multiple scenes / additive loading** | ✅ | 🟡 | ✅ | ✅ | **Behind** | `World::add_scene` loads a scene beside the ones a world already holds; `LoadedScenes` keeps which one is played and switches between them, leaving everything a scene holds as the player left it. `Scene.go`/`Scene.current` let a script ask, `[project] scenes` declares them and the exporter walks each one for its own assets. `Scene.go` now switches scenes in the browser as well as natively, so a title screen reaches its game on both targets. The editor carries the list through a save but offers no way to edit it, and a world holding several scenes does not round-trip through `to_scene` |
 | Scene streaming / Addressables | ❌ | ❌ | ❌ | ❌ | **Absent** | Not urgent at 2D scale, but named so it is not a surprise |
 | Undo / redo | ✅ | ✅ | — | — | **Par** | Command-backed; script writes are outside it |
 
@@ -162,7 +162,7 @@ is why it earns a section rather than a footnote.
 | **Nine-slice sprites** | ❌ | ❌ | — | — | **Absent** | Every UI panel that resizes needs it |
 | **Sprite masking / stencil** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | Sorting and draw order | ✅ | ✅ | 🟡 | ✅ | **Par** | Layers plus the ground anchor |
-| **Camera follow / confine / shake** | ❌ | ❌ | ❌ | ❌ | **Absent** | Cinemachine is the most-used Unity package there is; Unity bought it. Games hand-roll it today |
+| **Camera follow / confine / shake** | ❌ | ❌ | ❌ | ❌ | **Absent** | Cinemachine is the most-used Unity package there is; Unity bought it. Games hand-roll it today: Orbital's `camera-fx.decay` carries a trauma value in `Game` state, squares it, drives the camera offset from two sines and decays it per frame — a competent shake written in gameplay script because the engine offers none |
 
 ## 3D rendering
 
@@ -207,7 +207,7 @@ events, blending, tweening, and animating anything that is not a sprite frame.
 | **Named collision layers** | ❌ | ❌ | ❌ | — | **Behind** | Masks are raw `u32` bit values. Unity and Godot both name layers in project settings. Cheap to fix, daily friction |
 | Per-piece validation naming the failing index | ✅ | — | — | ✅ | **Ahead** | Neither baseline tells you *which* collider was wrong |
 | **Raycast / overlap / shape queries** | ❌ | ❌ | ❌ | ❌ | **Absent** | Line of sight, ground checks, click-to-select in-game, AI vision. Close to universal, and we have none |
-| **Joints and constraints** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
+| **Joints and constraints** | 🟡 | ❌ | ✅ | ❌ | **Behind** | One joint kind: `Physics.connect_distance(first, second, max_distance)` holds two bodies within a distance, queued when a chain is built in a single script pass and its bodies do not exist yet. No hinge, slider, spring, or motor, and nothing authors a joint in a scene — a joint exists only if a script makes one. Added for the spine boss, which ships without it: `games/orbital-baked/assets/scripts/spine-segment.decay` chains its segments by hand, each one reading its leader and steering toward a point `spacing` behind it. `crates/sindri-physics/tests/distance_joint.rs` is the only exercise |
 | **Physics materials as assets** | ❌ | ❌ | ❌ | — | **Behind** | Friction and restitution are per-collider literals |
 | **Character controller** | ❌ | ❌ | ❌ | ❌ | **Absent** | Every platformer and top-down game writes one |
 | **Continuous collision (CCD)** | ❌ | — | — | — | **Absent** | Fast bullets tunnel |
@@ -234,7 +234,7 @@ Sindri's strongest domain relative to the baseline.
 | WAV / Ogg / MP3, native + browser + silent backends | ✅ | 🟡 | ✅ | ✅ | **Par** | Scene-source preview is not integrated |
 | Play, loop, pause, resume, stop | ✅ | 🟡 | ✅ | ✅ | **Par** | — |
 | Per-play volume | ✅ | — | 🟡 | ✅ | **Behind** | — |
-| **Buses / mixer / master volume** | ❌ | ❌ | ❌ | ❌ | **Absent** | **A settings screen cannot offer a music slider.** Near-universal shipping requirement |
+| **Buses / mixer / master volume** | ❌ | ❌ | ❌ | ❌ | **Absent** | **A settings screen has a music slider and nothing for it to move.** The UI control landed; there is no bus, no master volume, and no way for a script to set one. Near-universal shipping requirement |
 | **Spatial audio / panning** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | **Per-voice handles** | ❌ | — | ❌ | — | **Behind** | A script cannot stop the specific sound it started |
 | **Music transitions / crossfade** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
@@ -259,7 +259,8 @@ Sindri's strongest domain relative to the baseline.
 | Pointer hit-testing, hover/press/held | ✅ | ✅ | ✅ | ✅ | **Par** | — |
 | Weave responsive stylesheets | 🟡 | 🟡 | — | ✅ | **Ahead** | No baseline equivalent. Stylesheet source editing and viewport presets remain external |
 | Project fonts | ✅ | ✅ | — | ✅ | **Par** | — |
-| **Slider, toggle, dropdown, text input** | ❌ | ❌ | ❌ | ❌ | **Absent** | **No settings screen can be built.** Buttons and images only |
+| **Slider** | ✅ | ✅ | ✅ | ❌ | **Par** | Horizontal or vertical, with `min`, `max`, `step`, `disabled` and a label; a drag and a scripted write pass through the same clamp-and-quantize contract, so a value cannot enter the component off-step. Weave styles it like any other node. `Ui.slider_value`, `Ui.set_slider_value` and `Ui.slider_changed` read, write and detect the change. The editor names it in Add Component with `orientation` as a declared choice — but no field carries a bounded-range meaning, so `value` is a free number box beside the range it is supposed to obey. No companion game in this repository proves it: `games/weave-poc` demonstrates it and Mujaffa Remaster uses it externally |
+| **Toggle, dropdown, text input** | ❌ | ❌ | ❌ | ❌ | **Absent** | **A settings screen still cannot be built.** The slider arrived alone; a checkbox, a choice list and a typed name have nothing |
 | **Scroll region** | ❌ | ❌ | ❌ | ❌ | **Absent** | No inventory, no credits, no long list |
 | **Rich text** | ❌ | ❌ | ❌ | ❌ | **Absent** | No colour or emphasis inside a string. TextMeshPro was absorbed for exactly this |
 | **World-space text** | ❌ | ❌ | ❌ | ❌ | **Absent** | Damage numbers, name plates |
@@ -500,12 +501,17 @@ output of the file; everything above is evidence.
    does not rewrite the scene it came from. Gather's player is the proof: its
    walk cycle had run since the sheet was sliced, including while standing
    still, because the clip was authored and nothing could tell it otherwise.
-3. **UI widget set: slider, toggle, text input, scroll region.** Without these
-   no settings screen, inventory, or long list can be built at all.
+3. **UI widget set: toggle, text input, scroll region.** The slider landed —
+   authored, styled, scripted, and clamped on one contract — and the rest of
+   the set did not, so a settings screen is still missing its checkbox and its
+   typed field, and no inventory or long list can scroll. The slider is also
+   the second capability in a row whose only user is outside this repository;
+   see the proof note below.
 4. **Physics queries: raycast, overlap, shape cast.** Line of sight, ground
    checks, AI vision, click-to-select. Close to universal.
-5. **Audio buses and a master volume.** A settings screen needs a music slider;
-   today it cannot have one.
+5. **Audio buses and a master volume.** A settings screen now has a music
+   slider and nothing behind it: there is no bus to route a clip to and no
+   master volume for the slider to move.
 6. **Un-strand the input action layer, and implement gamepad.** The engine cost
    is paid. Make it the input system, per the anti-goal.
 7. **Named collision layers instead of raw `u32` masks.** Cheap, daily friction.
@@ -522,6 +528,27 @@ output of the file; everything above is evidence.
 
 Items 1–6 are the ones that block a game today. Items 7–12 are cheap relative to
 their daily cost. Items 13–14 are real but survivable.
+
+### Proof that lives outside this repository
+
+Two capabilities now sit at ✅ ✅ ✅ ❌ — built on every surface, used by nobody
+here. The advanced sprite colour transform and the UI slider were both found by
+Mujaffa Remaster, an external project, and both are exercised only there.
+
+That is worth naming rather than tolerating quietly, for two reasons. The
+capability rule does not count an external user, so the Proof column is honest
+at ❌ and will stay ❌ until Gather or Orbital Last Stand picks each one up —
+which means neither capability is complete, however finished it looks. And an
+external forcing function finds real gaps: the slider is queue item 3 and the
+colour transform is a genuine limit in `sindri.sprite`, so this is not drift
+into features nobody needed. It is the proof step being skipped, and it is
+cheaper to close now than after a third row joins them.
+
+The two obvious closings are both small. A settings screen in Gather wants a
+volume slider, which also gives queue item 5 somewhere to land. And
+`games/orbital-baked/assets/scripts/charger.decay` recolours a baked sprite
+through `sprite.tint` every frame — multiply-only, which is the exact limit the
+colour transform was built to lift — so it is the natural first user.
 
 ---
 
