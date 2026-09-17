@@ -45,10 +45,7 @@ impl SceneExtractor {
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
             let mut cells = volume.cells.iter().collect::<Vec<_>>();
-            cells.sort_by_key(|cell| {
-                let coord = cell.coord();
-                (coord.x.saturating_add(coord.y), coord.z, coord.y, coord.x)
-            });
+            cells.sort_by_key(|cell| grid.depth_key(cell.coord()));
 
             for (cell_index, cell) in cells.into_iter().enumerate() {
                 let coord = cell.coord();
@@ -62,7 +59,41 @@ impl SceneExtractor {
                 let [cell_x, cell_y] = grid
                     .cell_to_local(coord)
                     .expect("a validated grid projects finite integer cells");
+                // Depth is a property of the *cell*, taken from where its
+                // column meets the ground, and every face of it shares that one
+                // value. Two things follow, and both were wrong while each face
+                // measured its own drawn position.
+                //
+                // Raising a block moves it up the screen, which is not moving
+                // it toward the viewer: a stack has to keep the depth of the
+                // column it stands in, or a tower walks in front of everything
+                // south of it as it grows.
+                //
+                // And a block's own faces must not sort against each other.
+                // Their offsets differ by a fraction of a cell, which was
+                // enough to interleave a top with the side of the block beside
+                // it. Which face of a cell is drawn first is decided by the
+                // face order, not by arithmetic on where its art happens to
+                // sit.
+                let [ground_x, ground_y] = grid
+                    .cell_to_local(GridCoord3::new(coord.x, coord.y, 0))
+                    .expect("a validated grid projects finite integer cells");
+                let ground = transform_matrix(transform)
+                    * Mat4::from_translation(Vec3::new(ground_x, ground_y, 0.0));
+                let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
+                let depth = camera_distance(
+                    camera.view,
+                    ground.w_axis.truncate().with_z(transform.position[2]),
+                );
+                let visible = grid.projection.visible_faces();
                 for (face_index, (face, visual)) in definition.faces.iter().enumerate() {
+                    // A face the projection turns away from is not culled by a
+                    // neighbour; there is simply no view of it to draw. An
+                    // isometric side in an orthogonal volume would otherwise
+                    // paint itself flat across the block.
+                    if !visible.contains(&face) {
+                        continue;
+                    }
                     if face_is_occluded(&volume, tile_set, coord, face, definition)? {
                         continue;
                     }
@@ -75,12 +106,16 @@ impl SceneExtractor {
                             0.0,
                         )) * Mat4::from_scale(Vec3::new(visual.size[0], visual.size[1], 1.0));
                     let model = transform_matrix(transform) * local;
-                    let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
-                    let position = model.w_axis.truncate().with_z(transform.position[2]);
+                    // Cells were sorted back to front before this loop, so the
+                    // submission index carries that order and the face index
+                    // orders the faces inside one cell. It is what decides
+                    // between draws the camera puts at the same depth -- the
+                    // levels of one column, and anything a projection lays out
+                    // along the view.
                     let stable = cell_index.saturating_mul(6).saturating_add(face_index);
                     let order = TransparentOrder::new(
                         volume.layer,
-                        camera_distance(camera.view, position),
+                        depth,
                         u32::try_from(stable).unwrap_or(u32::MAX),
                     )?;
                     batches.push(SpriteDraw {

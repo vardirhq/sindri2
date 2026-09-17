@@ -246,7 +246,7 @@ pub fn surface_cell_at_viewport(
             let outline = cell_outline(grid, transform, view_projection, coord)?;
             point_in_convex_quad(point, outline).then_some(coord)
         })
-        .max_by_key(|coord| (coord.x.saturating_add(coord.y), coord.z, coord.y, coord.x))
+        .max_by_key(|coord| grid.depth_key(*coord))
 }
 
 /// Pick the exact cell changed by the surface brush.

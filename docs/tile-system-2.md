@@ -98,12 +98,30 @@ For each occupied 3D cell, the renderer:
 6. globally sorts emitted visuals and only then groups adjacent equal textures
    into draw calls.
 
+Depth belongs to the *column*, not to the drawn face. Every face of a cell takes
+the depth of the point where its column meets the ground, so raising a block
+moves it up the screen without moving it toward the viewer, and a cell's own
+faces are ordered by face role rather than sorted against each other. What
+decides between draws at equal depth — the levels of one column, and everything
+in a view laid out along the camera's depth axis — is the painter key, whose
+leading term is the projection's own idea of distance: `x + y` along an
+isometric diagonal, `y` alone down orthogonal rows.
+
 An isometric column two blocks taller than its neighbour therefore exposes two
 side faces naturally. Removing the lower block creates a real opening rather
 than a special cliff case. No sprite is stretched into a slab and no overhang
 value is consulted.
 
-Projection supplies three basis vectors. Orthogonal and isometric views differ
+Projection supplies three basis vectors, and also decides which faces a view can
+see at all: an isometric view is turned between two axes and shows a cell's top
+and two sides, while an orthogonal view looks straight down the rows and shows
+the top and the side facing the viewer — its east and west faces are edge-on and
+have no width to draw. Neither shows an underside. Asking the projection rather
+than drawing whatever a tile set happens to define is what lets one set of tiles
+serve both, instead of painting an isometric side flat across an orthogonal
+block.
+
+Orthogonal and isometric views differ
 in the screen-space X/Y basis; both give integer Z a configured vertical step.
 This remains sprite rendering: a block is resolved into visible 2D face visuals,
 not submitted as runtime 3D geometry.

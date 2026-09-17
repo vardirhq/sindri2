@@ -1,7 +1,7 @@
 //! `sindri.tilemap`: a grid of sprites, and the projection it is laid out on.
 
 use serde::Deserialize;
-use sindri_core::SceneComponent;
+use sindri_core::{SceneComponent, TileFace};
 use sindri_grid::{
     GridBounds, GridCoord, GridError, GridSpace, PlanePoint, PlaneYAxis, Projection,
 };
@@ -25,6 +25,31 @@ pub enum TileProjection {
     /// full width and height; it is the *step* between tiles that halves, so
     /// neighbours overlap the way isometric art expects.
     Isometric,
+}
+
+impl TileProjection {
+    /// The faces of a stacked cell a view in this projection can see.
+    ///
+    /// A flat map has one face and never asks. A volume has six, and which of
+    /// them face the viewer is decided by the projection rather than by the
+    /// tile: an isometric view is turned between two axes and sees a cell's top
+    /// and two of its sides, while an orthogonal view looks straight down the
+    /// rows and sees the top and the side facing the bottom of the screen --
+    /// its east and west faces are edge-on and have no width to draw.
+    ///
+    /// Neither sees an underside, because both look down at the ground.
+    ///
+    /// Asking here rather than taking whatever a tile set happens to define is
+    /// what lets one set of tiles serve both projections: a set baked with
+    /// isometric sides drops them in an orthogonal volume instead of painting
+    /// them flat across the block.
+    #[must_use]
+    pub const fn visible_faces(self) -> &'static [TileFace] {
+        match self {
+            Self::Orthogonal => &[TileFace::Top, TileFace::South],
+            Self::Isometric => &[TileFace::Top, TileFace::South, TileFace::East],
+        }
+    }
 }
 
 /// A grid of tiles drawn from one sheet, as one batch, from one entity.
