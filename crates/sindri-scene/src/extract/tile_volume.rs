@@ -114,7 +114,7 @@ impl SceneExtractor {
                     // along the view.
                     let stable = cell_index.saturating_mul(6).saturating_add(face_index);
                     let order = TransparentOrder::new(
-                        volume.layer,
+                        volume.layer_for(&grid, coord),
                         depth,
                         u32::try_from(stable).unwrap_or(u32::MAX),
                     )?;

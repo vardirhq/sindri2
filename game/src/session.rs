@@ -15,7 +15,7 @@ use sindri_decay::{
 use sindri_platform::NativeAudioBackend;
 use sindri_platform::{AudioBackend, AudioError, FrameContext, Game, InputState, PlaybackSettings};
 use sindri_scene::{
-    AudioSourceComponent, ScenePhysics2d, ScreenExtent, ScreenUi, SpriteAnimations,
+    AudioSourceComponent, ScenePhysics2d, ScreenExtent, ScreenUi, SpriteAnimations, TileSetBindings,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -40,6 +40,12 @@ pub struct Session {
     /// for what it has just grown, and nothing it runs spawns. A host that does
     /// fills this the same way it fills the sources.
     prefabs: PrefabSources,
+    /// What the scenes' tile volumes are made of.
+    ///
+    /// Empty by default, which is right for a host with no volumes and wrong
+    /// the moment one has a floor: an unbound tile set means a script is told
+    /// so rather than quietly walking on water.
+    tile_sets: TileSetBindings,
     profiles: ProfileSources,
     components: ComponentSchemaRegistry,
     animations: SpriteAnimations,
@@ -103,6 +109,7 @@ impl Session {
             scripts: Scripts::new(),
             sources,
             prefabs: PrefabSources::new(),
+            tile_sets: TileSetBindings::new(),
             profiles: ProfileSources::new(),
             components,
             animations: SpriteAnimations::new(),
@@ -136,6 +143,18 @@ impl Session {
     #[must_use]
     pub fn with_profiles(mut self, profiles: ProfileSources) -> Self {
         self.profiles = profiles;
+        self
+    }
+
+    /// The tile sets the scenes' volumes name.
+    ///
+    /// Without these a script's pathfinding cannot tell a pond from a lawn:
+    /// which cells are solid is the tile set's answer, and the session has no
+    /// business guessing it. Gather's floor is a volume, so this is how the
+    /// water stops being walkable.
+    #[must_use]
+    pub fn with_tile_sets(mut self, tile_sets: TileSetBindings) -> Self {
+        self.tile_sets = tile_sets;
         self
     }
 
@@ -234,6 +253,14 @@ impl Session {
                 events,
             })
             .with_animations(&mut self.animations);
+        // Handed over only when this host actually binds any, the same way the
+        // scene channel is. An empty set is not "no tile sets" to the host that
+        // receives it — it is a host that binds tile sets and is missing the
+        // one this volume names, which is a project someone broke and deserves
+        // the error it gets.
+        if !self.tile_sets.is_empty() {
+            frame = frame.with_tile_sets(&self.tile_sets);
+        }
         // Only when this session is actually playing one of several scenes.
         // Handed over conditionally rather than always, so a host running a
         // single scene has its scripts told `Scene.go` cannot work here instead

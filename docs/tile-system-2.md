@@ -206,9 +206,25 @@ an imported tile set. A slab map cannot be translated honestly because sprite
 overhang does not state elevation; migration must require an explicit level and
 fill choice.
 
-Once all checked-in projects have moved, `sindri.tilemap`, its editor palette,
-and `tile_overhang` are removed together. The new format will not carry a
-compatibility field that preserves the ambiguity.
+Gather has now moved. Its island is 625 blocks at `z = 0` with the outcrop
+stacked on top, the shed is 35 more, and no scene in the repository carries
+`sindri.tilemap`. The translation was the mechanical one this section describes:
+each palette entry became a tile of the same name — all five kinds of grass, so
+the floor kept the variation the scene had already authored — and every filled
+cell became a block at level zero.
+
+Two things the move surfaced that a flat map had made unaskable. Water is opaque
+but not solid, so the moat and the pond became holes and the island is now
+bounded by the shape of its own ground rather than by an authored wall; three
+rocks standing off the shore were left on nothing, and sit on a sandbar. And a
+volume in a 2D scene needs somewhere to be in the draw order, which is what
+`layer_step` is: viewed straight on there is no depth but the render layer, so a
+volume that interleaves with sprites places its cells along it.
+
+`sindri.tilemap`, its editor palette, and `tile_overhang` can now be removed
+together whenever that change is worth making on its own; nothing shipped here
+depends on them. The new format will not carry a compatibility field that
+preserves the ambiguity.
 
 ## Acceptance test
 

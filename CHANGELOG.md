@@ -15,8 +15,16 @@ requests, commit history, and subsystem documentation rather than this file.
   drawn face, so raising a block no longer moves it toward the viewer and a
   block's own faces are no longer sorted against each other.
 
+### Changed
+
+- Gather's floor is a stacked tile volume rather than a flat tilemap, and no
+  scene in the project carries `sindri.tilemap` any more. Water is no longer
+  walkable, so the moat and pond now bound the island.
+
 ### Added
 
+- Tile volumes can spread their cells across render layers with `layer_step`,
+  which is what lets blocks interleave with sprites in a 2D scene.
 - The isometric baker can give a material grain: a texel grid that shifts each
   texel a step along the ramp it already has, so a baked block reads as a
   surface rather than as three flat faces. Gather's blocks are rebaked with it,

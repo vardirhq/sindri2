@@ -14,16 +14,7 @@ use sindri_decay::{AudioCommand, ScriptFrame, Scripts};
 use sindri_gather::{AUDIO, Session, extractor, sources, world};
 use sindri_grid::{GridCoord, GridPoint, GridSpace, PlanePoint};
 use sindri_platform::InputState;
-use sindri_scene::{SceneExtractor, SpriteComponent, TilemapComponent, WorldGridNavigation};
-
-/// A grid coordinate as a transform holds it.
-///
-/// The grid works in `f64` and a transform in `f32`, so something has to
-/// narrow. Named, so the narrowing reads as the intent it is.
-#[allow(clippy::cast_possible_truncation)]
-fn f64_to_f32(value: f64) -> f32 {
-    value as f32
-}
+use sindri_scene::{SceneExtractor, TileGridComponent, WorldGridNavigation};
 
 fn logical_position(grid: GridSpace, map: Transform3D, world: [f32; 3]) -> GridPoint {
     let (sin, cos) = map.rotation_z_radians().sin_cos();
@@ -38,10 +29,14 @@ fn logical_position(grid: GridSpace, map: Transform3D, world: [f32; 3]) -> GridP
 }
 
 fn floor_grid(world: &World, extractor: &SceneExtractor) -> (Transform3D, GridSpace) {
-    let (floor, tilemap) = extractor
+    // The floor is a stacked volume rather than a flat map, and the grid that
+    // describes it is the one thing the two always agreed about: a cell is in
+    // the same place either way, which is why the layer convention below did
+    // not have to change when the floor did.
+    let (floor, grid) = extractor
         .components()
-        .query::<TilemapComponent>(world)
-        .expect("the tilemap schema reads")
+        .query::<TileGridComponent>(world)
+        .expect("the tile grid schema reads")
         .into_iter()
         .next()
         .expect("Gather has a floor");
@@ -49,78 +44,18 @@ fn floor_grid(world: &World, extractor: &SceneExtractor) -> (Transform3D, GridSp
         .get(floor)
         .and_then(|data| data.transform_3d)
         .unwrap_or_default();
-    (
-        map,
-        tilemap.grid_space().expect("the floor has a valid grid"),
-    )
+    (map, grid.grid_space().expect("the floor has a valid grid"))
 }
 
-/// Draw order follows where a thing stands, not what it is made of.
+/// A grid coordinate as a transform holds it.
 ///
-/// Sprites batch by layer *and texture*, and a frame's passes are ordered by
-/// layer alone — so two different textures on one layer are drawn in whichever
-/// order their textures happen to sort in, however far apart they stand. That
-/// is why every world entity carries a layer derived from its isometric row
-/// rather than a hand-picked one: before this, the orbs sat on layer 10 and the
-/// player on 20, so both drew over the shrine from anywhere on the island.
-///
-/// Half rows, because a wall stands on the edge *between* two cells and so
-/// falls on an exact half row; rounding that to a whole one decides by coin
-/// toss whether the wall occludes what is behind it.
-#[test]
-fn every_world_sprite_layers_by_where_it_stands() {
-    let (world, _scenes) = world().expect("the scene loads");
-    let extractor = extractor().expect("the schemas register");
-    let (map, grid) = floor_grid(&world, &extractor);
-
-    let mut checked = 0;
-    for (entity, sprite) in extractor
-        .components()
-        .query::<SpriteComponent>(&world)
-        .expect("the sprite schema reads")
-    {
-        let Some(transform) = world.get(entity).and_then(|data| data.transform_3d) else {
-            continue;
-        };
-        let at = logical_position(grid, map, transform.position);
-        if !(-1.0_f64..=25.0).contains(&at.x) || !(-1.0_f64..=25.0).contains(&at.y) {
-            continue;
-        }
-
-        // Kept in floating point rather than casting the row to an integer:
-        // the cast would be the only lossy step in the comparison, and it is
-        // not the thing under test. Both sides are whole numbers, so the
-        // tolerance costs nothing and says so.
-        let expected = 1.0 + (2.0 * (at.x + at.y)).round();
-        assert!(
-            (f64::from(sprite.layer) - expected).abs() < 1.0e-9,
-            "{} stands on row {:.2} and belongs on layer {expected}, not {}",
-            world
-                .get(entity)
-                .and_then(|data| data.source_id.as_ref().map(|id| id.as_str().to_owned()))
-                .unwrap_or_default(),
-            at.x + at.y,
-            sprite.layer,
-        );
-        checked += 1;
-    }
-
-    assert!(
-        checked >= 70,
-        "expected the world's sprites, checked {checked}"
-    );
+/// The grid works in `f64` and a transform in `f32`, so something has to
+/// narrow. Named, so the narrowing reads as the intent it is.
+#[allow(clippy::cast_possible_truncation)]
+fn f64_to_f32(value: f64) -> f32 {
+    value as f32
 }
 
-/// Solid things are solid: walking at one stops rather than passing through.
-///
-/// Driven by holding a direction through the real scripts, which is what a
-/// player does — not by asking the collision helper whether a point is free,
-/// which would only test that the helper agrees with itself.
-///
-/// The player is put beside the tree rather than walked at whatever happens to
-/// be west of its start: a collision test that depends on the layout fails
-/// every time someone moves a tree, which is a test about composition wearing a
-/// collision test's name.
 #[test]
 fn the_player_cannot_walk_through_solid_scenery() {
     use sindri_platform::{InputEvent, Key};
@@ -312,7 +247,11 @@ fn the_wisp_routes_around_the_authored_wall() {
         .anchor;
     assert_eq!(before, GridCoord::new(8, 8));
 
-    let mut session = Session::new(extractor.components().clone());
+    // With the tile sets, because that is how the game runs: the floor is a
+    // volume now, and a session that cannot read it is a session whose scripts
+    // are told so rather than one that walks on water.
+    let mut session = Session::new(extractor.components().clone())
+        .with_tile_sets(sindri_gather::bind_tile_sets().expect("the tile sets decode"));
     session
         .step(&mut world, &InputState::default(), (960.0, 600.0), 0.33)
         .expect("the pathfinding script steps");

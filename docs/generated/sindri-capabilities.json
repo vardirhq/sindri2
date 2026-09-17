@@ -546,12 +546,14 @@
       "default_payload": {
         "cells": [],
         "layer": 0,
+        "layer_step": 0,
         "tileset": ""
       },
       "display_name": "Tile Volume",
       "fields": {
         "cells": [],
         "layer": 0,
+        "layer_step": 0,
         "tileset": ""
       },
       "meanings": {

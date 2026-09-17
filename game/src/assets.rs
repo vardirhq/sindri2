@@ -57,7 +57,6 @@ pub const WEAVE_SOURCES: &[(&str, &str)] = &[
 #[cfg(not(target_arch = "wasm32"))]
 pub const TEXTURE_IDS: &[&str] = &[
     "textures/gather-blocks.png",
-    "textures/ground.png",
     "textures/orb.png",
     "textures/player.png",
     "textures/pip.png",
@@ -126,10 +125,6 @@ pub const TEXTURES: &[(&str, &[u8])] = &[
     (
         "textures/gather-blocks.png",
         include_bytes!("../assets/textures/gather-blocks.png"),
-    ),
-    (
-        "textures/ground.png",
-        include_bytes!("../assets/textures/ground.png"),
     ),
     (
         "textures/orb.png",
@@ -227,10 +222,6 @@ pub const SHEETS: &[(&str, &str)] = &[
     (
         "textures/gather-blocks.sheet.json",
         include_str!("../assets/textures/gather-blocks.sheet.json"),
-    ),
-    (
-        "textures/ground.sheet.json",
-        include_str!("../assets/textures/ground.sheet.json"),
     ),
     (
         "textures/orb.sheet.json",

@@ -73,7 +73,7 @@
             ],
             "size": [
               1,
-              1,
+              1.0,
               1
             ]
           },
@@ -88,6 +88,324 @@
             "size": [
               1,
               1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "grass-b",
+      "model": {
+        "materials": {
+          "earth": {
+            "colour": "#7a5233",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 11
+            }
+          },
+          "grass": {
+            "colour": "#6f9f52",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.5,
+              "seed": 22
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1.0,
+              1
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "grass",
+            "position": [
+              0,
+              1.001,
+              0
+            ],
+            "size": [
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "grass-c",
+      "model": {
+        "materials": {
+          "earth": {
+            "colour": "#7a5233",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 11
+            }
+          },
+          "grass": {
+            "colour": "#6f9f52",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.5,
+              "seed": 32
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1.0,
+              1
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "grass",
+            "position": [
+              0,
+              1.001,
+              0
+            ],
+            "size": [
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "grass-tuft",
+      "model": {
+        "materials": {
+          "earth": {
+            "colour": "#7a5233",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 11
+            }
+          },
+          "grass": {
+            "colour": "#6f9f52",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.5,
+              "seed": 42
+            }
+          },
+          "blade": {
+            "colour": "#57823f",
+            "grain": {
+              "size": 0.06,
+              "strength": 0.4,
+              "seed": 43
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1.0,
+              1
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "grass",
+            "position": [
+              0,
+              1.001,
+              0
+            ],
+            "size": [
+              1,
+              1
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "blade",
+            "position": [
+              -0.22,
+              1.002,
+              -0.16
+            ],
+            "size": [
+              0.22,
+              0.22
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "blade",
+            "position": [
+              0.18,
+              1.002,
+              0.05
+            ],
+            "size": [
+              0.22,
+              0.22
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "blade",
+            "position": [
+              -0.02,
+              1.002,
+              0.26
+            ],
+            "size": [
+              0.22,
+              0.22
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "grass-bloom",
+      "model": {
+        "materials": {
+          "earth": {
+            "colour": "#7a5233",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 11
+            }
+          },
+          "grass": {
+            "colour": "#6f9f52",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.5,
+              "seed": 52
+            }
+          },
+          "blade": {
+            "colour": "#57823f",
+            "grain": {
+              "size": 0.06,
+              "strength": 0.4,
+              "seed": 53
+            }
+          },
+          "bloom": {
+            "colour": "#e8d98f"
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1.0,
+              1
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "grass",
+            "position": [
+              0,
+              1.001,
+              0
+            ],
+            "size": [
+              1,
+              1
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "blade",
+            "position": [
+              -0.24,
+              1.002,
+              0.12
+            ],
+            "size": [
+              0.22,
+              0.22
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "blade",
+            "position": [
+              0.2,
+              1.002,
+              -0.18
+            ],
+            "size": [
+              0.22,
+              0.22
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "bloom",
+            "position": [
+              -0.06,
+              1.002,
+              -0.06
+            ],
+            "size": [
+              0.12,
+              0.12
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "bloom",
+            "position": [
+              0.26,
+              1.002,
+              0.22
+            ],
+            "size": [
+              0.12,
+              0.12
             ]
           }
         ]
@@ -117,7 +435,7 @@
             ],
             "size": [
               1,
-              1,
+              1.0,
               1
             ]
           }
@@ -148,7 +466,7 @@
             ],
             "size": [
               1,
-              1,
+              1.0,
               1
             ]
           }
@@ -179,7 +497,7 @@
             ],
             "size": [
               1,
-              1,
+              1.0,
               1
             ]
           }
@@ -210,7 +528,7 @@
             ],
             "size": [
               1,
-              1,
+              1.0,
               1
             ]
           }
@@ -241,7 +559,7 @@
             ],
             "size": [
               1,
-              1,
+              1.0,
               1
             ]
           }
@@ -272,7 +590,7 @@
             ],
             "size": [
               1,
-              1,
+              1.0,
               1
             ]
           }
@@ -303,7 +621,7 @@
             ],
             "size": [
               1,
-              1,
+              1.0,
               1
             ]
           }
@@ -334,7 +652,7 @@
             ],
             "size": [
               1,
-              1,
+              1.0,
               1
             ]
           }
@@ -444,7 +762,7 @@
             "material": "grass",
             "position": [
               0,
-              0.501,
+              0.5009999999999999,
               0
             ],
             "size": [

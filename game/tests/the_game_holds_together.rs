@@ -21,7 +21,8 @@ use sindri_gather::{
     stylesheets, world,
 };
 use sindri_scene::{
-    SceneExtractor, ShapeComponent, SpriteComponent, TilemapComponent, UiAnchor, UiTextComponent,
+    SceneExtractor, ShapeComponent, SpriteComponent, TileGridComponent, TileVolumeComponent,
+    UiAnchor, UiTextComponent,
 };
 
 const SCENE: &str = include_str!("../assets/gather.scene.json");
@@ -30,42 +31,86 @@ const SCENE: &str = include_str!("../assets/gather.scene.json");
 fn the_island_has_authored_regions() {
     let (world, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
-    let (_, floor) = extractor
+    let (entity, grid) = extractor
         .components()
-        .query::<TilemapComponent>(&world)
-        .expect("the tilemap schema reads")
+        .query::<TileGridComponent>(&world)
+        .expect("the tile grid schema reads")
         .into_iter()
         .next()
         .expect("Gather has a floor");
+    let floor = extractor
+        .components()
+        .get::<TileVolumeComponent>(&world, entity)
+        .expect("the tile volume schema reads")
+        .expect("the floor is a volume");
 
-    assert_eq!((floor.columns, floor.rows), (25, 25));
-    assert_eq!(floor.tiles.len(), 625);
-    assert!(
-        floor.tiles.windows(2).any(|tiles| tiles[0] == tiles[1]),
-        "the island uses authored regions rather than a full checkerboard"
-    );
+    assert_eq!((grid.columns, grid.rows), (25, 25));
 
-    let used = floor.tiles.iter().copied().collect::<BTreeSet<_>>();
+    // The ground is the level the flat map became; anything above it is the
+    // outcrop that was already stacked there.
+    let ground = floor
+        .cells
+        .iter()
+        .filter(|cell| cell.position[2] == 0)
+        .collect::<Vec<_>>();
     assert_eq!(
-        used.len(),
-        floor.palette.len(),
-        "every ground state in the sheet earns a place on the farm"
+        ground.len(),
+        625,
+        "every cell of the old flat map became a block"
+    );
+    assert!(
+        floor.cells.len() > ground.len(),
+        "and the outcrop still stands on top of it"
     );
 
-    let count = |tile| {
-        floor
-            .tiles
-            .iter()
-            .filter(|cell| **cell == Some(tile))
-            .count()
-    };
-    assert!(count(5) >= 60, "the farm has substantial dry working plots");
-    assert!(count(6) >= 15, "one working plot is visibly watered");
-    assert!(count(7) >= 30, "paths connect the farm's regions");
-    assert!(count(8) >= 20, "the farmhouse has a flagstone yard");
+    let count = |tile: &str| ground.iter().filter(|cell| cell.tile == tile).count();
+    let grass = ["grass", "grass-b", "grass-c", "grass-tuft", "grass-bloom"]
+        .into_iter()
+        .map(count)
+        .sum::<usize>();
+
+    // Every tile the floor names has to exist, or the scene draws nothing and
+    // says so a frame later rather than here.
+    let tile_sets = sindri_gather::bind_tile_sets().expect("the tile sets decode");
+    let set = tile_sets
+        .get(&floor.tileset)
+        .expect("the floor's tile set is bound");
+    let unknown = floor
+        .cells
+        .iter()
+        .filter(|cell| set.tile(&cell.tile).is_none())
+        .map(|cell| cell.tile.clone())
+        .collect::<BTreeSet<_>>();
     assert!(
-        count(9) >= 150,
+        unknown.is_empty(),
+        "cells name undefined tiles: {unknown:?}"
+    );
+
+    assert!(grass >= 200, "the island is mostly lawn");
+    assert!(
+        count("grass-b") > 0 && count("grass-c") > 0,
+        "the five kinds of grass the flat map authored survived the move"
+    );
+    assert!(
+        count("soil") >= 60,
+        "the farm has substantial dry working plots"
+    );
+    assert!(
+        count("soil-wet") >= 15,
+        "one working plot is visibly watered"
+    );
+    assert!(count("path") >= 30, "paths connect the farm's regions");
+    assert!(
+        count("flagstone") >= 20,
+        "the farmhouse has a flagstone yard"
+    );
+    assert!(
+        count("water") >= 150,
         "an irregular shore makes the map an island"
+    );
+    assert!(
+        count("sand") > 0,
+        "and the rocks standing off it have a shoal under them"
     );
 }
 

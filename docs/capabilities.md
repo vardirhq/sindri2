@@ -582,6 +582,29 @@ can answer at all: which cells are solid and how tall they are is a question
 only the tile set answers, and guessing would quietly disagree with a caller
 holding the asset.
 
+**Gather's floor is a tile volume.** The companion game carries no
+`sindri.tilemap` anywhere: its 25×25 island is 625 blocks at level zero with an
+outcrop stacked on top, and the shed's floor is 35 more. The flat map's palette
+came across entry for entry — five kinds of grass included — so the floor kept
+the variation the scene had already authored rather than flattening it. The
+moat and the pond are water, which is opaque but not solid, so they are holes: a
+walker is confined to the island by the shape of the ground rather than by an
+authored wall. Three rocks standing off the shore turned out to be on nothing
+once that was true, and now sit on a sandbar.
+
+That last part is what a companion game is for. "Every occupant has ground under
+it" was not expressible against a flat map, where every cell was ground by
+definition; it became a thing that could be false, and was, in three places.
+
+**A volume spreads across render layers.** `layer_step` says how many layers one
+step of projected depth costs. Zero, the default, puts the whole volume on one
+layer, which is right for a backdrop and wrong the moment anything walks between
+the blocks. The reason it has to be said at all is that a 2D scene viewed
+straight on has no other depth axis: every world draw sits at the same distance
+from an orthographic camera, so the render layer *is* the distance. A step of
+two leaves an odd layer between each pair of cells for whatever stands on them,
+which is exactly the convention Gather's props already followed.
+
 **Block art is baked per height, and per texel.** `tools/isometric-baker` grows
 a `grain` option: a material says how big a texel is and how much of its surface
 shifts a step along the ramp it already has, so a face reads as stone or dirt

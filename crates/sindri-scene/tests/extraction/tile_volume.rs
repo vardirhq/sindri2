@@ -413,3 +413,102 @@ fn the_faces_of_one_cell_do_not_sort_against_each_other() {
          reordered by where their art sits: {xs:?}"
     );
 }
+
+#[test]
+fn a_volume_can_spread_its_cells_across_render_layers() {
+    // A 2D scene viewed straight on has no depth but the render layer, so a
+    // volume meant to interleave with sprites has to place its cells along it.
+    // A step of two leaves an odd layer between each pair of cells for whatever
+    // stands on them.
+    let world = world_from(&document(
+        r#"
+        { "id": "main-camera", "transform_3d": { "position": [0.0, 0.0, 10.0] },
+          "components": { "sindri.camera": {
+            "projection": "orthographic", "vertical_size": 8.0,
+            "near": 0.1, "far": 100.0 } } },
+        { "id": "blocks", "transform_3d": {}, "components": {
+          "sindri.tile_grid": {
+            "columns": 4, "rows": 4, "cell_size": [1.0, 0.5],
+            "level_step": [0.0, 0.5], "projection": "isometric"
+          },
+          "sindri.tile_volume": {
+            "tileset": "world.tileset.json", "layer": 0, "layer_step": 2,
+            "cells": [
+              { "position": [0, 0, 0], "tile": "grass" },
+              { "position": [3, 3, 0], "tile": "grass" }
+            ]
+          }
+        } },
+        { "id": "prop", "transform_3d": { "position": [0.0, -0.75, 0.0] },
+          "components": { "sindri.sprite": {
+            "texture": "blocks.png#0", "layer": 1 } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract_animated(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &textures(),
+            SceneRuntime::default().with_tile_sets(&tile_sets()),
+        )
+        .expect("the volume extracts");
+    let layers = frame
+        .passes()
+        .iter()
+        .filter_map(|pass| match &pass.command {
+            FrameCommand::SpriteBatch { instances, .. } => Some(instances.len()),
+            _ => None,
+        })
+        .sum::<usize>();
+    assert_eq!(layers, 5, "two blocks of two faces each, and one sprite");
+
+    // The cell at the origin is depth 0 and the far one depth 6, so with a step
+    // of two they are six layers apart and the sprite on layer 1 falls between
+    // them rather than in front of both.
+    let grid: sindri_scene::TileGridComponent = serde_json::from_value(serde_json::json!({
+        "columns": 4, "rows": 4, "cell_size": [1.0, 0.5],
+        "level_step": [0.0, 0.5], "projection": "isometric"
+    }))
+    .unwrap();
+    let volume: sindri_scene::TileVolumeComponent = serde_json::from_value(serde_json::json!({
+        "tileset": "world.tileset.json", "layer": 0, "layer_step": 2, "cells": []
+    }))
+    .unwrap();
+    assert_eq!(
+        volume.layer_for(&grid, sindri_grid::GridCoord3::new(0, 0, 0)),
+        0
+    );
+    assert_eq!(
+        volume.layer_for(&grid, sindri_grid::GridCoord3::new(3, 3, 0)),
+        12
+    );
+    // Raising a block does not move it along the depth axis, for the same
+    // reason it does not move it toward the camera.
+    assert_eq!(
+        volume.layer_for(&grid, sindri_grid::GridCoord3::new(3, 3, 4)),
+        12
+    );
+}
+
+#[test]
+fn a_volume_with_no_step_stays_on_one_layer() {
+    let grid: sindri_scene::TileGridComponent = serde_json::from_value(serde_json::json!({
+        "columns": 4, "rows": 4, "cell_size": [1.0, 0.5], "projection": "isometric"
+    }))
+    .unwrap();
+    let volume: sindri_scene::TileVolumeComponent = serde_json::from_value(serde_json::json!({
+        "tileset": "world.tileset.json", "layer": 4, "cells": []
+    }))
+    .unwrap();
+    for coord in [
+        sindri_grid::GridCoord3::new(0, 0, 0),
+        sindri_grid::GridCoord3::new(3, 3, 2),
+    ] {
+        assert_eq!(
+            volume.layer_for(&grid, coord),
+            4,
+            "a backdrop stays where it was put"
+        );
+    }
+}

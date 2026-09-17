@@ -52,7 +52,8 @@ impl DesktopApp for GatherApp {
         let mut audio = gather_audio_backend()?;
         bind_audio(&mut audio)?;
 
-        let mut session = Session::new(scene.components().clone());
+        let mut session =
+            Session::new(scene.components().clone()).with_tile_sets(bind_tile_sets()?);
         // Beside the executable rather than in an application data directory:
         // Gather is a demonstration that gets run from a checkout, and a save
         // buried in a per-user folder is one nobody can find to delete. A real
