@@ -8,7 +8,10 @@
 
 use sindri_gather::{extractor, world};
 use sindri_grid::GridCoord;
-use sindri_scene::{GridPlacementComponent, SpriteComponent, WorldGridNavigation};
+use sindri_scene::{
+    GridPlacementComponent, SpriteComponent, TileGridComponent, TileSurfaces, TileVolumeComponent,
+    WorldGridNavigation,
+};
 
 /// Draw order follows where a thing stands, and nothing says so in the scene.
 ///
@@ -192,5 +195,70 @@ fn everything_placed_on_the_farm_has_ground_under_it() {
     assert!(
         stranded.is_empty(),
         "these occupants are standing on water or on nothing: {stranded:#?}"
+    );
+}
+
+/// The moat is a pond rather than a hole or a floor.
+///
+/// One flag used to answer for both halves of that and got one of them wrong.
+/// Water was "not solid", which made the whole moat surface-less: nothing could
+/// walk there, which is right, and nothing could rest there either, which is
+/// why three rocks standing off the shore had to be given a sandbar to stand
+/// on. A pond holds a boat up. A hole does not.
+///
+/// So the two questions are asked separately now, and this asserts both on the
+/// real island: every water column has a surface, and none of them is walkable.
+#[test]
+fn water_holds_things_up_without_being_walkable() {
+    let (world, _scenes) = world().expect("the scene loads");
+    let extractor = extractor().expect("the schemas register");
+    let tile_sets = sindri_gather::bind_tile_sets().expect("the tile sets decode");
+
+    let volumes = extractor
+        .components()
+        .query::<TileVolumeComponent>(&world)
+        .expect("the volume schema reads");
+    let mut supporting = 0;
+    let mut walkable = 0;
+    let mut floating = 0;
+    for (entity, volume) in volumes {
+        extractor
+            .components()
+            .get::<TileGridComponent>(&world, entity)
+            .expect("the grid schema reads")
+            .expect("a volume carries a grid");
+        let tile_set = tile_sets
+            .get(&volume.tileset)
+            .expect("its tile set is bound");
+        let surfaces = TileSurfaces::derive(&volume, tile_set).expect("the surfaces derive");
+        for (coord, _) in volume.occupied() {
+            let cell = GridCoord::new(coord.x, coord.y);
+            if surfaces.height(cell).is_none() {
+                continue;
+            }
+            supporting += 1;
+            if surfaces.walkable_height(cell).is_some() {
+                walkable += 1;
+            } else {
+                floating += 1;
+            }
+        }
+    }
+
+    assert!(
+        walkable > 0 && floating > 0,
+        "the island should have both ground and water: {walkable} walkable, \
+         {floating} not"
+    );
+    assert_eq!(
+        supporting,
+        walkable + floating,
+        "every supporting column is one or the other"
+    );
+    // The moat and the pond: opaque, holding a boat up, holding nobody up.
+    assert!(
+        floating >= 200,
+        "the water should support without being walkable, and there is a lot \
+         of it: {floating} columns"
     );
 }

@@ -20,6 +20,11 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Changed
 
+- A tile says whether its top holds anything up (`supports`) and whether a
+  walker can stand on it (`walkable`) instead of one `solid` flag that meant
+  both. Water supports without being walkable, so a pond is no longer
+  indistinguishable from a hole. `solid` still reads as `walkable`.
+
 - Resolving a tile volume indexes its cells once instead of scanning them for
   every neighbour it asks about, and no longer revalidates a bound tile set on
   every frame.
