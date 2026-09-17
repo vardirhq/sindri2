@@ -323,7 +323,12 @@ fn register_gameplay(components: &mut ComponentSchemaRegistry) -> Result<(), Sce
     // one is a prop silently pinned to the wrong floor.
     components.register_with_fields::<GridPlacementComponent>(
         "Grid Placement",
-        serde_json::json!({ "grid": "", "cell": [0, 0], "offset": [0.0, 0.0] }),
+        serde_json::json!({
+            "grid": "",
+            "cell": [0, 0],
+            "offset": [0.0, 0.0],
+            "footprint": [[0, 0]]
+        }),
     )?;
     components.register_with_default::<GridNavigationComponent>(
         "Grid Navigation",

@@ -48,12 +48,12 @@ pub fn resolve_grid_placements(
             .find(|(_, data)| {
                 data.source_id
                     .as_ref()
-                    .is_some_and(|id| id.as_str() == placement.grid)
+                    .is_some_and(|id| id == &placement.grid)
             })
             .map(|(entity, _)| entity)
             .ok_or_else(|| GridPlacementError::MissingGrid {
                 entity,
-                grid: placement.grid.clone(),
+                grid: placement.grid.as_str().to_owned(),
             })?;
         let Some(grid) = components
             .get::<TileGridComponent>(world, grid_entity)
@@ -61,7 +61,7 @@ pub fn resolve_grid_placements(
         else {
             return Err(GridPlacementError::NotAGrid {
                 entity,
-                grid: placement.grid.clone(),
+                grid: placement.grid.as_str().to_owned(),
             });
         };
         let surfaces = surfaces_of(world, components, grid_entity, tile_sets)?;
@@ -127,9 +127,27 @@ fn place(
                 f64::from(column) + f64::from(placement.offset[0]),
                 f64::from(row) + f64::from(placement.offset[1]),
             );
-            let height = surfaces
-                .and_then(|surfaces| surfaces.height(GridCoord::new(column, row)))
-                .unwrap_or(0.0);
+            // Every cell it covers has to hold it up. Without a tile set
+            // there is nothing to ask -- a volume that cannot say which cells
+            // support anything gets the grid's own plane, as it always did --
+            // but with one, resting on a hole is an error rather than a prop
+            // quietly sitting at height zero, which is how three rocks came to
+            // be standing off Gather's shore on nothing.
+            let anchor = GridCoord::new(column, row);
+            let height = if let Some(surfaces) = surfaces {
+                for cell in footprint(placement, anchor) {
+                    if surfaces.height(cell).is_none() {
+                        return Err(GridPlacementError::UnsupportedCell {
+                            entity,
+                            x: cell.x,
+                            y: cell.y,
+                        });
+                    }
+                }
+                surfaces.height(anchor).unwrap_or(0.0)
+            } else {
+                0.0
+            };
             let [x, y] = grid
                 .point_to_local_at_height(at.0, at.1, height)
                 .ok_or(GridPlacementError::UnprojectableCell { entity })?;
@@ -271,6 +289,17 @@ pub fn blocking_step_ahead(
 /// step to whatever is standing on the next one.
 const CLEARANCE: f64 = 0.75;
 
+/// Every cell a placement covers, anchored on the one it names.
+fn footprint(
+    placement: &GridPlacementComponent,
+    anchor: GridCoord,
+) -> impl Iterator<Item = GridCoord> + '_ {
+    placement
+        .footprint
+        .iter()
+        .map(move |[x, y]| GridCoord::new(anchor.x + x, anchor.y + y))
+}
+
 #[derive(Debug, Error)]
 pub enum GridPlacementError {
     #[error("a grid placement payload is invalid: {source}")]
@@ -284,6 +313,8 @@ pub enum GridPlacementError {
     NotAGrid { entity: EntityId, grid: String },
     #[error("entity {entity:?} is placed on a cell the grid cannot project")]
     UnprojectableCell { entity: EntityId },
+    #[error("entity {entity:?} covers ({x}, {y}), where nothing holds it up")]
+    UnsupportedCell { entity: EntityId, x: i32, y: i32 },
     #[error("a placed grid's volume cannot be read: {source}")]
     InvalidSurface {
         #[source]

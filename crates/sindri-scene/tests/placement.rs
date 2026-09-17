@@ -260,3 +260,112 @@ fn a_placement_naming_no_grid_says_so() {
         "the failure names the grid it looked for: {error}"
     );
 }
+
+/// A prop over a hole used to be placed at height zero and say nothing.
+///
+/// The floor fills level -1 everywhere except one cell, so `(3, 3)` is a hole
+/// rather than low ground. Something standing there rests on nothing, and that
+/// is the kind of mistake that reaches a screenshot rather than a test: the old
+/// answer was to silently put it at the grid's own plane, which is why three
+/// rocks off Gather's shore had to be given a sandbar before anyone noticed.
+#[test]
+fn standing_over_a_hole_is_refused() {
+    let mut floor = SceneEntity::new(id("floor"));
+    floor.transform_3d = Some(Transform3D::default());
+    floor.components.insert(
+        "sindri.tile_grid".to_owned(),
+        json!({
+            "columns": 4, "rows": 4, "cell_size": [1.0, 0.5],
+            "level_step": [0.0, 0.5], "projection": "isometric"
+        }),
+    );
+    floor.components.insert(
+        "sindri.tile_volume".to_owned(),
+        json!({
+            "tileset": "world.tileset.json",
+            "cells": (0..4).flat_map(|row| (0..4)
+                .filter(move |column| [*column, row] != [3, 3])
+                .map(move |column| json!({ "position": [column, row, -1], "tile": "block" })))
+                .collect::<Vec<_>>()
+        }),
+    );
+
+    let document = SceneDocument {
+        format_version: SCENE_FORMAT_VERSION,
+        metadata: sindri_core::SceneMetadata::default(),
+        entities: vec![floor, placed("rock", &json!([3, 3]))],
+    };
+    let extractor = SceneExtractor::new().expect("the schemas register");
+    let mut world = World::default();
+    sindri_core::LoadedScenes::new()
+        .enter_keeping_identities(&mut world, "test", &document)
+        .expect("the scene loads");
+
+    let error = resolve_grid_placements(&mut world, extractor.components(), Some(&tile_sets()))
+        .expect_err("a prop over a hole is refused");
+    assert!(
+        error.to_string().contains("(3, 3)"),
+        "the refusal names the cell that holds nothing up: {error}"
+    );
+}
+
+/// A footprint is refused as a whole, not just at its anchor.
+///
+/// The anchor is solid ground and the cell beside it is the hole, which is
+/// exactly the case an anchor-only check waves through.
+#[test]
+fn a_footprint_reaching_over_a_hole_is_refused() {
+    let mut floor = SceneEntity::new(id("floor"));
+    floor.transform_3d = Some(Transform3D::default());
+    floor.components.insert(
+        "sindri.tile_grid".to_owned(),
+        json!({
+            "columns": 4, "rows": 4, "cell_size": [1.0, 0.5],
+            "level_step": [0.0, 0.5], "projection": "isometric"
+        }),
+    );
+    floor.components.insert(
+        "sindri.tile_volume".to_owned(),
+        json!({
+            "tileset": "world.tileset.json",
+            "cells": (0..4).flat_map(|row| (0..4)
+                .filter(move |column| [*column, row] != [3, 2])
+                .map(move |column| json!({ "position": [column, row, -1], "tile": "block" })))
+                .collect::<Vec<_>>()
+        }),
+    );
+
+    let mut house = SceneEntity::new(id("house"));
+    house.transform_3d = Some(Transform3D::default());
+    house.components.insert(
+        "sindri.grid.placement".to_owned(),
+        json!({ "grid": "floor", "cell": [2, 2], "footprint": [[0, 0], [1, 0]] }),
+    );
+
+    let document = SceneDocument {
+        format_version: SCENE_FORMAT_VERSION,
+        metadata: sindri_core::SceneMetadata::default(),
+        entities: vec![floor, house],
+    };
+    let extractor = SceneExtractor::new().expect("the schemas register");
+    let mut world = World::default();
+    sindri_core::LoadedScenes::new()
+        .enter_keeping_identities(&mut world, "test", &document)
+        .expect("the scene loads");
+
+    let error = resolve_grid_placements(&mut world, extractor.components(), Some(&tile_sets()))
+        .expect_err("a house half over a hole is refused");
+    assert!(
+        error.to_string().contains("(3, 2)"),
+        "the refusal names the covered cell rather than the anchor: {error}"
+    );
+}
+
+/// Without a tile set there is nothing to ask, and the old answer stands.
+#[test]
+fn an_unreadable_volume_still_places_on_the_plane() {
+    let (mut world, extractor) = world_with(vec![placed("rock", &json!([1, 1]))], 0.0);
+    let resolved = resolve_grid_placements(&mut world, extractor.components(), None)
+        .expect("no tile sets means no support question");
+    assert_eq!(resolved, 1);
+}

@@ -20,6 +20,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Changed
 
+- A grid placement names its grid with the same stable-ID type a grid occupant
+  uses, and carries the cells it covers. Standing something over a hole is now
+  an error naming that cell instead of placing it at height zero.
+
 - A tile says whether its top holds anything up (`supports`) and whether a
   walker can stand on it (`walkable`) instead of one `solid` flag that meant
   both. Water supports without being walkable, so a pond is no longer
