@@ -62,12 +62,12 @@ fn tile_sets() -> TileSetBindings {
     bindings
 }
 
-fn placed(name: &str, cell: Value) -> SceneEntity {
+fn placed(name: &str, cell: &Value) -> SceneEntity {
     let mut entity = SceneEntity::new(id(name));
     entity.transform_3d = Some(Transform3D::default());
     entity.components.insert(
         "sindri.grid.placement".to_owned(),
-        json!({ "grid": "floor", "cell": cell }),
+        json!({ "grid": "floor", "cell": cell.clone() }),
     );
     entity
 }
@@ -86,7 +86,7 @@ fn transform_of(world: &World, name: &str) -> Transform3D {
 
 #[test]
 fn a_placed_prop_lands_on_the_cell_it_names() {
-    let (mut world, extractor) = world_with(vec![placed("rock", json!([2, 1]))], 0.0);
+    let (mut world, extractor) = world_with(vec![placed("rock", &json!([2, 1]))], 0.0);
     let resolved = resolve_grid_placements(&mut world, extractor.components(), Some(&tile_sets()))
         .expect("the placement resolves");
     assert_eq!(resolved, 1);
@@ -112,7 +112,7 @@ fn a_placed_prop_lands_on_the_cell_it_names() {
 fn raising_the_ground_raises_what_stands_on_it() {
     // The bug this component exists to make impossible: the floor moves and
     // the props stay where a hand-written transform left them.
-    let (mut world, extractor) = world_with(vec![placed("rock", json!([1, 1]))], 0.0);
+    let (mut world, extractor) = world_with(vec![placed("rock", &json!([1, 1]))], 0.0);
     let sets = tile_sets();
     resolve_grid_placements(&mut world, extractor.components(), Some(&sets)).unwrap();
     let before = transform_of(&world, "rock").position[1];
@@ -147,7 +147,7 @@ fn a_slab_lifts_by_half_of_what_a_block_does() {
     // Height is a fraction, so standing on a slab is standing half a cell up.
     // A level count could not say this.
     let lift = |tile: &str| {
-        let (mut world, extractor) = world_with(vec![placed("rock", json!([1, 1]))], 0.0);
+        let (mut world, extractor) = world_with(vec![placed("rock", &json!([1, 1]))], 0.0);
         let floor = world
             .entities()
             .find(|(_, data)| {
@@ -168,7 +168,7 @@ fn a_slab_lifts_by_half_of_what_a_block_does() {
         transform_of(&world, "rock").position[1]
     };
     let flat = {
-        let (mut world, extractor) = world_with(vec![placed("rock", json!([1, 1]))], 0.0);
+        let (mut world, extractor) = world_with(vec![placed("rock", &json!([1, 1]))], 0.0);
         resolve_grid_placements(&mut world, extractor.components(), Some(&tile_sets())).unwrap();
         transform_of(&world, "rock").position[1]
     };
@@ -184,9 +184,9 @@ fn a_slab_lifts_by_half_of_what_a_block_does() {
 fn depth_comes_from_the_cell_and_orders_the_diagonal() {
     let (mut world, extractor) = world_with(
         vec![
-            placed("near", json!([3, 3])),
-            placed("far", json!([0, 0])),
-            placed("side", json!([3, 0])),
+            placed("near", &json!([3, 3])),
+            placed("far", &json!([0, 0])),
+            placed("side", &json!([3, 0])),
         ],
         0.01,
     );
@@ -207,12 +207,17 @@ fn a_grid_with_no_depth_step_derives_no_depth() {
     // The migration boundary: a scene that has not opted in keeps every Z it
     // had, so its ordering cannot change underneath it.
     let (mut world, extractor) = world_with(
-        vec![placed("near", json!([3, 3])), placed("far", json!([0, 0]))],
+        vec![
+            placed("near", &json!([3, 3])),
+            placed("far", &json!([0, 0])),
+        ],
         0.0,
     );
     resolve_grid_placements(&mut world, extractor.components(), Some(&tile_sets())).unwrap();
-    assert_eq!(transform_of(&world, "near").position[2], 0.0);
-    assert_eq!(transform_of(&world, "far").position[2], 0.0);
+    for name in ["near", "far"] {
+        let z = transform_of(&world, name).position[2];
+        assert!(z.abs() < f32::EPSILON, "{name} kept the Z it had: {z}");
+    }
 }
 
 #[test]

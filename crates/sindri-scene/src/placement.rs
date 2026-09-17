@@ -115,8 +115,8 @@ fn place(
 
     // A named cell decides X and Y; without one they are whatever moved the
     // entity last, and only the depth below is answered here.
-    let column_row = match placement.cell {
-        Some([column, row]) => {
+    let column_row = if let Some([column, row]) = placement.cell {
+        {
             // The offset is in cells, so the same two numbers place the entity
             // and decide its depth. In plane units they would be two different
             // quantities that happen to be written together, and a wall on a
@@ -136,7 +136,8 @@ fn place(
             transform.position[1] = origin[1] + y;
             at
         }
-        None => {
+    } else {
+        {
             let space = grid
                 .grid_space()
                 .map_err(|_| GridPlacementError::UnprojectableCell { entity })?;

@@ -6,48 +6,9 @@
 //! -- are properties of the layout rather than of anything the game does when
 //! someone plays it.
 
-use sindri_core::{Transform3D, World};
 use sindri_gather::{extractor, world};
-use sindri_grid::{GridCoord, GridPoint, GridSpace, PlanePoint};
-use sindri_scene::{
-    GridPlacementComponent, SceneExtractor, SpriteComponent, TileGridComponent, WorldGridNavigation,
-};
-
-/// Where a world position falls on the floor's grid, in whole and part cells.
-///
-/// Repeated from `the_game_plays.rs` rather than shared: each integration test
-/// is its own binary, and a dozen lines of projection maths is cheaper to have
-/// twice than a module that exists only to be imported.
-fn logical_position(grid: GridSpace, map: Transform3D, world: [f32; 3]) -> GridPoint {
-    let (sin, cos) = map.rotation_z_radians().sin_cos();
-    let x = world[0] - map.position[0];
-    let y = world[1] - map.position[1];
-    let local = PlanePoint::new(
-        f64::from((cos * x + sin * y) / map.scale[0]),
-        f64::from((-sin * x + cos * y) / map.scale[1]),
-    );
-    grid.unproject(local)
-        .expect("the authored point unprojects")
-}
-
-fn floor_grid(world: &World, extractor: &SceneExtractor) -> (Transform3D, GridSpace) {
-    // The floor is a stacked volume rather than a flat map, and the grid that
-    // describes it is the one thing the two always agreed about: a cell is in
-    // the same place either way, which is why the layer convention below did
-    // not have to change when the floor did.
-    let (floor, grid) = extractor
-        .components()
-        .query::<TileGridComponent>(world)
-        .expect("the tile grid schema reads")
-        .into_iter()
-        .next()
-        .expect("Gather has a floor");
-    let map = world
-        .get(floor)
-        .and_then(|data| data.transform_3d)
-        .unwrap_or_default();
-    (map, grid.grid_space().expect("the floor has a valid grid"))
-}
+use sindri_grid::GridCoord;
+use sindri_scene::{GridPlacementComponent, SpriteComponent, WorldGridNavigation};
 
 /// Draw order follows where a thing stands, and nothing says so in the scene.
 ///
