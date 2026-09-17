@@ -582,6 +582,23 @@ can answer at all: which cells are solid and how tall they are is a question
 only the tile set answers, and guessing would quietly disagree with a caller
 holding the asset.
 
+**Block art is baked per height, and per texel.** `tools/isometric-baker` grows
+a `grain` option: a material says how big a texel is and how much of its surface
+shifts a step along the ramp it already has, so a face reads as stone or dirt
+rather than as a grey or brown quadrilateral. The shift is hashed from the
+texel's position on the model rather than on the screen, so the same texel is
+the same shade in every bake and from every direction — a baked sprite that
+changed with the run would not be a baked sprite — and it is clamped to the
+ramp, so a grainy material still emits only the four colours its palette
+promised.
+
+Height is baked rather than scaled, which is the other half of a slab being its
+own tile. An isometric side face is a parallelogram whose vertical edges are the
+block's height and whose top and bottom edges slant; scaling it vertically moves
+the slant, and the correct shorter face removes a band from the middle, which
+one textured quad cannot do. Baking the slab as its own model gives the right
+shape for nothing.
+
 **A script reaches one cell at a time.** `Grid.block(volume, column, row, level)`
 answers with the tile a cell holds and `Grid.set_block` writes one, with the
 empty string meaning absence in both directions — a volume stores a missing cell

@@ -26,6 +26,38 @@ npm test
 is: the recipe lives beside the prefab it generates, `--out` is the asset root,
 and re-baking rewrites the generated files in place.
 
+## Grain
+
+A flat-shaded box gives three flat faces. That reads as a *shape*, and blocks
+made of it look like coloured cardboard: a face of grass and a face of stone
+differ only in hue. What tells them apart in the voxel games this art is copying
+is not the lighting — it is that each face is a small grid of texels that
+disagree slightly about their colour.
+
+There are no texture maps here and no way to author one, so a material may
+instead say its surface is grainy:
+
+```json
+"stone": { "colour": "#8e8e89", "grain": { "size": 0.125, "strength": 0.45, "seed": 31 } }
+```
+
+`size` is a texel in tile units, so the block decides how coarse its own surface
+is rather than the output resolution deciding for it. `strength` is how much of
+the surface is shifted off its lit band, from zero to one; the useful range is
+small, because at one nearly every texel disagrees with its neighbours and that
+is noise rather than texture. `seed` picks a stream, so two materials do not
+agree.
+
+The shift is one step along the ramp the material already has, clamped, so a
+grainy material still emits only the four colours its palette promised — which
+is what keeps `palette_snap` and the bake report honest.
+
+It is hashed from the texel's position **on the model**, not on the screen. The
+grain therefore belongs to the block: bake it twice, or from four directions,
+and the same texel is the same shade every time. A random number generator would
+give a prettier spread and a different sprite every run, which is not a trade an
+asset baker gets to make.
+
 ## Where this came from
 
 The pipeline is adapted from **IsoGame's Sprite Factory**

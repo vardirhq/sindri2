@@ -2,7 +2,7 @@
   "format_version": 1,
   "anchor": "center",
   "grid": {
-    "columns": 9,
+    "columns": 36,
     "rows": 1,
     "names": [
       "grass-top",
@@ -13,10 +13,37 @@
       "earth-east",
       "stone-top",
       "stone-south",
-      "stone-east"
+      "stone-east",
+      "soil-top",
+      "soil-south",
+      "soil-east",
+      "soil-wet-top",
+      "soil-wet-south",
+      "soil-wet-east",
+      "path-top",
+      "path-south",
+      "path-east",
+      "flagstone-top",
+      "flagstone-south",
+      "flagstone-east",
+      "sand-top",
+      "sand-south",
+      "sand-east",
+      "water-top",
+      "water-south",
+      "water-east",
+      "stone-slab-top",
+      "stone-slab-south",
+      "stone-slab-east",
+      "flagstone-slab-top",
+      "flagstone-slab-south",
+      "flagstone-slab-east",
+      "grass-slab-top",
+      "grass-slab-south",
+      "grass-slab-east"
     ],
     "size": [
-      828,
+      3312,
       156
     ],
     "margin": [

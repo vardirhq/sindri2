@@ -21,7 +21,7 @@ import {
   required,
 } from './json.ts';
 import { type ModelPart, type ModelSpec } from './model.ts';
-import { type MaterialSpec, type RampOptions } from './shading.ts';
+import { type GrainSpec, type MaterialSpec, type RampOptions } from './shading.ts';
 
 const RAMP_KEYS = ['lightness', 'saturation', 'hue'] as const;
 
@@ -43,14 +43,27 @@ function readRamp(value: JsonValue, path: string): Partial<RampOptions> {
   return ramp;
 }
 
+function readGrain(value: JsonValue, path: string): GrainSpec {
+  const source = asObject(value, path);
+  rejectUnknown(source, path, ['size', 'strength', 'seed']);
+  const size = required(source, 'size', path, asNumber);
+  if (!(size > 0)) fail(`${path}.size`, `a texel must have a size, got ${size}`);
+  const strength = required(source, 'strength', path, asNumber);
+  if (strength < 0 || strength > 1) {
+    fail(`${path}.strength`, `expected a fraction from zero to one, got ${strength}`);
+  }
+  return { size, strength, seed: optional(source, 'seed', path, asNumber) };
+}
+
 export function readMaterial(value: JsonValue, path: string): MaterialSpec {
   if (typeof value === 'string') return { colour: asColour(value, path) };
   const source = asObject(value, path);
-  rejectUnknown(source, path, ['colour', 'ramp', 'unlit']);
+  rejectUnknown(source, path, ['colour', 'ramp', 'unlit', 'grain']);
   return {
     colour: required(source, 'colour', path, asColour),
     ramp: optional(source, 'ramp', path, readRamp),
     unlit: optional(source, 'unlit', path, asBoolean),
+    grain: optional(source, 'grain', path, readGrain),
   };
 }
 

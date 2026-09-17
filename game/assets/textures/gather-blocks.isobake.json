@@ -4,20 +4,40 @@
   "texture": "textures/gather-blocks.png",
   "output": "block_faces",
   "view": "isometric",
-  "tile": { "width": 88, "height": 44 },
-  "tile_world": { "width": 1.1, "height": 0.55 },
+  "tile": {
+    "width": 88,
+    "height": 44
+  },
+  "tile_world": {
+    "width": 1.1,
+    "height": 0.55
+  },
   "facing": "south",
   "directions": 1,
-  "footprint": { "width": 1, "height": 1 },
+  "footprint": {
+    "width": 1,
+    "height": 1
+  },
   "render": {
     "supersample": 4,
     "padding": 0,
     "alpha_cutoff": 128,
     "palette_snap": true,
-    "outline": { "enabled": true, "colour": "#20222a" },
+    "outline": {
+      "enabled": true,
+      "colour": "#20222a"
+    },
     "shading": {
-      "light": [-0.3, 0.89, 0.35],
-      "thresholds": [0.25, 0.5, 0.8]
+      "light": [
+        -0.3,
+        0.89,
+        0.35
+      ],
+      "thresholds": [
+        0.25,
+        0.5,
+        0.8
+      ]
     }
   },
   "variants": [
@@ -25,30 +45,413 @@
       "name": "grass",
       "model": {
         "materials": {
-          "earth": { "colour": "#805236" },
-          "grass": { "colour": "#6f9f52" }
+          "earth": {
+            "colour": "#7a5233",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 11
+            }
+          },
+          "grass": {
+            "colour": "#6f9f52",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.5,
+              "seed": 12
+            }
+          }
         },
         "parts": [
-          { "type": "box", "material": "earth", "position": [0, 0.5, 0], "size": [1, 1, 1] },
-          { "type": "plate", "material": "grass", "position": [0, 1.001, 0], "size": [1, 1] }
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "grass",
+            "position": [
+              0,
+              1.001,
+              0
+            ],
+            "size": [
+              1,
+              1
+            ]
+          }
         ]
       }
     },
     {
       "name": "earth",
       "model": {
-        "materials": { "earth": { "colour": "#805236" } },
+        "materials": {
+          "earth": {
+            "colour": "#7a5233",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 21
+            }
+          }
+        },
         "parts": [
-          { "type": "box", "material": "earth", "position": [0, 0.5, 0], "size": [1, 1, 1] }
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ]
+          }
         ]
       }
     },
     {
       "name": "stone",
       "model": {
-        "materials": { "stone": { "colour": "#92928d" } },
+        "materials": {
+          "stone": {
+            "colour": "#8e8e89",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 31
+            }
+          }
+        },
         "parts": [
-          { "type": "box", "material": "stone", "position": [0, 0.5, 0], "size": [1, 1, 1] }
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "soil",
+      "model": {
+        "materials": {
+          "soil": {
+            "colour": "#5d4029",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 41
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "soil",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "soil-wet",
+      "model": {
+        "materials": {
+          "soil-wet": {
+            "colour": "#42301f",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 51
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "soil-wet",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "path",
+      "model": {
+        "materials": {
+          "path": {
+            "colour": "#a08b63",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 61
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "path",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "flagstone",
+      "model": {
+        "materials": {
+          "flagstone": {
+            "colour": "#9a9aa2",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 71
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "flagstone",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "sand",
+      "model": {
+        "materials": {
+          "sand": {
+            "colour": "#d8c48c",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 81
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "sand",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "water",
+      "model": {
+        "materials": {
+          "water": {
+            "colour": "#3f6f9e",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 91
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "water",
+            "position": [
+              0,
+              0.5,
+              0
+            ],
+            "size": [
+              1,
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "stone-slab",
+      "model": {
+        "materials": {
+          "stone": {
+            "colour": "#8e8e89",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 31
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              0,
+              0.25,
+              0
+            ],
+            "size": [
+              1,
+              0.5,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "flagstone-slab",
+      "model": {
+        "materials": {
+          "flagstone": {
+            "colour": "#9a9aa2",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 71
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "flagstone",
+            "position": [
+              0,
+              0.25,
+              0
+            ],
+            "size": [
+              1,
+              0.5,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "grass-slab",
+      "model": {
+        "materials": {
+          "earth": {
+            "colour": "#7a5233",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.45,
+              "seed": 11
+            }
+          },
+          "grass": {
+            "colour": "#6f9f52",
+            "grain": {
+              "size": 0.125,
+              "strength": 0.5,
+              "seed": 12
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0,
+              0.25,
+              0
+            ],
+            "size": [
+              1,
+              0.5,
+              1
+            ]
+          },
+          {
+            "type": "plate",
+            "material": "grass",
+            "position": [
+              0,
+              0.501,
+              0
+            ],
+            "size": [
+              1,
+              1
+            ]
+          }
         ]
       }
     }

@@ -109,7 +109,12 @@ test('a material may be named or written inline', () => {
   });
   const model = recipe.variants[0].model;
   assert.equal(model.materials.rock.unlit, true);
-  assert.deepEqual(model.parts[1].material, { colour: '#ff0000', ramp: undefined, unlit: undefined });
+  assert.deepEqual(model.parts[1].material, {
+    colour: '#ff0000',
+    ramp: undefined,
+    unlit: undefined,
+    grain: undefined,
+  });
 });
 
 test('a texture has to be a png, because that is what a bake writes', () => {
@@ -174,5 +179,41 @@ test('a flat prefab cannot occupy a tilemap', () => {
         prefab: { path: 'prefabs/x.prefab.json', name: 'X', grid: 'Floor' },
       }),
     /stands on none/,
+  );
+});
+test('a grainy material says how big a texel is and how much it moves', () => {
+  const recipe = parse({
+    model: {
+      materials: { rock: { colour: '#808080', grain: { size: 0.125, strength: 0.4, seed: 7 } } },
+      parts: [{ type: 'box', material: 'rock', size: [1, 1, 1] }],
+    },
+  });
+  assert.deepEqual(recipe.variants[0].model.materials.rock.grain, {
+    size: 0.125,
+    strength: 0.4,
+    seed: 7,
+  });
+});
+
+test('a texel with no size, or a strength off the scale, is caught where it was written', () => {
+  assert.throws(
+    () =>
+      parse({
+        model: {
+          materials: { rock: { colour: '#808080', grain: { size: 0, strength: 0.4 } } },
+          parts: [{ type: 'box', material: 'rock', size: [1, 1, 1] }],
+        },
+      }),
+    /a texel must have a size/,
+  );
+  assert.throws(
+    () =>
+      parse({
+        model: {
+          materials: { rock: { colour: '#808080', grain: { size: 0.1, strength: 4 } } },
+          parts: [{ type: 'box', material: 'rock', size: [1, 1, 1] }],
+        },
+      }),
+    /expected a fraction from zero to one/,
   );
 });
