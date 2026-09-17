@@ -169,6 +169,25 @@
       "type_name": "sindri.grid.occupant"
     },
     {
+      "addable": false,
+      "default_payload": null,
+      "display_name": "Grid Placement",
+      "fields": {
+        "cell": [
+          0,
+          0
+        ],
+        "grid": "",
+        "offset": [
+          0.0,
+          0.0
+        ]
+      },
+      "meanings": {},
+      "schema_version": 1,
+      "type_name": "sindri.grid.placement"
+    },
+    {
       "addable": true,
       "default_payload": {
         "layer": 0,
@@ -508,6 +527,7 @@
           1.0
         ],
         "columns": 1,
+        "depth_step": 0.0,
         "level_step": [
           0.0,
           0.5
@@ -522,6 +542,7 @@
           1.0
         ],
         "columns": 1,
+        "depth_step": 0.0,
         "level_step": [
           0.0,
           0.5
@@ -546,14 +567,12 @@
       "default_payload": {
         "cells": [],
         "layer": 0,
-        "layer_step": 0,
         "tileset": ""
       },
       "display_name": "Tile Volume",
       "fields": {
         "cells": [],
         "layer": 0,
-        "layer_step": 0,
         "tileset": ""
       },
       "meanings": {

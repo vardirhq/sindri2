@@ -24,6 +24,8 @@ fn grid() -> TileGridComponent {
         cell_size: [1.0, 0.5],
         level_step: [0.0, 0.5],
         projection: TileProjection::Isometric,
+        // Picking is plane arithmetic; depth only decides draw order.
+        depth_step: 0.0,
     }
 }
 

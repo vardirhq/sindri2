@@ -1,7 +1,10 @@
 # Depth and placement in 2D
 
-Status: accepted direction; nothing implemented. This continues
-`docs/2d-model.md` and answers the question it left open.
+Status: implemented for grids. `sindri.grid.placement` derives a transform
+from a cell, `depth_step` turns projected depth into Z, and Gather's
+seventy-four authored layers are gone. What remains unbuilt is listed under
+*What this does not decide*. This continues `docs/2d-model.md` and answers the
+question it left open.
 
 Sindri is not going to be the best 3D engine. It can be the best 2D one.
 
@@ -174,10 +177,17 @@ depth buffer.
 *within* a layer, so every scene in the repository draws as it does today until
 its own props move onto the grid.
 
-Gather's seventy-four integers are deleted in the change that proves the rule,
-and their deletion is the proof: a scene that renders identically with every
-authored layer removed has demonstrated that derived depth reproduces what the
-hand computed. `layer_step` goes at the same time and for the same reason.
+Gather's seventy-four integers are gone, and their deletion is the proof: a
+scene that renders with every authored layer removed has demonstrated that
+derived depth reproduces what the hand computed. `layer_step` went with them.
+Two Decay scripts that computed the same formula at runtime — the player's and
+the wisp's — lost those lines too, which is the same statement made in the other
+place it was being made.
+
+Batching improved as a side effect. Gather drew 104 sprite batches with
+forty-five distinct layers and draws 85 with one, because a layer boundary is
+also a batch boundary and most of Gather's were describing depth rather than
+grouping.
 
 The other games do not move. Orbital's ten layers are groups and are already
 right.

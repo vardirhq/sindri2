@@ -279,6 +279,15 @@ impl Session {
         }
         self.animations
             .advance(world, &self.components, delta_seconds)?;
+        // After the scripts, because a walker's depth is a consequence of where
+        // this step left it, and before anything draws. Props settle on the
+        // first pass and never move again; only what moved costs anything.
+        let tile_sets = (!self.tile_sets.is_empty()).then_some(&self.tile_sets);
+        if let Err(error) =
+            sindri_scene::resolve_grid_placements(world, &self.components, tile_sets)
+        {
+            log::error!("{error}");
+        }
         // Last, so a script's request is performed with no script mid-call in
         // the scene it is leaving.
         self.follow_scene_request(world)?;

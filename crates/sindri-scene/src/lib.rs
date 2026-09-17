@@ -15,6 +15,7 @@ mod extract;
 mod navigation;
 mod physics;
 mod physics_sync;
+mod placement;
 pub(crate) mod screen_ui;
 mod textures;
 mod tile_surface;
@@ -24,13 +25,13 @@ pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, Spr
 pub use audio::AudioSourceComponent;
 pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
-    CameraComponent, CameraFit, GridNavigationComponent, GridOccupantComponent, GridWallDocument,
-    MeshComponent, MeshPrimitive, ShapeComponent, ShapeGeometry, SpriteColorTransform,
-    SpriteComponent, TileCellDocument, TileDraw, TileGridComponent, TileGridError, TileProjection,
-    TileVolumeComponent, TileVolumeError, TilemapComponent, TilemapError, UiAnchor, UiFill,
-    UiFillEdge, UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextAutoSize,
-    UiTextCase, UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,
-    ui_text_template,
+    CameraComponent, CameraFit, GridNavigationComponent, GridOccupantComponent,
+    GridPlacementComponent, GridWallDocument, MeshComponent, MeshPrimitive, ShapeComponent,
+    ShapeGeometry, SpriteColorTransform, SpriteComponent, TileCellDocument, TileDraw,
+    TileGridComponent, TileGridError, TileProjection, TileVolumeComponent, TileVolumeError,
+    TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiShapeBlend,
+    UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase, UiTextComponent, UiTextLineAlign,
+    UiTextOutline, UiTextShadow, UiTextWrap, ui_text_template,
 };
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{
@@ -40,6 +41,7 @@ pub use extract::{
 pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
 pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
 pub use physics_sync::{PhysicsSyncError, ScenePhysics2d};
+pub use placement::{GridPlacementError, resolve_grid_placements};
 pub use screen_ui::{
     SafeArea, ScreenExtent, ScreenRect, ScreenUi, UiButtonComponent, UiDirection, UiHierarchy,
     UiLayoutComponent, UiPlaced, UiSliderComponent, UiSliderOrientation,

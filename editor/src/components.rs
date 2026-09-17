@@ -170,6 +170,11 @@ const KNOWN: &[Known] = &[
         icon: icons::GRID,
     },
     Known {
+        type_name: "sindri.grid.placement",
+        family: Family::Grid,
+        icon: icons::GRID,
+    },
+    Known {
         type_name: "sindri.script",
         family: Family::Behaviour,
         icon: icons::SCRIPT,

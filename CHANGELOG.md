@@ -15,8 +15,19 @@ requests, commit history, and subsystem documentation rather than this file.
   drawn face, so raising a block no longer moves it toward the viewer and a
   block's own faces are no longer sorted against each other.
 
+### Added
+
+- Entities can be placed by naming a grid cell rather than a world position.
+  `sindri.grid.placement` derives the transform from the cell, including the
+  height of the ground in that column and the Z that orders it, so raising the
+  ground raises what stands on it and nothing authors a draw order.
+
 ### Changed
 
+- Draw order in a 2D scene is derived from where a thing stands rather than
+  from an authored render layer. Gather carries no layer on any world sprite,
+  its player and wisp scripts no longer compute one, and `layer_step` on tile
+  volumes is replaced by the grid's `depth_step`.
 - Gather's floor is a stacked tile volume rather than a flat tilemap, and no
   scene in the project carries `sindri.tilemap` any more. Water is no longer
   walkable, so the moat and pond now bound the island.

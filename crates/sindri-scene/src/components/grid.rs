@@ -60,6 +60,44 @@ impl SceneComponent for GridNavigationComponent {
     const TYPE_NAME: &'static str = "sindri.grid.navigation";
 }
 
+/// Places an entity by naming a cell, rather than by naming a position.
+///
+/// The inverse of `sindri.grid.occupant`, which derives a cell *from* a
+/// transform: a scene authors a world position and the runtime works out where
+/// it landed. That direction is why a prop can straddle the boundary between
+/// two cells, and why nothing moves when the ground beneath it does.
+///
+/// Here the cell is the authored fact and the transform is derived from it,
+/// including the height of the ground in that column and the Z that orders it.
+/// `docs/2d-depth-and-placement.md` carries the reasoning; the short version is
+/// that an author who never writes a depth cannot write a wrong one.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
+pub struct GridPlacementComponent {
+    /// The stable scene ID of the grid this stands on.
+    pub grid: String,
+    /// The cell, or `None` for something that moves.
+    ///
+    /// With a cell, the whole transform is derived and the entity is pinned.
+    /// Without one, only the depth is: a walker keeps whatever X and Y its
+    /// script gives it, and its Z follows from where that leaves it. Both are
+    /// the same rule — depth is a consequence of position — applied to
+    /// something that stays put and something that does not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cell: Option<[i32; 2]>,
+    /// Where inside the cell, as a fraction of it from the centre.
+    ///
+    /// Snapping everything to a cell centre makes a grid look like a
+    /// spreadsheet. An offset lets a rock sit off-centre without leaving the
+    /// cell that owns it, and without reintroducing a position nobody can
+    /// trace back to one.
+    #[serde(default)]
+    pub offset: [f32; 2],
+}
+
+impl SceneComponent for GridPlacementComponent {
+    const TYPE_NAME: &'static str = "sindri.grid.placement";
+}
+
 /// Marks an entity as occupying cells on one authored grid.
 ///
 /// `grid` is a stable scene ID rather than a runtime handle. The runtime
