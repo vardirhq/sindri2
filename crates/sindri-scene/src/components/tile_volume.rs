@@ -68,6 +68,35 @@ impl TileGridComponent {
         )
     }
 
+    /// Back-to-front order for one cell, in this grid's projection.
+    ///
+    /// Two places need the same answer: the renderer, deciding what to draw
+    /// over what, and the editor, deciding which exposed top face a click
+    /// landed on. Splitting that between them is how the two would eventually
+    /// disagree about which block is in front.
+    ///
+    /// Depth is the ground distance from the viewer, which is not the same
+    /// question in both projections. An isometric view looks along the grid's
+    /// diagonal, so a cell's depth is `x + y` and moving one column east is a
+    /// step toward the viewer. An orthogonal view looks straight down the rows:
+    /// depth is `y` alone, and a column further east is neither nearer nor
+    /// further. Sorting an orthogonal volume by `x + y` puts blocks in front of
+    /// their eastern neighbours for no reason at all.
+    ///
+    /// Level breaks the tie rather than deepening it, in both: raising a block
+    /// moves it up the screen without moving it toward the viewer, so a stack
+    /// draws bottom-up and still goes behind whatever stands in front of it.
+    /// The cell coordinate finishes the key so the order is total, and a scene
+    /// draws the same way twice.
+    #[must_use]
+    pub fn depth_key(&self, coord: GridCoord3) -> (i64, i32, i32, i32) {
+        let depth = match self.projection {
+            TileProjection::Orthogonal => i64::from(coord.y),
+            TileProjection::Isometric => i64::from(coord.x) + i64::from(coord.y),
+        };
+        (depth, coord.z, coord.y, coord.x)
+    }
+
     /// The volume's plane mapping without its level step.
     ///
     /// Navigation and the `Grid.*` script calls reason about columns and rows

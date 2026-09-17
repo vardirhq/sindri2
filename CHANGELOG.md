@@ -9,8 +9,17 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- A tile volume's depth is taken from a cell's column rather than from each
+  drawn face, so raising a block no longer moves it toward the viewer and a
+  block's own faces are no longer sorted against each other.
+
 ### Added
 
+- Tile volumes work in orthogonal projection as well as isometric. The
+  projection now decides which faces a view can see and how cells are ordered
+  back to front, so one tile set serves both.
 - Tile set tiles can declare how much of their cell they fill, so half-height
   slabs and other partial blocks are logical cells rather than art tricks.
   Face culling now hides a face only when a neighbour covers it completely.

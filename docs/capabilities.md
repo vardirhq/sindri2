@@ -542,6 +542,22 @@ Anything taller than one cell is refused when the asset decodes, because
 occlusion and occupancy both assume a cell's contents stay inside it, and
 something two blocks tall is two cells.
 
+Both projections are real. `sindri.tile_grid` takes `orthogonal` or
+`isometric`, and the choice decides three things rather than one: where a cell
+sits, which of its faces a view can see, and what "behind" means. An isometric
+view is turned between the axes, so it shows a cell's top and two sides and
+measures depth along the diagonal; an orthogonal view looks straight down the
+rows, so it shows the top and the side facing the viewer — the others are
+edge-on — and a column further east is neither nearer nor further. One tile set
+serves both: faces a projection cannot see are left undrawn rather than painted
+flat across the block.
+
+Depth belongs to a cell's column rather than to each drawn face. Raising a block
+moves it up the screen without moving it toward the camera, so a tower keeps the
+depth of the column it stands in instead of walking out in front of everything
+south of it, and a block's own faces are ordered by face role rather than sorted
+against one another a fraction of a cell apart.
+
 Occlusion then has to answer *completely* rather than *at all*. A neighbour
 hides a side face only when it is at least as tall as the face it abuts, so a
 full block beside a slab hides the slab's side while a slab beside a block
