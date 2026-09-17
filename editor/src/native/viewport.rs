@@ -21,32 +21,12 @@ use super::overlay::{
     paint_viewport_border,
 };
 use super::pointer::TilemapHover;
+use super::prefab_pointer::paint_prefab_target;
 use super::scene_io::SceneSource;
+use super::view_interaction::{PaintHover, ViewInteraction};
 use super::{EditorApp, INITIAL_VIEWPORT_HEIGHT, INITIAL_VIEWPORT_WIDTH, WorkspaceTab};
 use crate::tile_volume::TilePlacement;
 use crate::ui::theme::{color, text};
-
-enum PaintHover<'a> {
-    Tilemap(&'a TilemapHover),
-    TileVolume(&'a TileVolumeHover),
-}
-
-struct ViewInteraction {
-    editing: bool,
-    painting: bool,
-    camera: CameraView,
-    tilemap_hover: Option<TilemapHover>,
-    volume_hover: Option<TileVolumeHover>,
-}
-
-impl ViewInteraction {
-    fn hover(&self) -> Option<PaintHover<'_>> {
-        self.tilemap_hover
-            .as_ref()
-            .map(PaintHover::Tilemap)
-            .or_else(|| self.volume_hover.as_ref().map(PaintHover::TileVolume))
-    }
-}
 
 /// The GPU pipelines every viewport draws with.
 ///
@@ -326,6 +306,7 @@ impl EditorApp {
                 interaction.painting,
                 text_rect,
             );
+            paint_prefab_target(ui, interaction.prefab_target.as_ref());
         } else {
             // The unused space is painted out rather than left showing the
             // panel, so the shape being previewed reads as the screen and not
@@ -372,14 +353,15 @@ impl EditorApp {
         } else {
             camera_for(tab, EditorCamera::default())
         };
-        let volume_hover = editing
+        let prefab_target = self.prefab_interaction(rect, response, camera, editing);
+        let volume_hover = (prefab_target.is_none() && editing)
             .then(|| self.tile_volume_hover(rect, response.hover_pos(), camera))
             .flatten();
         let tilemap_hover = (!volume_painting && editing)
             .then(|| self.tilemap_hover(rect, response.hover_pos(), camera))
             .flatten();
         self.apply_paint_input(response, volume_hover.as_ref(), tilemap_hover.as_ref());
-        if editing {
+        if editing && prefab_target.is_none() {
             self.select_viewport_click(rect, response, camera, painting || gizmo_owned);
         }
         ViewInteraction {
@@ -388,6 +370,7 @@ impl EditorApp {
             camera,
             tilemap_hover,
             volume_hover,
+            prefab_target,
         }
     }
 

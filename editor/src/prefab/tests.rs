@@ -182,7 +182,103 @@ fn a_prefab_without_one_root_is_refused() {
 
 #[test]
 fn a_missing_prefab_says_so_rather_than_panicking() {
-    let error = load(Some(Path::new("/nonexistent")), "nothing.prefab.json")
+    let error = load(Path::new("/nonexistent/nothing.prefab.json"))
         .expect_err("a missing file is an error");
     assert!(error.contains("nothing.prefab.json"), "{error}");
+}
+
+/// A prefab with a shape, so placing it has something to preserve.
+fn house() -> PrefabDocument {
+    let mut root = SceneEntity::new(id("house"));
+    root.name = Some("House".to_owned());
+    root.components.insert(
+        super::PLACEMENT_COMPONENT.to_owned(),
+        json!({
+            "grid": "somewhere-else",
+            "cell": [9, 9],
+            "offset": [0.0, 0.0],
+            "footprint": [[0, 0], [1, 0], [0, 1], [1, 1]]
+        }),
+    );
+    PrefabDocument {
+        format_version: PREFAB_FORMAT_VERSION,
+        metadata: sindri_core::SceneMetadata::default(),
+        entities: vec![root],
+    }
+}
+
+fn place(world: &mut World, prefab: &PrefabDocument, cell: [i32; 2]) -> sindri_core::EntityId {
+    let mut rehearsal = world.clone();
+    let mut buffer = CommandBuffer::new();
+    let root = super::instantiate_on_cell(&mut rehearsal, prefab, &id("floor"), cell, &mut buffer)
+        .expect("it places");
+    let mut history = CommandHistory::default();
+    history
+        .apply(buffer.into_transaction("Place"), world)
+        .expect("the commands apply");
+    root
+}
+
+#[test]
+fn placing_on_a_cell_names_that_cell_and_that_grid() {
+    let mut world = World::default();
+    let root = place(&mut world, &oak(), [4, 7]);
+
+    let payload = world
+        .get(root)
+        .and_then(|data| data.components.get(super::PLACEMENT_COMPONENT))
+        .expect("the root stands on the grid");
+    assert_eq!(payload["grid"], "floor");
+    assert_eq!(payload["cell"], json!([4, 7]));
+}
+
+/// The click says where, not what shape. A house stays a house.
+#[test]
+fn a_prefabs_own_footprint_survives_being_placed() {
+    let mut world = World::default();
+    let root = place(&mut world, &house(), [2, 3]);
+
+    let payload = world
+        .get(root)
+        .and_then(|data| data.components.get(super::PLACEMENT_COMPONENT))
+        .expect("the root stands on the grid");
+    assert_eq!(
+        payload["footprint"],
+        json!([[0, 0], [1, 0], [0, 1], [1, 1]]),
+        "the shape is the prefab's"
+    );
+    assert_eq!(payload["cell"], json!([2, 3]), "the place is the click's");
+    assert_eq!(payload["grid"], "floor", "and so is the grid");
+}
+
+/// Something with no opinion gets the ordinary one cell.
+#[test]
+fn a_prefab_without_a_footprint_covers_one_cell() {
+    let mut world = World::default();
+    let root = place(&mut world, &oak(), [0, 0]);
+    let payload = world
+        .get(root)
+        .and_then(|data| data.components.get(super::PLACEMENT_COMPONENT))
+        .expect("the root stands on the grid");
+    assert_eq!(payload["footprint"], json!([[0, 0]]));
+}
+
+/// Placing is still one step: the spawns and the placement undo together.
+#[test]
+fn undoing_a_placement_takes_the_whole_thing_back() {
+    let mut world = World::default();
+    let prefab = oak();
+    let mut rehearsal = world.clone();
+    let mut buffer = CommandBuffer::new();
+    let root =
+        super::instantiate_on_cell(&mut rehearsal, &prefab, &id("floor"), [1, 1], &mut buffer)
+            .expect("it places");
+    let mut history = CommandHistory::default();
+    history
+        .apply(buffer.into_transaction("Place"), &mut world)
+        .expect("the commands apply");
+    assert!(world.get(root).is_some());
+
+    history.undo(&mut world).expect("one step undoes it");
+    assert!(world.entities().next().is_none());
 }

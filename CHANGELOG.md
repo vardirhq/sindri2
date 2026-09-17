@@ -39,6 +39,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Choosing a `.prefab.json` in the project browser arms it, and clicking a cell
+  in the Scene view puts it there: one undoable step, standing on that cell of
+  that grid, keeping whatever footprint the prefab declares.
+
 - The editor can read a `.prefab.json` and put it into the open scene as one
   undoable step, with every entity given a stable identity nothing else is
   using. Distinct from the runtime's spawn, which deliberately gives none.

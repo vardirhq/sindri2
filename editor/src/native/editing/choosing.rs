@@ -71,6 +71,7 @@ impl EditorApp {
     /// Puts away whatever the inspector was showing about a file.
     pub(crate) fn show_nothing(&mut self) {
         self.slicer = None;
+        self.prefab_brush = None;
         self.preview = None;
         self.profile = None;
         self.heard = None;
@@ -121,6 +122,10 @@ impl EditorApp {
         self.show_nothing();
         if AssetKind::of_path(path) == AssetKind::Profile {
             self.profile = Some(ProfileEditor::open(path));
+        } else if crate::prefab::is_a_prefab(path) {
+            // A prefab is readable text, so without this it showed as a file to
+            // scroll rather than a thing to place.
+            self.prefab_brush = Some(crate::prefab::PrefabBrush::open(path));
         } else if is_sliceable(path) {
             self.slicer = Some(Slicer::open(path));
         } else if preview::is_readable(path) {

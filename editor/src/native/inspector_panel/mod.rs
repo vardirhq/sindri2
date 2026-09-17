@@ -406,6 +406,10 @@ impl EditorApp {
             self.profile_panel(ui);
             return;
         }
+        if self.prefab_brush.is_some() {
+            self.prefab_panel(ui);
+            return;
+        }
         if self.preview.is_some() {
             self.preview_panel(ui);
             return;
