@@ -24,8 +24,7 @@
     "alpha_cutoff": 128,
     "palette_snap": true,
     "outline": {
-      "enabled": true,
-      "colour": "#20222a"
+      "enabled": false
     },
     "shading": {
       "light": [
