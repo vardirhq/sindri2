@@ -46,21 +46,33 @@ fn the_island_has_authored_regions() {
 
     assert_eq!((grid.columns, grid.rows), (25, 25));
 
-    // The ground is the level the flat map became; anything above it is the
-    // outcrop that was already stacked there.
+    // The ground is the level the flat map became. It sits one level *below*
+    // the plane everything stands on, because the surface a walker walks on is
+    // a block's top rather than its floor; anything above it is the plateau
+    // that was already stacked there.
     let ground = floor
         .cells
         .iter()
-        .filter(|cell| cell.position[2] == 0)
+        .filter(|cell| cell.position[2] == -1)
         .collect::<Vec<_>>();
     assert_eq!(
         ground.len(),
         625,
         "every cell of the old flat map became a block"
     );
+    assert_eq!(
+        floor.cells.len() - ground.len(),
+        35,
+        "and every tier of the plateau still stands on top of it"
+    );
     assert!(
-        floor.cells.len() > ground.len(),
-        "and the outcrop still stands on top of it"
+        floor
+            .cells
+            .iter()
+            .filter(|cell| cell.position[2] == 0)
+            .count()
+            == 25,
+        "including the base tier, which is the one a careless translation eats"
     );
 
     let count = |tile: &str| ground.iter().filter(|cell| cell.tile == tile).count();
