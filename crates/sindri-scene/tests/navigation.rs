@@ -283,3 +283,139 @@ fn invalid_authored_wall_endpoints_name_the_wall_and_grid() {
         } if grid == floor_id
     ));
 }
+
+#[test]
+fn a_grid_carrying_only_a_tile_grid_still_derives_navigation() {
+    // The migration case: a floor that has moved onto a tile volume and no
+    // longer carries the flat map. Nothing about walls, occupants, or
+    // pathfinding is a flat map's idea, so none of it should have moved with it.
+    let floor = entity(
+        "floor",
+        Some([0.0, 0.0, 0.0]),
+        [
+            (
+                "sindri.tile_grid",
+                json!({ "columns": 4, "rows": 3, "cell_size": [1.0, 1.0] }),
+            ),
+            (
+                "sindri.grid.navigation",
+                json!({ "walls": [{ "first": [1, 1], "second": [1, 2] }] }),
+            ),
+        ],
+    );
+    let actor = entity(
+        "actor",
+        Some([1.5, -1.5, 0.0]),
+        [(
+            "sindri.grid.occupant",
+            json!({ "grid": "floor", "footprint": [[0, 0]] }),
+        )],
+    );
+    let loaded = world(vec![floor, actor]);
+    let floor_id = loaded.entity_map[&id("floor")];
+    let actor_id = loaded.entity_map[&id("actor")];
+
+    let navigation =
+        WorldGridNavigation::from_world(&loaded.world, floor_id).expect("a tile grid navigates");
+    let placement = navigation.placement(actor_id).expect("actor is placed");
+    assert_eq!(placement.anchor, GridCoord::new(1, 1));
+    // The wall sits on the edge between the actor's cell and its neighbour, so
+    // the route has to go around rather than straight through it — the same
+    // answer this grid gives when a flat map describes it.
+    let route = navigation
+        .find_path(GridPathfinder::default(), actor_id, GridCoord::new(1, 2))
+        .expect("the query runs")
+        .expect("another way round exists")
+        .into_nodes();
+    assert!(
+        route.len() > 2,
+        "the authored wall should have been honoured, got {route:?}"
+    );
+}
+
+#[test]
+fn the_two_grid_components_place_the_same_cell_in_the_same_place() {
+    // The migration is only honest if a cell does not move when the component
+    // describing it changes. Same columns, rows, size and projection on both
+    // sides; the anchor derived for one actor has to be the anchor derived for
+    // the other.
+    let flat = world(vec![
+        entity(
+            "floor",
+            Some([10.0, 20.0, 0.0]),
+            [(
+                "sindri.tilemap",
+                json!({
+                    "texture": "tiles",
+                    "palette": [],
+                    "columns": 6,
+                    "rows": 6,
+                    "tiles": vec![Value::Null; 36],
+                    "tile_size": [2.0, 1.0],
+                    "projection": "isometric"
+                }),
+            )],
+        ),
+        entity(
+            "actor",
+            Some([13.0, 18.5, 0.0]),
+            [(
+                "sindri.grid.occupant",
+                json!({ "grid": "floor", "footprint": [[0, 0]] }),
+            )],
+        ),
+    ]);
+    let stacked = world(vec![
+        entity(
+            "floor",
+            Some([10.0, 20.0, 0.0]),
+            [(
+                "sindri.tile_grid",
+                json!({
+                    "columns": 6,
+                    "rows": 6,
+                    "cell_size": [2.0, 1.0],
+                    "projection": "isometric"
+                }),
+            )],
+        ),
+        entity(
+            "actor",
+            Some([13.0, 18.5, 0.0]),
+            [(
+                "sindri.grid.occupant",
+                json!({ "grid": "floor", "footprint": [[0, 0]] }),
+            )],
+        ),
+    ]);
+
+    let anchor = |loaded: &sindri_core::LoadedScene| {
+        WorldGridNavigation::from_world(&loaded.world, loaded.entity_map[&id("floor")])
+            .expect("navigation derives")
+            .placement(loaded.entity_map[&id("actor")])
+            .expect("actor is placed")
+            .anchor
+    };
+    assert_eq!(anchor(&flat), anchor(&stacked));
+}
+
+#[test]
+fn a_grid_carrying_neither_component_names_both() {
+    let loaded = world(vec![entity(
+        "floor",
+        Some([0.0, 0.0, 0.0]),
+        [("sindri.grid.navigation", json!({ "walls": [] }))],
+    )]);
+    let floor_id = loaded.entity_map[&id("floor")];
+    let error = WorldGridNavigation::from_world(&loaded.world, floor_id)
+        .expect_err("a grid with no geometry cannot navigate");
+    assert!(
+        matches!(error, GridNavigationError::MissingGrid(entity) if entity == floor_id),
+        "unexpected error: {error}"
+    );
+    let message = error.to_string();
+    assert!(
+        message.contains("sindri.tilemap") && message.contains("sindri.tile_grid"),
+        "the error should name both ways to carry geometry: {message}"
+    );
+}

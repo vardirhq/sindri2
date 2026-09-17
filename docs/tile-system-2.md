@@ -151,7 +151,22 @@ the volume back into a 2D obstacle map.
 ## Migration boundary
 
 `sindri.tilemap` remains readable only while repository scenes are migrated.
-New authoring targets Tile System 2 and never writes `tile_overhang`. A flat old
+New authoring targets Tile System 2 and never writes `tile_overhang`.
+
+Geometry is the one thing the two systems already share, and it is shared
+deliberately rather than duplicated. Columns, rows, cell size and projection
+mean the same thing in `sindri.tilemap` and `sindri.tile_grid`, and both put a
+cell's origin in the same place and run their Y axis the same way, so anything
+that only asks *where a cell is* takes either component: `Grid.position_x`,
+`Grid.place`, `Grid.can_reach`, `Grid.step_toward`, `Grid.columns`, `Grid.rows`,
+and the navigation snapshot behind walls, occupancy and pathfinding. An entity
+carrying both — a migration in progress — answers from the flat map, so adding
+a volume beside an existing floor changes nothing until the flat map is removed.
+
+What is *not* shared is what a cell holds. `Grid.tile` and `Grid.set_tile` index
+a palette in a flat array, which is the old model rather than a translation of
+it, and they refuse on a grid that carries only `sindri.tile_grid` instead of
+pretending a volume has one level and a palette. A flat old
 map can be translated mechanically into a grid, one tile volume at `z = 0`, and
 an imported tile set. A slab map cannot be translated honestly because sprite
 overhang does not state elevation; migration must require an explicit level and

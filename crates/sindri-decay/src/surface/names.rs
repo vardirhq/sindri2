@@ -100,3 +100,10 @@ pub(crate) const SHAPE_COMPONENT: &str = "sindri.shape";
 
 /// The component whose layout and entity transform define a gameplay grid.
 pub(crate) const TILEMAP_COMPONENT: &str = "sindri.tilemap";
+
+/// The same geometry, for a scene that has moved on to stackable tile volumes.
+///
+/// A flat map and a volume disagree about what a cell *contains*, and about
+/// whether levels exist at all, but not about where a cell is. A script asking
+/// that question is answered by whichever of the two the entity carries.
+pub(crate) const TILE_GRID_COMPONENT: &str = "sindri.tile_grid";

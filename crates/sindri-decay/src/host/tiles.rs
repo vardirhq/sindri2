@@ -15,10 +15,11 @@ use decay_runtime::{RuntimeError, Value};
 use sindri_core::{EntityId, SceneComponent};
 use sindri_scene::TilemapComponent;
 
-use crate::surface::GridCall;
+use crate::surface::{GridCall, TILE_GRID_COMPONENT};
 
 use super::WorldHost;
 use super::convert::number;
+use super::geometry::{self, GridSource};
 
 /// What a cell write is allowed to say, beyond an index into the palette.
 ///
@@ -31,7 +32,9 @@ const EMPTY: f32 = -1.0;
 struct MapShape {
     columns: usize,
     rows: usize,
-    palette: usize,
+    /// `None` on a grid whose geometry came from `sindri.tile_grid`, which has
+    /// no flat palette to index into.
+    palette: Option<usize>,
 }
 
 impl WorldHost<'_> {
@@ -53,6 +56,7 @@ impl WorldHost<'_> {
             GridCall::Columns => Ok(Value::Number(as_number(shape.columns))),
             GridCall::Rows => Ok(Value::Number(as_number(shape.rows))),
             GridCall::Tile => {
+                Self::flat_palette(path, &shape)?;
                 let Some(index) = Self::cell_index(path, args, &shape)? else {
                     // Off the map reads as empty rather than as an error: a
                     // script asking what is under a moving thing will ask about
@@ -89,41 +93,48 @@ impl WorldHost<'_> {
         }
     }
 
-    /// The map's size and palette, read from the payload rather than through
-    /// the typed view, so a map carrying a field this build does not know about
-    /// is still answerable.
+    /// The map's size, and its palette when a flat map is what carries it.
+    ///
+    /// Size is geometry, which `sindri.tile_grid` describes as well as
+    /// `sindri.tilemap` does, so `Grid.columns` and `Grid.rows` answer for a
+    /// scene that has moved on to volumes. A palette is not geometry: it is the
+    /// flat map's own idea of what a cell may hold, so a volume-only grid has
+    /// none and the calls that need one say which component they are missing.
     fn map_shape(&self, path: &Path, map: EntityId) -> Result<MapShape, RuntimeError> {
-        let payload = self
-            .world
-            .get(map)
-            .and_then(|data| data.components.get(TilemapComponent::TYPE_NAME))
-            .ok_or_else(|| {
-                RuntimeError::Host(format!(
-                    "{} needs a {} on the entity it was given",
-                    path.dotted(),
-                    TilemapComponent::TYPE_NAME
-                ))
-            })?;
-        let read = |field: &str| -> Result<usize, RuntimeError> {
-            usize::try_from(
-                payload
-                    .get(field)
-                    .and_then(serde_json::Value::as_u64)
-                    .ok_or_else(|| {
-                        RuntimeError::Host(format!("{}'s tilemap has no {field}", path.dotted()))
-                    })?,
-            )
-            .map_err(|_| {
-                RuntimeError::Host(format!("{}'s tilemap {field} is too large", path.dotted()))
-            })
-        };
+        let data = self.world.get(map).ok_or_else(|| {
+            RuntimeError::Host(format!("{}'s grid no longer exists", path.dotted()))
+        })?;
+        let (geometry, source) = geometry::read(path, data)?;
         Ok(MapShape {
-            columns: read("columns")?,
-            rows: read("rows")?,
-            palette: payload
-                .get("palette")
-                .and_then(serde_json::Value::as_array)
-                .map_or(0, Vec::len),
+            columns: geometry.columns,
+            rows: geometry.rows,
+            palette: match source {
+                GridSource::Tilemap => Some(
+                    data.components
+                        .get(TilemapComponent::TYPE_NAME)
+                        .and_then(|payload| payload.get("palette"))
+                        .and_then(serde_json::Value::as_array)
+                        .map_or(0, Vec::len),
+                ),
+                GridSource::TileGrid => None,
+            },
+        })
+    }
+
+    /// How many palette entries this map offers, refusing on a grid whose
+    /// cells are not a flat map's to begin with.
+    ///
+    /// Every call that names a *cell* goes through here first, so a script
+    /// reaching for `Grid.tile` on a volume is told which component it is
+    /// missing rather than that a tilemap it never had has no tiles.
+    fn flat_palette(path: &Path, shape: &MapShape) -> Result<usize, RuntimeError> {
+        shape.palette.ok_or_else(|| {
+            RuntimeError::Host(format!(
+                "{} needs a {} on the entity it was given; a {} holds stacked cells rather than a flat palette",
+                path.dotted(),
+                TilemapComponent::TYPE_NAME,
+                TILE_GRID_COMPONENT
+            ))
         })
     }
 
@@ -185,18 +196,18 @@ impl WorldHost<'_> {
                 path.dotted()
             )));
         }
+        let palette = Self::flat_palette(path, shape)?;
         // Refused rather than stored, because a map holding an index its
         // palette cannot answer fails validation on the next load — long after
         // the script that wrote it ran, and nowhere near it.
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let slot = (wanted >= 0.0).then_some(wanted as usize);
         if let Some(slot) = slot
-            && slot >= shape.palette
+            && slot >= palette
         {
             return Err(RuntimeError::Host(format!(
-                "{} was given palette index {slot}, but the map's palette has {} sprite(s)",
-                path.dotted(),
-                shape.palette
+                "{} was given palette index {slot}, but the map's palette has {palette} sprite(s)",
+                path.dotted()
             )));
         }
         let map = self.entity_argument(path, args, 0, "the tilemap")?;

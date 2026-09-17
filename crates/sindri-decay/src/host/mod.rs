@@ -15,6 +15,7 @@ mod call;
 mod convert;
 mod dispatch;
 mod effects;
+mod geometry;
 mod map;
 mod physics;
 mod profile;

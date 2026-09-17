@@ -913,6 +913,15 @@ by guesswork.
 | `Grid.can_reach(mover, grid, target)` | `bool` |
 | `Grid.step_toward(mover, grid, target)` | `bool` |
 
+The `grid` argument is an entity carrying either `sindri.tilemap` or
+`sindri.tile_grid`. The two describe the same geometry — columns, rows, cell
+size, projection — under different field names, and place a cell's origin and
+run their Y axis identically, so a cell does not move when the component
+describing it changes. A script therefore never says which of the two its floor
+is, and a scene can move onto a stackable tile volume without its scripts moving
+with it. When an entity carries both, which is what a migration in progress
+looks like, the flat map answers.
+
 ### Where the game is
 
 | Call | Returns |
@@ -955,6 +964,13 @@ what the map *holds* there.
 A cell is named by whole column and row rather than by a world position: the map
 is the authority on which cell a position falls in, and a script doing that
 arithmetic itself would be a second answer free to disagree with the first.
+
+`columns` and `rows` are geometry, so they answer on a `sindri.tile_grid` the
+same way they answer on a `sindri.tilemap`. `tile` and `set_tile` are not: a
+palette index into a flat array is the flat map's own model, and a volume stacks
+named cells instead. Asked of a grid that carries only `sindri.tile_grid`, both
+fail and name the component they would need rather than reporting that a tilemap
+the entity never had holds no tiles.
 
 `tile` answers with an index into the map's `palette`, or `-1` where the cell
 holds nothing. Reading a cell the map does not have is `-1` as well rather than
