@@ -52,3 +52,18 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let sampled = textureSample(sprite_texture, sprite_sampler, input.uv);
     return sampled * input.tint * input.color_multiply + input.color_offset;
 }
+
+// Opaque geometry, which writes depth.
+//
+// The discard is what keeps a cutout honest: a fully transparent pixel that
+// wrote depth would hide whatever is behind it while showing nothing itself,
+// so the shape a texture cuts out would punch a hole in the world.
+@fragment
+fn fs_solid(input: VertexOutput) -> @location(0) vec4<f32> {
+    let sampled = textureSample(sprite_texture, sprite_sampler, input.uv);
+    let color = sampled * input.tint * input.color_multiply + input.color_offset;
+    if color.a < 0.5 {
+        discard;
+    }
+    return vec4<f32>(color.rgb, 1.0);
+}

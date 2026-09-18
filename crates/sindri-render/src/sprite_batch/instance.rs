@@ -6,8 +6,8 @@ use crate::UvRect;
 
 /// What a batch of sprites does about the depth the opaque stage wrote.
 ///
-/// Sprites never write depth under either of these: blending is order
-/// dependent, so a depth write would make the result depend on draw order
+/// Blending is order dependent, so a blended batch never writes: a depth write
+/// from one would make the result depend on draw order
 /// twice. What differs is whether something in front can hide them.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum SpriteDepth {
@@ -18,14 +18,34 @@ pub enum SpriteDepth {
     /// Hidden by opaque geometry nearer the camera, which is what being in the
     /// world means.
     Test,
+    /// Opaque geometry: hidden by what is nearer, and hiding what is further.
+    ///
+    /// The one mode that writes. A quad that writes depth is not a sprite in
+    /// the painter's sense any more -- it is a surface, and what covers what
+    /// stops being a sort order the extractor has to get right and becomes an
+    /// answer the depth buffer already holds. Blocks are drawn this way, which
+    /// is what lets a camera go round them.
+    ///
+    /// Writing and blending do not mix: a blended pixel's result depends on
+    /// what was drawn before it, so writing depth from one would make the
+    /// picture depend on draw order in exactly the way depth is meant to stop.
+    /// This mode draws opaque and discards the fully transparent, which is how
+    /// a cutout texture keeps its shape without putting holes in the depth it
+    /// leaves behind.
+    Write,
 }
 
 impl SpriteDepth {
     pub(super) const fn compare(self) -> wgpu::CompareFunction {
         match self {
             Self::Ignore => wgpu::CompareFunction::Always,
-            Self::Test => wgpu::CompareFunction::Less,
+            Self::Test | Self::Write => wgpu::CompareFunction::Less,
         }
+    }
+
+    /// Whether this mode puts anything into the depth buffer.
+    pub(super) const fn writes(self) -> bool {
+        matches!(self, Self::Write)
     }
 }
 

@@ -22,6 +22,19 @@ pub enum TileFace {
 }
 
 impl TileFace {
+    /// The face on the other side of the same block.
+    #[must_use]
+    pub const fn opposite(self) -> Self {
+        match self {
+            Self::Bottom => Self::Top,
+            Self::North => Self::South,
+            Self::West => Self::East,
+            Self::East => Self::West,
+            Self::South => Self::North,
+            Self::Top => Self::Bottom,
+        }
+    }
+
     /// The cell whose presence may hide this face.
     #[must_use]
     pub const fn neighbour_offset(self) -> [i32; 3] {
@@ -77,6 +90,33 @@ impl TileFaces {
         ]
         .into_iter()
         .filter_map(|(face, visual)| visual.map(|visual| (face, visual)))
+    }
+
+    /// What to draw on a face, falling back to the face opposite it.
+    ///
+    /// A block drawn for one fixed viewpoint only ever needed three sides.
+    /// Gather's tiles define `top`, `south` and `east` for exactly that reason:
+    /// no camera could see the others, so no art was drawn for them. A cube a
+    /// camera can go round needs all six, and redrawing every tile to say
+    /// "the north face looks like the south face" would be ceremony -- it is
+    /// what a block without a distinguished front means.
+    ///
+    /// So a missing face borrows the one opposite it: north from south, west
+    /// from east, bottom from top, and each the other way about for art drawn
+    /// from the other side. The visual is used as it is rather than mirrored,
+    /// which is right for the patterned-but-not-handed textures blocks
+    /// usually carry; a tile that needs handedness names both faces itself.
+    ///
+    /// Returns which face's art was borrowed as well as the art, because a
+    /// caller that does want to mirror needs to know it is looking at a
+    /// stand-in.
+    #[must_use]
+    pub fn resolved(&self, face: TileFace) -> Option<(TileFace, &TileFaceVisual)> {
+        if let Some(visual) = self.get(face) {
+            return Some((face, visual));
+        }
+        let opposite = face.opposite();
+        self.get(opposite).map(|visual| (opposite, visual))
     }
 
     #[must_use]
@@ -475,5 +515,78 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(error, TileSetError::InvalidSize { .. }));
+    }
+
+    /// Three-sided art on a cube a camera can go round.
+    #[test]
+    fn a_face_the_art_never_drew_borrows_the_one_opposite_it() {
+        let set = TileSetDocument::from_json(
+            r#"{
+              "format_version": 1,
+              "tiles": { "grass": { "faces": {
+                "top": { "sprite": "blocks.png#grass-top", "size": [1.0, 1.0] },
+                "south": { "sprite": "blocks.png#grass-south", "size": [1.0, 1.0] },
+                "east": { "sprite": "blocks.png#grass-east", "size": [1.0, 1.0] }
+              } } }
+            }"#,
+        )
+        .expect("the tile set parses");
+        let faces = &set.tile("grass").expect("the tile is there").faces;
+
+        for (face, expected) in [
+            (TileFace::Top, "blocks.png#grass-top"),
+            (TileFace::South, "blocks.png#grass-south"),
+            (TileFace::East, "blocks.png#grass-east"),
+            // The three nobody could see, and so nobody drew.
+            (TileFace::Bottom, "blocks.png#grass-top"),
+            (TileFace::North, "blocks.png#grass-south"),
+            (TileFace::West, "blocks.png#grass-east"),
+        ] {
+            let (_, visual) = faces
+                .resolved(face)
+                .unwrap_or_else(|| panic!("{face:?} resolves to something"));
+            assert_eq!(visual.sprite, expected, "{face:?}");
+        }
+
+        // A borrowed face says so, so a caller that wants to mirror it can.
+        assert_eq!(
+            faces.resolved(TileFace::North).map(|(face, _)| face),
+            Some(TileFace::South)
+        );
+        assert_eq!(
+            faces.resolved(TileFace::South).map(|(face, _)| face),
+            Some(TileFace::South)
+        );
+    }
+
+    /// The fallback runs both ways: art drawn from the other side works too.
+    #[test]
+    fn a_tile_drawn_from_the_other_side_resolves_just_as_well() {
+        let set = TileSetDocument::from_json(
+            r#"{
+              "format_version": 1,
+              "tiles": { "slab": { "faces": {
+                "bottom": { "sprite": "blocks.png#slab-bottom", "size": [1.0, 1.0] },
+                "north": { "sprite": "blocks.png#slab-north", "size": [1.0, 1.0] }
+              } } }
+            }"#,
+        )
+        .expect("the tile set parses");
+        let faces = &set.tile("slab").expect("the tile is there").faces;
+
+        assert_eq!(
+            faces
+                .resolved(TileFace::Top)
+                .map(|(_, v)| v.sprite.as_str()),
+            Some("blocks.png#slab-bottom")
+        );
+        assert_eq!(
+            faces
+                .resolved(TileFace::South)
+                .map(|(_, v)| v.sprite.as_str()),
+            Some("blocks.png#slab-north")
+        );
+        // Nothing to borrow from: east and west are both undrawn.
+        assert!(faces.resolved(TileFace::East).is_none());
     }
 }
