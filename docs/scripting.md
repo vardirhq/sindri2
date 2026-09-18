@@ -1270,6 +1270,61 @@ finger keeps its place while it stays down, so a drag cannot jump from one
 finger to another. Asking for a finger that is not down is refused rather than
 answered with zero, which would read as a finger in the corner of the screen.
 
+### Pointing at a block
+
+| Path | Type |
+| --- | --- |
+| `Aim.hit` | `bool` |
+| `Aim.x` | `f32` |
+| `Aim.y` | `f32` |
+| `Aim.z` | `f32` |
+| `Aim.place_x` | `f32` |
+| `Aim.place_y` | `f32` |
+| `Aim.place_z` | `f32` |
+
+`Pointer` stops at the overlay, and the section above says why: going on to the
+world means a camera. `Aim` is the host going on anyway, for the one case where
+a game cannot do the multiplication itself — a world made of blocks, where the
+answer is not a point on a plane but *which block, and which of its six sides*.
+No amount of arithmetic on `overlay_x` recovers a side.
+
+So the host works it out before scripts run, exactly as it works out which
+screen element the pointer is over: it holds the camera and the viewport, casts
+the ray, and walks the volume. A script reads the result.
+
+`Aim.x`, `y` and `z` are the block under the pointer — the column, row and
+level of the cell you would remove. `Aim.place_x`, `place_y` and `place_z` are
+the empty cell against the side being looked at — where a block attached by
+this click would go. Both are needed because a cell alone cannot say which of
+its six neighbours a click meant, which is the whole reason picking reports a
+face at all.
+
+**Ask `Aim.hit` first.** Every other value here reads zero when the pointer is
+on nothing, and zero is a real cell: a script that skipped the check would
+quietly build a tower at the origin whenever the pointer crossed the sky. It
+reads false rather than failing, because pointing at nothing is an ordinary
+thing to do — and false is also what a host that picked nothing reports, so a
+game running without a pointer finds the person pointing at nothing rather than
+an error.
+
+Together with `Grid.set_block`, that is a whole builder:
+
+```rust
+if Aim.hit && !Pointer.over_ui {
+    if Pointer.just_pressed("Primary") {
+        Grid.set_block(floor, Aim.place_x, Aim.place_y, Aim.place_z, chosen);
+    }
+    if Pointer.just_pressed("Secondary") {
+        // The empty string clears a cell.
+        Grid.set_block(floor, Aim.x, Aim.y, Aim.z, "");
+    }
+}
+```
+
+Only a grid whose cells are boxes has sides to point at. A projected grid draws
+a picture of blocks, and a picture has no near side, so `Aim.hit` is false over
+one however convincing it looks.
+
 ### Steering with a thumb
 
 | Path | Type |

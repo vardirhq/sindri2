@@ -284,9 +284,11 @@ fn covers(face: TileFace, fill: f32, neighbour: Option<f32>) -> bool {
     }
 }
 
+mod aim;
 mod picking;
 
-pub use picking::{VoxelHit, face_quad, pick};
+pub use aim::{REACH, VolumeAim, aim_at};
+pub use picking::{VoxelHit, face_quad, model_of, pick, ray_at_viewport};
 
 #[cfg(test)]
 mod tests;

@@ -25,6 +25,8 @@ pub struct WorldServices<'a> {
     pub effects: Option<&'a mut sindri_scene::Effects2d>,
     pub physics: Option<crate::Physics2d<'a>>,
     pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    /// Which block the pointer is on, when the host picked one this frame.
+    pub aim: Option<sindri_scene::voxel::VolumeAim>,
     pub random: Option<&'a mut sindri_core::Rng>,
     /// Where each animated sprite has got to, when the host advances any.
     pub animations: Option<&'a mut sindri_scene::SpriteAnimations>,
@@ -52,6 +54,7 @@ impl<'a> WorldHost<'a> {
             effects,
             physics,
             screen_ui,
+            aim,
             random,
             animations,
             scenes,
@@ -66,6 +69,7 @@ impl<'a> WorldHost<'a> {
             profiles,
             physics,
             screen_ui,
+            aim,
             random,
             saves,
             effects,

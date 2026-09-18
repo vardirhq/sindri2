@@ -5,6 +5,11 @@
   "globals": [
     {
       "kind": "value",
+      "name": "Aim",
+      "type": "Aim"
+    },
+    {
+      "kind": "value",
       "name": "Animation",
       "type": "Animation"
     },
@@ -198,6 +203,46 @@
     }
   ],
   "types": [
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "hit",
+          "type": "bool"
+        },
+        {
+          "kind": "value",
+          "name": "place_x",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "place_y",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "place_z",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "x",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "y",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "z",
+          "type": "f32"
+        }
+      ],
+      "name": "Aim"
+    },
     {
       "members": [
         {

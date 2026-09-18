@@ -19,6 +19,15 @@ pub(crate) const POINTER: &str = "Pointer";
 /// Facts about the screen a game is being drawn into.
 pub(crate) const VIEWPORT: &str = "Viewport";
 
+/// Which block the person is pointing at, and where a block clicked there goes.
+///
+/// Its own namespace rather than more of `Pointer` for the reason `Stick` is:
+/// `Pointer` says where on the screen the person is, which any game can use.
+/// This says what that means in a world made of blocks, which needs a camera
+/// and a volume to answer. Keeping them apart is what lets a game with no
+/// blocks in it ignore the whole idea.
+pub(crate) const AIM: &str = "Aim";
+
 /// The fingers, for a game that wants more than one.
 pub(crate) const TOUCH: &str = "Touch";
 
