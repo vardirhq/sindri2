@@ -9,9 +9,20 @@ use crate::ui::theme::{color, text};
 
 use super::EditorApp;
 
+/// How far a click reaches into a scene, in cells. Far enough to cross any
+/// volume worth building by hand, and short enough that a click at the sky
+/// stops rather than walking to the horizon.
+const PICK_REACH: f32 = 512.0;
+
 pub(super) struct TileVolumeHover {
     pub(super) entity: EntityId,
     pub(super) coord: sindri_grid::GridCoord3,
+    /// Where a block goes if one is placed, and where one is taken from.
+    ///
+    /// On a solid grid these differ: a click attaches against the side you are
+    /// looking at, and removes the block that side belongs to. On a flattened
+    /// one there is no side to speak of, so both are the cell the plane hit.
+    pub(super) against: sindri_grid::GridCoord3,
     pub(super) outline: [Pos2; 4],
 }
 
@@ -61,6 +72,31 @@ impl EditorApp {
             (pointer.x - rect.min.x) / rect.width().max(1.0),
             (pointer.y - rect.min.y) / rect.height().max(1.0),
         ];
+        // A grid whose cells are boxes is picked by walking the blocks, which
+        // is the only way to know which *side* of one the pointer is over.
+        // Everything the other branch needs -- a target mode, a level, whether
+        // this click places or removes -- exists because a plane cannot say.
+        if let Some(cell_size) = grid.solid_cell() {
+            let (origin, direction) =
+                tile_volume::ray_at_viewport(transform, camera.view_projection, normalized)?;
+            let hit = sindri_scene::voxel::pick(&volume, cell_size, origin, direction, PICK_REACH)?;
+            let corners = sindri_scene::voxel::face_quad(hit.cell, hit.face, cell_size);
+            let model = tile_volume::model_of(transform);
+            let outline = corners.map(|corner| {
+                let clip = camera.view_projection * model.transform_point3(corner).extend(1.0);
+                let ndc = clip.truncate() / clip.w;
+                Pos2::new(
+                    rect.min.x + (ndc.x * 0.5 + 0.5) * rect.width(),
+                    rect.min.y + (0.5 - ndc.y * 0.5) * rect.height(),
+                )
+            });
+            return Some(TileVolumeHover {
+                entity,
+                coord: hit.cell,
+                against: hit.against(),
+                outline,
+            });
+        }
         let coord = match self.tile_volume_tool.placement {
             TilePlacement::Surface => tile_volume::surface_target_at_viewport(
                 &grid,
@@ -89,11 +125,12 @@ impl EditorApp {
         Some(TileVolumeHover {
             entity,
             coord,
+            against: coord,
             outline,
         })
     }
 
-    pub(super) fn apply_volume_brush(&mut self, hover: &TileVolumeHover) {
+    pub(super) fn apply_volume_brush(&mut self, hover: &TileVolumeHover, remove: bool) {
         if !self.authoring_enabled() {
             return;
         }
@@ -106,14 +143,18 @@ impl EditorApp {
             return;
         };
         let chosen = self.tile_volume_tool.tile.clone();
-        let brush = if self.tile_volume_tool.erase {
+        let brush = if remove {
             TileBrush::Erase
         } else if let Some(chosen) = chosen.as_deref() {
             TileBrush::Tile(chosen)
         } else {
             return;
         };
-        match paint_block(&mut payload, hover.coord, brush) {
+        // Removing takes the block you clicked; placing attaches against the
+        // side of it you are looking at. On a flattened grid these are the same
+        // cell, because there is no side to have clicked.
+        let cell = if remove { hover.coord } else { hover.against };
+        match paint_block(&mut payload, cell, brush) {
             Ok(false) => return,
             Err(error) => {
                 self.console.warning(error);

@@ -66,6 +66,15 @@ pub(super) fn components_sections(
         .get(crate::tilemap::TYPE_NAME)
         .and_then(|payload| crate::tilemap::component(payload).ok())
         .map(|map| (map.columns, map.rows));
+    // Whether this entity's cells are boxes, which decides how much of a
+    // building panel there is to show: on a solid grid the pointer answers
+    // every question the controls used to ask.
+    let solid_blocks = components
+        .get(crate::tile_volume::GRID_TYPE_NAME)
+        .and_then(|payload| {
+            serde_json::from_value::<sindri_scene::TileGridComponent>(payload.clone()).ok()
+        })
+        .is_some_and(|grid| grid.solid_cell().is_some());
     let mut names = components.keys().cloned().collect::<Vec<_>>();
     names.sort_by(|left, right| {
         component_priority(left)
@@ -127,7 +136,14 @@ pub(super) fn components_sections(
             tilemap_section(ui, payload, assets_root, tools.tilemap);
         }
         if name == crate::tile_volume::TYPE_NAME {
-            tile_volume_section(ui, payload, assets_root, tools.tile_volume, tools.occlusion);
+            tile_volume_section(
+                ui,
+                payload,
+                assets_root,
+                tools.tile_volume,
+                tools.occlusion,
+                solid_blocks,
+            );
         }
         if name == GRID_NAVIGATION_COMPONENT {
             grid_navigation_section(ui, payload, grid_size);

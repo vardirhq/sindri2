@@ -381,11 +381,16 @@ impl EditorApp {
         tilemap: Option<&TilemapHover>,
     ) {
         if let Some(hover) = volume {
-            let requested = response.clicked_by(egui::PointerButton::Primary)
+            // Right is remove. It is the gesture every game that lets you build
+            // out of blocks already uses, and it is what makes a Place/Remove
+            // toggle unnecessary rather than merely redundant.
+            if response.clicked_by(egui::PointerButton::Secondary) {
+                self.apply_volume_brush(hover, true);
+            } else if response.clicked_by(egui::PointerButton::Primary)
                 || (self.tile_volume_tool.placement == TilePlacement::Level
-                    && response.dragged_by(egui::PointerButton::Primary));
-            if requested {
-                self.apply_volume_brush(hover);
+                    && response.dragged_by(egui::PointerButton::Primary))
+            {
+                self.apply_volume_brush(hover, self.tile_volume_tool.erase);
             }
         } else if let Some(hover) = tilemap
             && (response.clicked_by(egui::PointerButton::Primary)
