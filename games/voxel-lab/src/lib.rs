@@ -102,7 +102,7 @@ fn tile_set() -> TileSetDocument {
     .expect("the tile set parses")
 }
 
-fn bind_textures(
+pub fn bind_textures(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     registry: &mut TextureRegistry,
@@ -174,13 +174,16 @@ fn viewport_height() -> f32 {
 /// Where the camera stands for one of the four corners.
 pub fn camera(turn: f32) -> FrameCamera {
     let yaw = FRAC_PI_4 + turn;
-    let centre = Vec3::new(1.5, 1.5, 0.75);
+    // Y is up, so the island lies in the XZ plane: a column runs along X, a row
+    // along Z, and a level toward the sky. Which is the engine's convention,
+    // not this lab's choice -- its cameras look down their own -Z with +Y up.
+    let centre = Vec3::new(1.5, 0.5, 1.5);
     let distance = 20.0;
     let eye = centre
         + Vec3::new(
             yaw.cos() * PITCH.cos(),
-            yaw.sin() * PITCH.cos(),
             PITCH.sin(),
+            yaw.sin() * PITCH.cos(),
         ) * distance;
     let aspect = aspect_ratio();
     FrameCamera {
@@ -191,7 +194,7 @@ pub fn camera(turn: f32) -> FrameCamera {
             ZOOM,
             0.1,
             100.0,
-        ) * look_at(eye, centre, Vec3::Z),
+        ) * look_at(eye, centre, Vec3::Y),
     }
 }
 
@@ -314,13 +317,13 @@ pub async fn capture(out: &Path) -> Result<(), Box<dyn Error>> {
     // a click that lands somewhere else is a bug rather than a bad aim.
     let clicks: [(Vec3, Option<&str>, &str); 3] = [
         // The top of the stack: stack another on it.
-        (Vec3::new(1.0, 1.0, 3.0), Some("stone"), "stacked"),
+        (Vec3::new(1.0, 3.0, 1.0), Some("stone"), "stacked"),
         // The east side of a ground block: hang one off the edge. East and
         // south are the sides this camera can see; aiming at a west face
         // picks whatever stands in front of it, correctly.
-        (Vec3::new(3.5, 2.0, 0.5), Some("stone"), "attached"),
+        (Vec3::new(3.5, 0.5, 2.0), Some("stone"), "attached"),
         // And take the slab away again.
-        (Vec3::new(3.0, 3.0, 1.25), None, "removed"),
+        (Vec3::new(3.0, 1.25, 3.0), None, "removed"),
     ];
     for (index, (aim, place, name)) in clicks.into_iter().enumerate() {
         let pixel = pixel_of(view.view_projection, aim);

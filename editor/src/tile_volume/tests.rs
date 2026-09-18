@@ -26,6 +26,8 @@ fn grid() -> TileGridComponent {
         projection: TileProjection::Isometric,
         // Picking is plane arithmetic; depth only decides draw order.
         depth_step: 0.0,
+        space: sindri_scene::TileSpace::Projected,
+        cell_height: None,
     }
 }
 

@@ -528,6 +528,7 @@
     {
       "addable": true,
       "default_payload": {
+        "cell_height": 1.0,
         "cell_size": [
           1.0,
           1.0
@@ -539,10 +540,12 @@
           0.5
         ],
         "projection": "orthogonal",
-        "rows": 1
+        "rows": 1,
+        "space": "projected"
       },
       "display_name": "Tile Grid",
       "fields": {
+        "cell_height": 1.0,
         "cell_size": [
           1.0,
           1.0
@@ -554,7 +557,8 @@
           0.5
         ],
         "projection": "orthogonal",
-        "rows": 1
+        "rows": 1,
+        "space": "projected"
       },
       "meanings": {
         "projection": {

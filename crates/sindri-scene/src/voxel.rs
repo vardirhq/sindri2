@@ -5,11 +5,17 @@
 //! viewpoint and from nowhere else, because the arrangement *is* the illusion:
 //! turn the camera and the faces are still facing where the camera used to be.
 //!
-//! This is the same cells as a shape. A cell becomes a box in the volume's own
-//! space, X across, Y into the scene and Z up, and each of its six sides
-//! becomes a quad facing outward. Nothing here knows where the camera is, and
-//! that is the point: what covers what stops being an order somebody has to
-//! compute and becomes a depth comparison the GPU already does.
+//! This is the same cells as a shape. A cell becomes a box, and each of its
+//! six sides a quad facing outward. Nothing here knows where the camera is,
+//! and that is the point: what covers what stops being an order somebody has
+//! to compute and becomes a depth comparison the GPU already does.
+//!
+//! A cell's coordinates are a column, a row and a level; the world's axes are
+//! X across, Y up and Z into the scene. So a level stacks along Y and a row
+//! runs along Z, rather than the other way about. That is not arbitrary: the
+//! engine's cameras are Y-up -- a camera looks down its own -Z with +Y up, and
+//! the editor's orbit turns about Y -- so a volume that stacked along Z would
+//! build sideways to every camera that looks at it.
 
 use std::collections::BTreeMap;
 
@@ -47,13 +53,26 @@ const fn shade_of(face: TileFace) -> f32 {
 /// pointing into the block.
 const fn basis_of(face: TileFace) -> (Vec3, Vec3, Vec3) {
     match face {
-        TileFace::Top => (Vec3::Z, Vec3::X, Vec3::Y),
-        TileFace::Bottom => (Vec3::NEG_Z, Vec3::X, Vec3::NEG_Y),
-        TileFace::South => (Vec3::Y, Vec3::NEG_X, Vec3::Z),
-        TileFace::North => (Vec3::NEG_Y, Vec3::X, Vec3::Z),
-        TileFace::East => (Vec3::X, Vec3::Y, Vec3::Z),
-        TileFace::West => (Vec3::NEG_X, Vec3::NEG_Y, Vec3::Z),
+        TileFace::Top => (Vec3::Y, Vec3::X, Vec3::NEG_Z),
+        TileFace::Bottom => (Vec3::NEG_Y, Vec3::X, Vec3::Z),
+        TileFace::South => (Vec3::Z, Vec3::X, Vec3::Y),
+        TileFace::North => (Vec3::NEG_Z, Vec3::NEG_X, Vec3::Y),
+        TileFace::East => (Vec3::X, Vec3::NEG_Z, Vec3::Y),
+        TileFace::West => (Vec3::NEG_X, Vec3::Z, Vec3::Y),
     }
+}
+
+/// Where a cell's floor sits, in world units.
+///
+/// The one place the mapping lives: column across, level up, row into the
+/// scene. Everything else asks here rather than doing it again.
+fn floor_of(cell: GridCoord3, cell_size: [f32; 3]) -> Vec3 {
+    let [across, into, up] = cell_size;
+    Vec3::new(
+        axis(cell.x) * across,
+        axis(cell.z) * up,
+        axis(cell.y) * into,
+    )
 }
 
 /// One side of one cell, ready to draw.
@@ -113,7 +132,7 @@ pub fn cube_faces(
             continue;
         }
         // The cell's box: centred on its column and row, standing on its level.
-        let base = Vec3::new(axis(cell.x) * sx, axis(cell.y) * sy, axis(cell.z) * sz);
+        let base = floor_of(cell, cell_size);
         let tall = fill * sz;
 
         for face in TileFace::ALL {
@@ -128,12 +147,13 @@ pub fn cube_faces(
             let (normal, right, up) = basis_of(face);
             // A side is as tall as the tile fills its cell; a top and a bottom
             // are the cell's full footprint however thin the tile is.
-            let (width, height) = match face {
-                TileFace::Top | TileFace::Bottom => (sx * right.x.abs() + sy * right.y.abs(), sy),
-                _ => (sx * right.x.abs() + sy * right.y.abs(), tall),
-            };
+            // A quad's own width runs along whichever world axis `right` picks
+            // out, and its height along `up`: across for a column, into the
+            // scene for a row, and the tile's own fill for anything vertical.
+            let extent = |axis: Vec3| sx * axis.x.abs() + tall * axis.y.abs() + sy * axis.z.abs();
+            let (width, height) = (extent(right), extent(up));
             let centre = base
-                + Vec3::new(0.0, 0.0, tall * 0.5)
+                + Vec3::new(0.0, tall * 0.5, 0.0)
                 + normal
                     * match face {
                         // Up and down are half the tile's own height away,
@@ -224,8 +244,10 @@ mod tests {
         for face in &faces {
             let centre = face.model.col(3).truncate();
             let (normal, _, _) = basis_of(face.face);
+            // The cell at the origin stands on y = 0 and fills one unit, so its
+            // middle is half a unit up and each side half a unit from there.
             assert!(
-                (centre - (Vec3::new(0.0, 0.0, 0.5) + normal * 0.5)).length() < 1e-5,
+                (centre - (Vec3::new(0.0, 0.5, 0.0) + normal * 0.5)).length() < 1e-5,
                 "{:?} sits at {centre:?}",
                 face.face
             );
@@ -293,8 +315,8 @@ mod tests {
         let hit = pick(
             &volume,
             [1.0, 1.0, 1.0],
-            Vec3::new(0.0, 0.0, 5.0),
-            Vec3::new(0.0, 0.0, -1.0),
+            Vec3::new(0.0, 5.0, 0.0),
+            Vec3::new(0.0, -1.0, 0.0),
             32.0,
         )
         .expect("the ray reaches the block");
@@ -311,7 +333,7 @@ mod tests {
         let hit = pick(
             &volume,
             [1.0, 1.0, 1.0],
-            Vec3::new(-5.0, 0.0, 0.5),
+            Vec3::new(-5.0, 0.5, 0.0),
             Vec3::new(1.0, 0.0, 0.0),
             32.0,
         )
@@ -331,7 +353,7 @@ mod tests {
         let hit = pick(
             &volume,
             [1.0, 1.0, 1.0],
-            Vec3::new(-5.0, 0.0, 0.5),
+            Vec3::new(-5.0, 0.5, 0.0),
             Vec3::new(1.0, 0.0, 0.0),
             32.0,
         )
@@ -347,7 +369,7 @@ mod tests {
             pick(
                 &volume,
                 [1.0, 1.0, 1.0],
-                Vec3::new(-5.0, 0.0, 1.5),
+                Vec3::new(-5.0, 1.5, 0.0),
                 Vec3::new(1.0, 0.0, 0.0),
                 32.0,
             )
@@ -358,7 +380,7 @@ mod tests {
     #[test]
     fn a_block_beyond_reach_is_not_picked() {
         let volume = volume(r#"{ "position": [20, 0, 0], "tile": "stone" }"#);
-        let ray = (Vec3::new(-1.0, 0.0, 0.5), Vec3::new(1.0, 0.0, 0.0));
+        let ray = (Vec3::new(-1.0, 0.5, 0.0), Vec3::new(1.0, 0.0, 0.0));
         assert!(pick(&volume, [1.0, 1.0, 1.0], ray.0, ray.1, 5.0).is_none());
         assert!(pick(&volume, [1.0, 1.0, 1.0], ray.0, ray.1, 64.0).is_some());
     }
@@ -371,7 +393,7 @@ mod tests {
         let hit = pick(
             &volume,
             [1.0, 1.0, 0.5],
-            Vec3::new(-5.0, 0.0, 0.25),
+            Vec3::new(-5.0, 0.25, 0.0),
             Vec3::new(1.0, 0.0, 0.0),
             32.0,
         )
@@ -452,15 +474,15 @@ pub fn pick(
     if cells.is_empty() {
         return None;
     }
-    // Into a space where every cell is the unit cube from its own coordinate:
-    // X and Y are centred on their column and row, Z stands on its level, and
-    // the traversal below need know none of that.
     let [sx, sy, sz] = cell_size;
     if sx <= 0.0 || sy <= 0.0 || sz <= 0.0 {
         return None;
     }
-    let start = Vec3::new(origin.x / sx + 0.5, origin.y / sy + 0.5, origin.z / sz);
-    let step_by = Vec3::new(direction.x / sx, direction.y / sy, direction.z / sz);
+    // Into cell space -- column, row, level -- where every cell is the unit
+    // cube from its own coordinate, and the traversal below need know nothing
+    // about which world axis is up.
+    let start = Vec3::new(origin.x / sx + 0.5, origin.z / sy + 0.5, origin.y / sz);
+    let step_by = Vec3::new(direction.x / sx, direction.z / sy, direction.y / sz);
     if !start.is_finite() || !step_by.is_finite() || step_by.length_squared() <= 0.0 {
         return None;
     }

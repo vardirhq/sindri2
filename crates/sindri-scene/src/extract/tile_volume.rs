@@ -39,6 +39,20 @@ pub(super) struct BakedVolume {
     /// somewhere; an empty one has nothing to be wrong about.
     authored: bool,
     cells: Vec<BakedCell>,
+    /// A solid grid's blocks, already grouped by texture and ready to submit.
+    ///
+    /// Nothing about them is measured again. A projected volume keeps two
+    /// numbers per cell so its depth can be recomputed when the camera moves;
+    /// a solid one has no depth to compute, because the depth buffer is doing
+    /// it. The camera can go anywhere and this is still what to draw.
+    solid: Vec<BakedSolidFace>,
+}
+
+/// One block face of a solid volume.
+#[derive(Clone, Debug)]
+struct BakedSolidFace {
+    texture: TextureId,
+    sprite: SpriteInstance,
 }
 
 /// One cell's faces, and the two numbers its depth is measured from.
@@ -106,6 +120,21 @@ impl SceneExtractor {
             if !volume.authored {
                 continue;
             }
+            if !volume.solid.is_empty() {
+                for face in &volume.solid {
+                    batches.push(SpriteDraw {
+                        space: DrawSpace::Solid,
+                        texture: face.texture,
+                        // Every solid draw shares one order, so the stable sort
+                        // before batching leaves them in the order they were
+                        // baked -- which is grouped by texture, which is one
+                        // draw call per material rather than per cell.
+                        order: TransparentOrder::new(volume.layer, 0.0, 0)?,
+                        sprite: face.sprite,
+                    });
+                }
+                continue;
+            }
             let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
             for cell in &volume.cells {
                 let depth = camera_distance(camera.view, cell.ground.with_z(cell.depth_z));
@@ -138,6 +167,7 @@ impl SceneExtractor {
             layer: 0,
             authored: false,
             cells: Vec::new(),
+            solid: Vec::new(),
         };
         let Some(volume) = self.components.get::<TileVolumeComponent>(world, entity)? else {
             return Ok(empty);
@@ -163,123 +193,22 @@ impl SceneExtractor {
             .get(entity)
             .and_then(|data| data.transform_3d)
             .unwrap_or_default();
-        // Once per volume, not once per face. Building this from a transform
-        // costs a quaternion and three composes, which was being paid about two
-        // thousand times a frame on a farm-sized island.
-        let model = transform_matrix(transform);
-        // Built once. `cell_to_local` builds and validates one of these per
-        // call, which was two calls a cell: thirteen hundred projections
-        // constructed to be told the same arithmetic.
-        let space = grid.volume_space().map_err(TileGridError::from)?;
-        let resolved = resolved_sprites(tile_set, textures)?;
-        let mut cells = volume.cells.iter().collect::<Vec<_>>();
-        cells.sort_by_key(|cell| grid.depth_key(cell.coord()));
-
-        let mut baked = Vec::with_capacity(cells.len());
-        for (cell_index, cell) in cells.into_iter().enumerate() {
-            let coord = cell.coord();
-            let definition =
-                tile_set
-                    .tile(&cell.tile)
-                    .ok_or_else(|| SceneExtractError::UnknownTile {
-                        tile_set: volume.tileset.clone(),
-                        tile: cell.tile.clone(),
-                    })?;
-            let [cell_x, cell_y] = cell_to_local_in(&space, coord)
-                .expect("a validated grid projects finite integer cells");
-            // Depth is a property of the *cell*, taken from where its column
-            // meets the ground, and every face of it shares that one value. Two
-            // things follow, and both were wrong while each face measured its
-            // own drawn position.
-            //
-            // Raising a block moves it up the screen, which is not moving it
-            // toward the viewer: a stack has to keep the depth of the column it
-            // stands in, or a tower walks in front of everything south of it as
-            // it grows.
-            //
-            // And a block's own faces must not sort against each other. Their
-            // offsets differ by a fraction of a cell, which was enough to
-            // interleave a top with the side of the block beside it. Which face
-            // of a cell is drawn first is decided by the face order, not by
-            // arithmetic on where its art happens to sit.
-            let [ground_x, ground_y] =
-                cell_to_local_in(&space, GridCoord3::new(coord.x, coord.y, 0))
-                    .expect("a validated grid projects finite integer cells");
-            let ground = model * Mat4::from_translation(Vec3::new(ground_x, ground_y, 0.0));
-            // The cell's own Z, by the same rule anything standing on this grid
-            // takes: depth is a consequence of position, so a block and a prop
-            // are finally measured on one axis instead of two. Zero
-            // `depth_step` leaves every cell at the volume's own Z, which is
-            // what a backdrop wants and what every scene written before this
-            // did.
-            // Half a step back, because a cell *is* the ground and anything
-            // placed on it rests on top: they share a column, so without the
-            // bias they tie and submission order decides whether a shrine
-            // stands on its flagstone or under it. This is what the
-            // hand-written even-and-odd layers encoded before depth was
-            // derived.
-            let cell_z = transform.position[2] + grid.depth_z(grid.face_depth(coord));
-            let visible = grid.projection.visible_faces();
-            // Which look this cell has, decided once for the whole cell: a
-            // block whose top came from one variant and whose side came from
-            // another is not a block.
-            let faces =
-                definition.faces_at(volume.variant_seed, [coord.x, coord.y, coord.z], &cell.tile);
-            let mut baked_faces = Vec::new();
-            for (face_index, (face, visual)) in faces.iter().enumerate() {
-                // A face the projection turns away from is not culled by a
-                // neighbour; there is simply no view of it to draw. An
-                // isometric side in an orthogonal volume would otherwise paint
-                // itself flat across the block.
-                if !visible.contains(&face) {
-                    continue;
-                }
-                if face_is_occluded(
-                    &occupied,
-                    &volume.tileset,
+        if let Some(cell_size) = grid.solid_cell() {
+            return Ok(BakedVolume {
+                authored: true,
+                solid: solid_faces(
+                    &volume,
                     tile_set,
-                    coord,
-                    face,
-                    definition,
-                )? {
-                    continue;
-                }
-                let (texture, rect) = *resolved
-                    .get(visual.sprite.as_str())
-                    .expect("every face of a bound tile set was resolved above");
-                let local = Mat4::from_translation(Vec3::new(
-                    cell_x + visual.offset[0],
-                    cell_y + visual.offset[1],
-                    0.0,
-                )) * Mat4::from_scale(Vec3::new(visual.size[0], visual.size[1], 1.0));
-                // Cells were sorted back to front above, so the submission
-                // index carries that order and the face index orders the faces
-                // inside one cell. It is what decides between draws the camera
-                // puts at the same depth -- the levels of one column, and
-                // anything a projection lays out along the view.
-                let stable = cell_index.saturating_mul(6).saturating_add(face_index);
-                baked_faces.push(BakedFace {
-                    model: model * local,
-                    texture,
-                    rect,
-                    order: u32::try_from(stable).unwrap_or(u32::MAX),
-                });
-            }
-            if baked_faces.is_empty() {
-                continue;
-            }
-            baked.push(BakedCell {
-                ground: ground.w_axis.truncate(),
-                depth_z: cell_z,
-                faces: baked_faces,
+                    textures,
+                    cell_size,
+                    transform_matrix(transform),
+                )?,
+                ..empty
             });
         }
-        Ok(BakedVolume {
-            layer: volume.layer,
-            authored: true,
-            cells: baked,
-            ..empty
-        })
+        bake_projected_volume(
+            &volume, &grid, tile_set, textures, transform, &occupied, empty,
+        )
     }
 }
 
@@ -360,5 +289,166 @@ pub(crate) fn face_is_occluded(
         TileFace::North | TileFace::West | TileFace::East | TileFace::South => {
             neighbour.hides_side_of(definition.height)
         }
+    })
+}
+
+/// A solid volume's blocks, grouped by the texture each draws from.
+///
+/// Grouped here rather than sorted later because the sort before batching is
+/// stable and keyed on space and order, which every solid face shares: coming
+/// out of here in texture order is what makes an island a handful of draw
+/// calls instead of one per cell.
+fn solid_faces(
+    volume: &TileVolumeComponent,
+    tile_set: &TileSetDocument,
+    textures: &TextureBindings,
+    cell_size: [f32; 3],
+    model: Mat4,
+) -> Result<Vec<BakedSolidFace>, SceneExtractError> {
+    let faces = crate::voxel::cube_faces(volume, tile_set, cell_size).map_err(|error| {
+        let crate::voxel::VoxelError::UnknownTile { tile, .. } = error;
+        SceneExtractError::UnknownTile {
+            tile_set: volume.tileset.clone(),
+            tile,
+        }
+    })?;
+    let resolved = resolved_sprites(tile_set, textures)?;
+    let mut grouped: BTreeMap<TextureId, Vec<BakedSolidFace>> = BTreeMap::new();
+    for face in faces {
+        let Some(&(texture, rect)) = resolved.get(face.sprite.as_str()) else {
+            continue;
+        };
+        // The face's own light, as a tint on otherwise unshaded art. A block
+        // lit in its texture would keep its bright side pointing one way while
+        // the camera walked round to the other.
+        let shade = [face.shade, face.shade, face.shade, 1.0];
+        grouped.entry(texture).or_default().push(BakedSolidFace {
+            texture,
+            sprite: SpriteInstance::new(model * face.model, shade).with_uv_rect(rect),
+        });
+    }
+    Ok(grouped.into_values().flatten().collect())
+}
+
+/// The other kind of volume: quads arranged for one fixed viewpoint, in an
+/// order this has to work out because nothing else will.
+#[allow(clippy::too_many_arguments)]
+fn bake_projected_volume(
+    volume: &TileVolumeComponent,
+    grid: &TileGridComponent,
+    tile_set: &TileSetDocument,
+    textures: &TextureBindings,
+    transform: sindri_core::Transform3D,
+    occupied: &TileVolumeIndex<'_>,
+    empty: BakedVolume,
+) -> Result<BakedVolume, SceneExtractError> {
+    // Once per volume, not once per face. Building this from a transform
+    // costs a quaternion and three composes, which was being paid about two
+    // thousand times a frame on a farm-sized island.
+    let model = transform_matrix(transform);
+    // Built once. `cell_to_local` builds and validates one of these per
+    // call, which was two calls a cell: thirteen hundred projections
+    // constructed to be told the same arithmetic.
+    let space = grid.volume_space().map_err(TileGridError::from)?;
+    let resolved = resolved_sprites(tile_set, textures)?;
+    let mut cells = volume.cells.iter().collect::<Vec<_>>();
+    cells.sort_by_key(|cell| grid.depth_key(cell.coord()));
+
+    let mut baked = Vec::with_capacity(cells.len());
+    for (cell_index, cell) in cells.into_iter().enumerate() {
+        let coord = cell.coord();
+        let definition =
+            tile_set
+                .tile(&cell.tile)
+                .ok_or_else(|| SceneExtractError::UnknownTile {
+                    tile_set: volume.tileset.clone(),
+                    tile: cell.tile.clone(),
+                })?;
+        let [cell_x, cell_y] = cell_to_local_in(&space, coord)
+            .expect("a validated grid projects finite integer cells");
+        // Depth is a property of the *cell*, taken from where its column
+        // meets the ground, and every face of it shares that one value. Two
+        // things follow, and both were wrong while each face measured its
+        // own drawn position.
+        //
+        // Raising a block moves it up the screen, which is not moving it
+        // toward the viewer: a stack has to keep the depth of the column it
+        // stands in, or a tower walks in front of everything south of it as
+        // it grows.
+        //
+        // And a block's own faces must not sort against each other. Their
+        // offsets differ by a fraction of a cell, which was enough to
+        // interleave a top with the side of the block beside it. Which face
+        // of a cell is drawn first is decided by the face order, not by
+        // arithmetic on where its art happens to sit.
+        let [ground_x, ground_y] = cell_to_local_in(&space, GridCoord3::new(coord.x, coord.y, 0))
+            .expect("a validated grid projects finite integer cells");
+        let ground = model * Mat4::from_translation(Vec3::new(ground_x, ground_y, 0.0));
+        // The cell's own Z, by the same rule anything standing on this grid
+        // takes: depth is a consequence of position, so a block and a prop
+        // are finally measured on one axis instead of two. Zero
+        // `depth_step` leaves every cell at the volume's own Z, which is
+        // what a backdrop wants and what every scene written before this
+        // did.
+        // Half a step back, because a cell *is* the ground and anything
+        // placed on it rests on top: they share a column, so without the
+        // bias they tie and submission order decides whether a shrine
+        // stands on its flagstone or under it. This is what the
+        // hand-written even-and-odd layers encoded before depth was
+        // derived.
+        let cell_z = transform.position[2] + grid.depth_z(grid.face_depth(coord));
+        let visible = grid.projection.visible_faces();
+        // Which look this cell has, decided once for the whole cell: a
+        // block whose top came from one variant and whose side came from
+        // another is not a block.
+        let faces =
+            definition.faces_at(volume.variant_seed, [coord.x, coord.y, coord.z], &cell.tile);
+        let mut baked_faces = Vec::new();
+        for (face_index, (face, visual)) in faces.iter().enumerate() {
+            // A face the projection turns away from is not culled by a
+            // neighbour; there is simply no view of it to draw. An
+            // isometric side in an orthogonal volume would otherwise paint
+            // itself flat across the block.
+            if !visible.contains(&face) {
+                continue;
+            }
+            if face_is_occluded(occupied, &volume.tileset, tile_set, coord, face, definition)? {
+                continue;
+            }
+            let (texture, rect) = *resolved
+                .get(visual.sprite.as_str())
+                .expect("every face of a bound tile set was resolved above");
+            let local = Mat4::from_translation(Vec3::new(
+                cell_x + visual.offset[0],
+                cell_y + visual.offset[1],
+                0.0,
+            )) * Mat4::from_scale(Vec3::new(visual.size[0], visual.size[1], 1.0));
+            // Cells were sorted back to front above, so the submission
+            // index carries that order and the face index orders the faces
+            // inside one cell. It is what decides between draws the camera
+            // puts at the same depth -- the levels of one column, and
+            // anything a projection lays out along the view.
+            let stable = cell_index.saturating_mul(6).saturating_add(face_index);
+            baked_faces.push(BakedFace {
+                model: model * local,
+                texture,
+                rect,
+                order: u32::try_from(stable).unwrap_or(u32::MAX),
+            });
+        }
+        if baked_faces.is_empty() {
+            continue;
+        }
+        baked.push(BakedCell {
+            ground: ground.w_axis.truncate(),
+            depth_z: cell_z,
+            faces: baked_faces,
+        });
+    }
+    Ok(BakedVolume {
+        layer: volume.layer,
+        authored: true,
+        cells: baked,
+        ..empty
     })
 }

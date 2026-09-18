@@ -31,5 +31,9 @@ wgpu.workspace = true
 name = "voxel-lab-capture"
 path = "src/bin/capture.rs"
 
+[[bin]]
+name = "voxel-lab-scene"
+path = "src/bin/scene.rs"
+
 [lints]
 workspace = true

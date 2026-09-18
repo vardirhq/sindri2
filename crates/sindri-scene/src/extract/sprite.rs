@@ -28,6 +28,10 @@ use super::{SceneExtractError, SceneExtractor, transform_matrix};
 /// order batches come out in is the order their passes are pushed.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub(super) enum DrawSpace {
+    /// Opaque geometry, which writes depth and so needs no painter order at
+    /// all: the blocks of a solid tile volume. First, because opaque surfaces
+    /// are drawn before what blends against them.
+    Solid,
     Screen,
     World,
 }
@@ -219,6 +223,11 @@ impl SceneExtractor {
                     RenderStage::Transparent2d,
                     cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?,
                     SpriteDepth::Test,
+                ),
+                DrawSpace::Solid => (
+                    RenderStage::Opaque3d,
+                    cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?,
+                    SpriteDepth::Write,
                 ),
             };
             frame.push(FramePass::new(

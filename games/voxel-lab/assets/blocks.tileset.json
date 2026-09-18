@@ -1,0 +1,134 @@
+{
+  "format_version": 1,
+  "tiles": {
+    "grass": {
+      "faces": {
+        "top": {
+          "sprite": "textures/block-tops.png#grass",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "textures/block-tops.png#grass",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/block-sides.png#grass",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/block-sides.png#grass",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "earth": {
+      "faces": {
+        "top": {
+          "sprite": "textures/block-tops.png#earth",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "textures/block-tops.png#earth",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/block-sides.png#earth",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/block-sides.png#earth",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "stone": {
+      "faces": {
+        "top": {
+          "sprite": "textures/block-tops.png#stone",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "textures/block-tops.png#stone",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/block-sides.png#stone",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/block-sides.png#stone",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "slab": {
+      "faces": {
+        "top": {
+          "sprite": "textures/block-tops.png#stone",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "textures/block-tops.png#stone",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/block-sides.png#stone",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/block-sides.png#stone",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "height": 0.5
+    }
+  }
+}
