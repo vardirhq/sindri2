@@ -413,3 +413,98 @@ fn the_faces_of_one_cell_do_not_sort_against_each_other() {
          reordered by where their art sits: {xs:?}"
     );
 }
+
+/// A grid whose cells are boxes, framed by a camera that sees a few of them.
+///
+/// Its own fixture because the others are projected grids: culling is a solid
+/// grid's business, since only a solid grid draws the world rather than a
+/// picture arranged for one viewpoint.
+fn solid_scene(cells: &str) -> sindri_core::World {
+    world_from(&document(&format!(
+        r#"
+        {{ "id": "main-camera",
+           "transform_3d": {{ "position": [6.0, 6.0, 6.0],
+             "rotation": [-0.2706, 0.3536, 0.1036, 0.8887] }},
+           "components": {{ "sindri.camera": {{
+             "projection": "orthographic", "vertical_size": 8.0,
+             "near": 0.1, "far": 200.0 }} }} }},
+        {{ "id": "blocks", "transform_3d": {{}}, "components": {{
+          "sindri.tile_grid": {{
+            "columns": 512, "rows": 4, "cell_size": [1.0, 1.0],
+            "cell_height": 1.0, "projection": "isometric", "space": "solid"
+          }},
+          "sindri.tile_volume": {{
+            "tileset": "world.tileset.json",
+            "cells": [{cells}]
+          }}
+        }} }}"#
+    )))
+}
+
+fn solid_instances(cells: &str) -> Vec<sindri_render::SpriteInstance> {
+    let sets = tile_sets();
+    SceneExtractor::new()
+        .unwrap()
+        .extract_animated(
+            &solid_scene(cells),
+            VIEWPORT,
+            CameraView::default(),
+            &textures(),
+            SceneRuntime::default().with_tile_sets(&sets),
+        )
+        .expect("the volume extracts")
+        .passes()
+        .iter()
+        .flat_map(|pass| match &pass.command {
+            FrameCommand::SpriteBatch { instances, .. } => instances.clone(),
+            _ => Vec::new(),
+        })
+        .collect()
+}
+
+/// A run of cells along one row, far longer than any view of it.
+fn long_run(columns: i32) -> String {
+    (0..columns)
+        .map(|column| format!(r#"{{ "position": [{column}, 0, 0], "tile": "grass" }}"#))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+#[test]
+fn a_solid_volume_draws_only_the_part_the_camera_frames() {
+    // A world is bigger than a view of it. Submitting every face of one is
+    // work per frame that has nothing to do with what anybody sees, and on a
+    // world of any size it is enough of it to starve the thread that would
+    // otherwise be running the game.
+    let near = solid_instances(&long_run(4));
+    let far = solid_instances(&long_run(400));
+    assert!(!near.is_empty(), "four blocks in view draw something");
+    assert!(
+        far.len() < near.len() * 8,
+        "a hundred times the cells should not cost a hundred times the frame: \
+         {} against {}",
+        far.len(),
+        near.len()
+    );
+}
+
+#[test]
+fn nothing_the_camera_frames_is_culled_away() {
+    // The failure mode worth guarding is the other direction. A test that only
+    // checked the count goes down is satisfied by a bug that draws nothing,
+    // and culling that is wrong takes bites out of the world as the camera
+    // turns. Blocks the camera frames have to survive, and adding one beside
+    // them has to show.
+    let one = solid_instances(r#"{ "position": [0, 0, 0], "tile": "grass" }"#);
+    let two = solid_instances(
+        r#"{ "position": [0, 0, 0], "tile": "grass" },
+           { "position": [0, 1, 0], "tile": "grass" }"#,
+    );
+    assert!(!one.is_empty(), "a block in front of the camera is drawn");
+    assert!(
+        two.len() > one.len(),
+        "a second block beside it adds faces: {} against {}",
+        two.len(),
+        one.len()
+    );
+}

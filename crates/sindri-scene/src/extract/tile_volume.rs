@@ -39,13 +39,66 @@ pub(super) struct BakedVolume {
     /// somewhere; an empty one has nothing to be wrong about.
     authored: bool,
     cells: Vec<BakedCell>,
-    /// A solid grid's blocks, already grouped by texture and ready to submit.
+    /// A solid grid's blocks, in chunks, each grouped by texture.
     ///
-    /// Nothing about them is measured again. A projected volume keeps two
+    /// Nothing about a face is measured again. A projected volume keeps two
     /// numbers per cell so its depth can be recomputed when the camera moves;
     /// a solid one has no depth to compute, because the depth buffer is doing
-    /// it. The camera can go anywhere and this is still what to draw.
-    solid: Vec<BakedSolidFace>,
+    /// it.
+    ///
+    /// Chunked rather than one list, because a world is bigger than a view of
+    /// it. Submitting every face of a hundred and sixty cells square is
+    /// seventy-odd thousand instances a frame to show the two per cent of them
+    /// the camera frames -- enough CPU work per frame, before the GPU draws
+    /// anything, to starve a browser's main thread.
+    solid: Vec<BakedChunk>,
+}
+
+/// One square of a solid volume, and where it is.
+#[derive(Clone, Debug)]
+struct BakedChunk {
+    /// World-space bounds of every face in it, for testing against a camera.
+    min: Vec3,
+    max: Vec3,
+    faces: Vec<BakedSolidFace>,
+}
+
+/// How many columns square one chunk covers.
+///
+/// Small enough that a chunk is mostly inside or mostly outside the view,
+/// large enough that the per-chunk test is not itself the cost. At sixteen, a
+/// hundred and sixty square world is a hundred chunks and a framed view
+/// touches a handful.
+const CHUNK: i32 = 16;
+
+impl BakedChunk {
+    /// Whether any of this chunk could be on screen.
+    ///
+    /// Conservative on purpose: it rejects a chunk only when all eight corners
+    /// fall outside the same clip plane, which can keep a chunk that is not
+    /// really visible but can never drop one that is. A culling test that is
+    /// wrong in the other direction takes bites out of the world as the camera
+    /// turns, which is far worse than drawing a little too much.
+    fn in_view(&self, view_projection: Mat4) -> bool {
+        let corners = [
+            Vec3::new(self.min.x, self.min.y, self.min.z),
+            Vec3::new(self.max.x, self.min.y, self.min.z),
+            Vec3::new(self.min.x, self.max.y, self.min.z),
+            Vec3::new(self.max.x, self.max.y, self.min.z),
+            Vec3::new(self.min.x, self.min.y, self.max.z),
+            Vec3::new(self.max.x, self.min.y, self.max.z),
+            Vec3::new(self.min.x, self.max.y, self.max.z),
+            Vec3::new(self.max.x, self.max.y, self.max.z),
+        ];
+        let clip = corners.map(|corner| view_projection * corner.extend(1.0));
+        // Six planes, each rejected only if every corner is beyond it.
+        !(clip.iter().all(|point| point.x < -point.w)
+            || clip.iter().all(|point| point.x > point.w)
+            || clip.iter().all(|point| point.y < -point.w)
+            || clip.iter().all(|point| point.y > point.w)
+            || clip.iter().all(|point| point.z < 0.0)
+            || clip.iter().all(|point| point.z > point.w))
+    }
 }
 
 /// One block face of a solid volume.
@@ -121,17 +174,24 @@ impl SceneExtractor {
                 continue;
             }
             if !volume.solid.is_empty() {
-                for face in &volume.solid {
-                    batches.push(SpriteDraw {
-                        space: DrawSpace::Solid,
-                        texture: face.texture,
-                        // Every solid draw shares one order, so the stable sort
-                        // before batching leaves them in the order they were
-                        // baked -- which is grouped by texture, which is one
-                        // draw call per material rather than per cell.
-                        order: TransparentOrder::new(volume.layer, 0.0, 0)?,
-                        sprite: face.sprite,
-                    });
+                let framed = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
+                for chunk in &volume.solid {
+                    if !chunk.in_view(framed.view_projection) {
+                        continue;
+                    }
+                    for face in &chunk.faces {
+                        batches.push(SpriteDraw {
+                            space: DrawSpace::Solid,
+                            texture: face.texture,
+                            // Every solid draw shares one order, so the stable
+                            // sort before batching leaves them in the order
+                            // they were baked -- grouped by texture within a
+                            // chunk, which is a draw call per material per
+                            // chunk rather than one per cell.
+                            order: TransparentOrder::new(volume.layer, 0.0, 0)?,
+                            sprite: face.sprite,
+                        });
+                    }
                 }
                 continue;
             }
@@ -304,7 +364,7 @@ fn solid_faces(
     textures: &TextureBindings,
     cell_size: [f32; 3],
     model: Mat4,
-) -> Result<Vec<BakedSolidFace>, SceneExtractError> {
+) -> Result<Vec<BakedChunk>, SceneExtractError> {
     let faces = crate::voxel::cube_faces(volume, tile_set, cell_size).map_err(|error| {
         let crate::voxel::VoxelError::UnknownTile { tile, .. } = error;
         SceneExtractError::UnknownTile {
@@ -313,7 +373,15 @@ fn solid_faces(
         }
     })?;
     let resolved = resolved_sprites(tile_set, textures)?;
-    let mut grouped: BTreeMap<TextureId, Vec<BakedSolidFace>> = BTreeMap::new();
+    // Keyed by chunk first and texture second, so a chunk comes out as a run
+    // per material rather than a draw call per face.
+    let mut grouped: BTreeMap<(i32, i32), BTreeMap<TextureId, Vec<BakedSolidFace>>> =
+        BTreeMap::new();
+    let mut bounds: BTreeMap<(i32, i32), (Vec3, Vec3)> = BTreeMap::new();
+    // A face's centre is a point; the quad around it reaches half a cell out
+    // in the widest direction, so every bound is grown by that much before it
+    // is used.
+    let reach = cell_size[0].max(cell_size[1]).max(cell_size[2]) * 0.5;
     for face in faces {
         let Some(&(texture, rect)) = resolved.get(face.sprite.as_str()) else {
             continue;
@@ -322,14 +390,35 @@ fn solid_faces(
         // lit in its texture would keep its bright side pointing one way while
         // the camera walked round to the other.
         let shade = [face.shade, face.shade, face.shade, 1.0];
-        grouped.entry(texture).or_default().push(BakedSolidFace {
-            texture,
-            sprite: SpriteInstance::new(model * face.model, shade)
-                .with_uv_rect(rect)
-                .with_corner_shade(face.corners),
-        });
+        let placed = model * face.model;
+        let centre = placed.w_axis.truncate();
+        let key = (face.cell.x.div_euclid(CHUNK), face.cell.y.div_euclid(CHUNK));
+        let entry = bounds.entry(key).or_insert((centre, centre));
+        entry.0 = entry.0.min(centre);
+        entry.1 = entry.1.max(centre);
+        grouped
+            .entry(key)
+            .or_default()
+            .entry(texture)
+            .or_default()
+            .push(BakedSolidFace {
+                texture,
+                sprite: SpriteInstance::new(placed, shade)
+                    .with_uv_rect(rect)
+                    .with_corner_shade(face.corners),
+            });
     }
-    Ok(grouped.into_values().flatten().collect())
+    Ok(grouped
+        .into_iter()
+        .map(|(key, by_texture)| {
+            let (min, max) = bounds[&key];
+            BakedChunk {
+                min: min - Vec3::splat(reach),
+                max: max + Vec3::splat(reach),
+                faces: by_texture.into_values().flatten().collect(),
+            }
+        })
+        .collect())
 }
 
 /// The other kind of volume: quads arranged for one fixed viewpoint, in an
