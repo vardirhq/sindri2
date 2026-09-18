@@ -596,6 +596,39 @@ That last part is what a companion game is for. "Every occupant has ground under
 it" was not expressible against a flat map, where every cell was ground by
 definition; it became a thing that could be false, and was, in three places.
 
+**A volume is resolved once, not every frame.** An island's faces do not move
+while the player walks around it, and rebuilding them per frame was most of what
+extracting Gather's scene cost: 6.7 ms a frame, of which the volume was 5.7 ms,
+spread evenly across decoding six hundred cells of JSON, indexing them, parsing
+every face's sprite reference, and building a matrix per face. None of that
+depends on where the camera is. It is now resolved into faces once and replayed,
+with only the depth each cell sorts at measured again — the one part a moving
+camera does change — which takes the frame to 1.2 ms and the volume's share to
+about 0.2 ms.
+
+What makes that safe is knowing when the answer stops holding. `World` gives
+each entity a revision, bumped whenever anything takes a mutable borrow of it,
+and `TextureBindings` and `TileSetBindings` each carry a generation. A volume
+keeps the ones it was built from, so editing its cells, moving it, changing its
+grid, rebinding its tile set and re-cutting its atlas each show up on the next
+frame. The revision is deliberately pessimistic: a borrow that writes nothing
+still bumps it, because re-deriving something that did not need it costs time
+while missing a change that did shows the player the wrong world. The
+revisions and the generations are both handed out process-wide rather than
+counted per world or per binding, because both are compared across one: a world
+counting its own changes starts at zero, so a freshly opened scene's entity
+carries the same revision as the different entity that held its handle in the
+scene before -- which is a second scene drawn as the first, and was, until a
+test opened two. A host that reloads its art by *replacing* its bindings hits
+the same thing from the other side, handing over a fresh object whose count
+happens to match the old one's. Whether an entity takes part in the scene is
+asked every frame instead, because it is not a property of the entity: switching
+off an ancestor is not a change to anything under it.
+
+`crates/sindri-scene/tests/extraction/baked_volume.rs` is one test per input:
+each edits exactly one of them and fails if the volume goes on drawing what it
+drew before.
+
 **A volume spreads across render layers.** `layer_step` says how many layers one
 step of projected depth costs. Zero, the default, puts the whole volume on one
 layer, which is right for a backdrop and wrong the moment anything walks between

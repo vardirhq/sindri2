@@ -12,6 +12,7 @@ mod camera_math;
 mod components;
 pub(crate) mod effects;
 mod extract;
+mod generation;
 mod navigation;
 mod occlusion;
 mod physics;

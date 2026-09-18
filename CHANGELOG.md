@@ -9,6 +9,17 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ## [Unreleased]
 
+### Changed
+
+- A tile volume is resolved into the faces it draws once and kept, rather than
+  rebuilt every frame. Extracting Gather's farm cost 6.7 ms a frame and now
+  costs 1.2 ms; the volume's own share of that fell from 5.7 ms to about 0.2 ms.
+  Only the depth each cell sorts at is measured again, because that is the only
+  part a moving camera changes. An entity now carries a revision, and texture
+  and tile-set bindings a generation, so an edit to a volume — its cells, its
+  grid, its transform, the art it draws from, or whether it takes part in the
+  scene at all — is picked up on the next frame.
+
 ### Fixed
 
 - The editor's grid chooser offers entities carrying `sindri.tile_grid` as well

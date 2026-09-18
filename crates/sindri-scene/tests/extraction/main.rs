@@ -6,6 +6,7 @@
 
 mod animation;
 mod assets;
+mod baked_volume;
 mod cameras;
 mod canvas;
 mod passes;

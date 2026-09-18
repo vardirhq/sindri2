@@ -16,6 +16,7 @@ pub use prefab::SpawnedPrefab;
 pub use scene::{AddedScene, LoadedScene};
 
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::Value;
 use thiserror::Error;
@@ -49,7 +50,29 @@ pub struct EntityData {
 #[derive(Clone, Debug)]
 struct EntitySlot {
     generation: u32,
+    /// When this slot last changed, on the world's own clock.
+    ///
+    /// Not a count of changes: the world hands out a fresh number for each one,
+    /// so a value is unique across the whole world and a slot cannot be
+    /// mistaken for its former occupant after being freed and spawned into.
+    revision: u64,
     data: Option<EntityData>,
+}
+
+/// Hands out entity revisions, for every world in the process.
+///
+/// Not per world, and the difference is a scene drawn as the one opened before
+/// it. A world counting its own changes starts at zero, so an entity in a
+/// freshly loaded scene carries the same revision as a different entity with
+/// the same handle in the scene it replaced -- and anything that kept a derived
+/// answer from the old one would conclude it still held. Cloning a world has
+/// the same shape: a clone that counted from where its original left off would
+/// hand the same number to a different edit.
+static CLOCK: AtomicU64 = AtomicU64::new(0);
+
+/// A revision nothing else has had.
+fn tick() -> u64 {
+    CLOCK.fetch_add(1, Ordering::Relaxed).saturating_add(1)
 }
 
 #[derive(Clone, Debug, Default)]
@@ -88,18 +111,39 @@ impl World {
 
     pub fn spawn(&mut self, data: EntityData) -> EntityId {
         self.len += 1;
+        let revision = tick();
         if let Some(index) = self.free.pop() {
             let slot = &mut self.slots[index as usize];
             slot.data = Some(data);
+            slot.revision = revision;
             return EntityId::new(index, slot.generation);
         }
 
         let index = u32::try_from(self.slots.len()).expect("entity capacity exceeded u32::MAX");
         self.slots.push(EntitySlot {
             generation: 0,
+            revision,
             data: Some(data),
         });
         EntityId::new(index, 0)
+    }
+
+    /// When this entity last changed, or `None` if the world does not hold it.
+    ///
+    /// What lets anything deriving state from an entity -- a renderer resolving
+    /// a tile volume into faces, a navigation surface, a collider -- keep the
+    /// derived answer and rebuild it only when the entity it came from has
+    /// moved on. The number is opaque and only comparable for equality: a
+    /// different value means "ask again", not how much changed.
+    ///
+    /// Deliberately pessimistic. Taking a mutable borrow of an entity bumps it
+    /// whether or not the borrower wrote anything, because a borrow that is
+    /// handed out cannot be watched. Re-deriving something that did not need it
+    /// costs time; missing a change that did shows the player the wrong world.
+    #[must_use]
+    pub fn revision(&self, entity: EntityId) -> Option<u64> {
+        let slot = self.slot(entity)?;
+        slot.data.is_some().then_some(slot.revision)
     }
 
     pub fn contains(&self, entity: EntityId) -> bool {
@@ -176,13 +220,16 @@ impl World {
             // end, which is one slot at a time.
             self.slots.resize_with(index + 1, || EntitySlot {
                 generation: 0,
+                revision: 0,
                 data: None,
             });
         }
         if self.slots[index].data.is_some() {
             return Err(WorldError::SlotOccupied(entity));
         }
+        let revision = tick();
         self.slots[index].generation = entity.generation();
+        self.slots[index].revision = revision;
         self.slots[index].data = Some(data);
         self.free.retain(|free| *free != entity.index());
         self.len += 1;
@@ -201,8 +248,13 @@ impl World {
     }
 
     fn slot_mut(&mut self, entity: EntityId) -> Option<&mut EntitySlot> {
+        let revision = tick();
         let slot = self.slots.get_mut(entity.index() as usize)?;
-        (slot.generation == entity.generation()).then_some(slot)
+        if slot.generation != entity.generation() {
+            return None;
+        }
+        slot.revision = revision;
+        Some(slot)
     }
 }
 

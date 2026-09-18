@@ -11,6 +11,10 @@ use crate::TileVolumeComponent;
 
 #[derive(Clone, Debug, Default)]
 pub struct TileSetBindings {
+    /// How many times these bindings have changed; see
+    /// [`crate::TextureBindings::generation`], which it serves the same purpose
+    /// as. A rebound tile set re-cuts what every cell of a volume draws.
+    generation: u64,
     bound: BTreeMap<String, TileSetDocument>,
 }
 
@@ -52,10 +56,18 @@ impl TileSetBindings {
         tile_set: TileSetDocument,
     ) -> Result<Option<TileSetDocument>, TileSetError> {
         tile_set.validate()?;
+        self.generation = crate::generation::next();
         Ok(self.bound.insert(reference.into(), tile_set))
     }
 
+    /// How many times these bindings have changed; equality-comparable only.
+    #[must_use]
+    pub const fn generation(&self) -> u64 {
+        self.generation
+    }
+
     pub fn unbind(&mut self, reference: &str) -> Option<TileSetDocument> {
+        self.generation = crate::generation::next();
         self.bound.remove(reference)
     }
 
