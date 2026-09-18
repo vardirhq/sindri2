@@ -22,6 +22,7 @@ members = [
     "games/orbital-last-stand",
     "games/orbital-baked",
     "games/weave-poc",
+    "games/voxel-lab",
 ]
 # Decay and Weave are their own workspaces, and a path dependency alone does not
 # keep them that way: cargo makes path dependencies of a member into members too,

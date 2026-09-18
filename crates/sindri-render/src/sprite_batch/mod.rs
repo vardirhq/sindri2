@@ -124,7 +124,16 @@ impl SpriteBatchRenderer {
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
                 }),
-                primitive: wgpu::PrimitiveState::default(),
+                primitive: wgpu::PrimitiveState {
+                    // Solid geometry is closed, so a face pointing away from
+                    // the camera is a face on the far side of the thing it
+                    // belongs to: drawing it costs fill and, where the solid is
+                    // open at the edges, shows its inside. A blended sprite is
+                    // not closed and often faces away on purpose, so only the
+                    // writing pipeline culls.
+                    cull_mode: depth.writes().then_some(wgpu::Face::Back),
+                    ..wgpu::PrimitiveState::default()
+                },
                 depth_stencil: Some(wgpu::DepthStencilState {
                     format: DepthTarget::FORMAT,
                     depth_write_enabled: Some(depth.writes()),

@@ -1,0 +1,41 @@
+{
+  "format_version": 1,
+  "id": "block-tops",
+  "texture": "textures/block-tops.png",
+  "view": "top-down",
+  "pixels_per_unit": 32,
+  "directions": 1,
+  "footprint": { "width": 1, "height": 1 },
+  "render": {
+    "supersample": 4,
+    "padding": 0,
+    "palette_snap": true,
+    "alpha_cutoff": 128
+  },
+  "variants": [
+    {
+      "name": "grass",
+      "model": {
+        "kind": "primitives",
+        "materials": { "grass": { "colour": "#6f9f52", "grain": { "strength": 0.5, "size": 0.12 } } },
+        "parts": [{ "type": "box", "material": "grass", "position": [0, 0.5, 0], "size": [1, 1, 1] }]
+      }
+    },
+    {
+      "name": "stone",
+      "model": {
+        "kind": "primitives",
+        "materials": { "stone": { "colour": "#8d8f9a", "grain": { "strength": 0.5, "size": 0.12 } } },
+        "parts": [{ "type": "box", "material": "stone", "position": [0, 0.5, 0], "size": [1, 1, 1] }]
+      }
+    },
+    {
+      "name": "earth",
+      "model": {
+        "kind": "primitives",
+        "materials": { "earth": { "colour": "#805236", "grain": { "strength": 0.5, "size": 0.12 } } },
+        "parts": [{ "type": "box", "material": "earth", "position": [0, 0.5, 0], "size": [1, 1, 1] }]
+      }
+    }
+  ]
+}

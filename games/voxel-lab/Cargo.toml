@@ -1,0 +1,34 @@
+[package]
+name = "voxel-lab"
+description = "A tile volume drawn as solid blocks, to see whether it survives being walked round"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# No game code, in the way Graphics Lab is not a game: this is a proving ground
+# for one question — whether a volume can be a shape rather than a picture of
+# one — and what lives here is the blocks to look at and the binary that
+# photographs them from four sides.
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+sindri-assets = { path = "../../crates/sindri-assets" }
+sindri-core = { path = "../../crates/sindri-core" }
+sindri-gpu = { path = "../../crates/sindri-gpu" }
+sindri-render = { path = "../../crates/sindri-render" }
+sindri-scene = { path = "../../crates/sindri-scene" }
+glam.workspace = true
+png = "0.18"
+pollster.workspace = true
+serde_json.workspace = true
+wgpu.workspace = true
+
+[[bin]]
+name = "voxel-lab-capture"
+path = "src/bin/capture.rs"
+
+[lints]
+workspace = true
