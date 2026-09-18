@@ -14,7 +14,7 @@
 //! settle on the first pass and never move again; a walker's X and Y come from
 //! its script and only its depth is answered here.
 
-use sindri_core::{ComponentSchemaRegistry, EntityId, World};
+use sindri_core::{ComponentSchemaRegistry, EntityId, Transform3D, World};
 use sindri_grid::GridCoord;
 use thiserror::Error;
 
@@ -114,6 +114,16 @@ fn place(
         .and_then(|data| data.transform_3d)
         .unwrap_or_default();
 
+    // A grid whose cells are boxes places things in the world rather than on a
+    // picture of it. There is no projection to apply and no depth to derive:
+    // a column is a distance across, a row is a distance into the scene, and
+    // the ground's height is a height.
+    if let Some(cell_size) = grid.solid_cell() {
+        return place_solid(
+            world, entity, placement, cell_size, surfaces, origin, transform,
+        );
+    }
+
     // A named cell decides X and Y; without one they are whatever moved the
     // entity last, and only the depth below is answered here.
     let column_row = if let Some([column, row]) = placement.cell {
@@ -191,6 +201,76 @@ fn place(
         data.transform_3d = Some(transform);
     }
     Ok(())
+}
+
+/// Where a thing stands on a grid of boxes.
+///
+/// The whole of what the projected path below computes -- a plane point, a
+/// projected offset for height, a depth key, a Z derived from it -- collapses
+/// to three coordinates, because in a world with boxes in it a position is a
+/// position. What covers what is the depth buffer's answer, so nothing here
+/// has an opinion about draw order.
+fn place_solid(
+    world: &mut World,
+    entity: EntityId,
+    placement: &GridPlacementComponent,
+    cell_size: [f32; 3],
+    surfaces: Option<&TileSurfaces>,
+    origin: [f32; 3],
+    mut transform: Transform3D,
+) -> Result<(), GridPlacementError> {
+    let [across, into, up] = cell_size;
+    let (column, row) = if let Some([column, row]) = placement.cell {
+        // Every cell it covers has to hold it up, exactly as on a flat grid:
+        // resting on a hole is an error rather than a prop quietly sitting at
+        // height zero.
+        if let Some(surfaces) = surfaces {
+            for cell in footprint(placement, GridCoord::new(column, row)) {
+                if surfaces.height(cell).is_none() {
+                    return Err(GridPlacementError::UnsupportedCell {
+                        entity,
+                        x: cell.x,
+                        y: cell.y,
+                    });
+                }
+            }
+        }
+        (
+            f64::from(column) + f64::from(placement.offset[0]),
+            f64::from(row) + f64::from(placement.offset[1]),
+        )
+    } else {
+        // A walker's cell is wherever whatever moves it has put it, read back
+        // out of the position it already holds.
+        (
+            f64::from(transform.position[0] - origin[0]) / f64::from(across),
+            f64::from(transform.position[2] - origin[2]) / f64::from(into),
+        )
+    };
+
+    let standing = nearest_cell(column, row);
+    let height = match (surfaces, placement.cell.is_some()) {
+        // An authored occupant rests on whatever holds it up; a walker stands
+        // only on what it can stand on, which is what keeps it off a pond.
+        (Some(surfaces), true) => surfaces.height(standing).unwrap_or(0.0),
+        (Some(surfaces), false) => surfaces.walkable_height(standing).unwrap_or(0.0),
+        (None, _) => 0.0,
+    };
+
+    transform.position = [
+        origin[0] + narrow(column) * across,
+        origin[1] + height * up,
+        origin[2] + narrow(row) * into,
+    ];
+    if let Some(data) = world.get_mut(entity) {
+        data.transform_3d = Some(transform);
+    }
+    Ok(())
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn narrow(value: f64) -> f32 {
+    value as f32
 }
 
 /// The cell a continuous grid point stands in.
