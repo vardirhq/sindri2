@@ -302,7 +302,7 @@ fn covers(face: TileFace, shape: TileBox, neighbour: Option<TileBox>) -> bool {
     // neighbour reaches it from the other side.
     let outward = matches!(face, TileFace::East | TileFace::Top | TileFace::South);
     let (wall, opposite) = if outward { (1.0, 0.0) } else { (0.0, 1.0) };
-    mine == wall && theirs == opposite && neighbour.spans(shape, axis)
+    TileBox::same(mine, wall) && TileBox::same(theirs, opposite) && neighbour.spans(shape, axis)
 }
 
 mod aim;

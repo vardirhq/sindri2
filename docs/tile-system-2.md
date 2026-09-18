@@ -62,7 +62,13 @@ need no second map system.
 Project asset describing semantic terrain:
 
 - stable tile IDs such as `grass`, `earth`, `water`, `soil`, and `stone`
-- how much of its cell each tile fills, from its floor upward
+- how much of its cell each tile fills: a `height` from the floor upward, or an
+  `extent` box naming the part of the cell the tile occupies as fractions of it,
+  `[across, up, into]`. A height is the full footprint by definition, so
+  everything it can describe is a slab of some thickness — a post, a fence, a
+  kerb, a rail and a step are all outside what it can say, and a rail is outside
+  it twice over because a height always starts at the floor. A document naming
+  both is refused rather than having one of them quietly win
 - whether a tile's top holds anything up, and separately whether a walker can
   stand on it — water does the first and not the second, and one flag saying
   "solid" could not tell a pond from a hole
@@ -76,6 +82,21 @@ Project asset describing semantic terrain:
   the whole thing at once. The hash is written in-repo rather than taken from
   `std`, whose default hasher may change between releases and would rearrange
   every scene that used it
+
+A box changes what covering means. A height could only ask whether a neighbour
+was tall enough, which stops being the question the moment a tile does not fill
+its footprint: a post against a wall is tall, and hides almost none of it.
+Culling now asks whether the two faces meet at the wall between the cells at
+all, and whether the neighbour covers the whole of the face rather than part of
+it. Corner darkening asks the narrower question still — only a neighbour filling
+its cell crowds a corner — because a fence post is not a wall and should not
+shade like one.
+
+A box is the shape the tile *is*, not the shape of its art. Its faces are still
+six quads placed on the box's own sides, so a fence post is a thin box wearing a
+fence texture rather than a full block whose picture happens to be mostly
+transparent. Picking is unchanged and still treats a cell as a whole cell, so a
+click near a post's cell finds the post.
 
 Tile sets are assets rather than components so several scenes and volumes can
 share one definition without copying it into every scene. Optional terrain

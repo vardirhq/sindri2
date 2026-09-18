@@ -13,7 +13,10 @@ script Hud {
         if which < 1.5 {
             return "earth";
         }
-        return "stone";
+        if which < 2.5 {
+            return "stone";
+        }
+        return "railing";
     }
 
     fn update(dt: f32) {
