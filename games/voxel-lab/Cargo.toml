@@ -21,6 +21,7 @@ sindri-gpu = { path = "../../crates/sindri-gpu" }
 sindri-render = { path = "../../crates/sindri-render" }
 sindri-scene = { path = "../../crates/sindri-scene" }
 glam.workspace = true
+sindri-grid = { path = "../../crates/sindri-grid" }
 png = "0.18"
 pollster.workspace = true
 serde_json.workspace = true

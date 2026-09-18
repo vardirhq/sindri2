@@ -61,6 +61,6 @@ pub use textures::{
 };
 pub use tile_surface::{TileSurfaceError, TileSurfaces};
 pub mod voxel;
-pub use voxel::{VoxelError, VoxelFace, cube_faces};
+pub use voxel::{VoxelError, VoxelFace, VoxelHit, cube_faces, pick};
 
 pub use tilesets::{TileSetBindings, referenced_tile_sets, tile_set_sheets, tile_set_textures};

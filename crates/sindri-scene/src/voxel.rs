@@ -286,6 +286,100 @@ mod tests {
         );
     }
 
+    /// Looking down at a block from above.
+    #[test]
+    fn a_ray_from_above_arrives_at_the_top_of_the_block_under_it() {
+        let volume = volume(r#"{ "position": [0, 0, 0], "tile": "stone" }"#);
+        let hit = pick(
+            &volume,
+            [1.0, 1.0, 1.0],
+            Vec3::new(0.0, 0.0, 5.0),
+            Vec3::new(0.0, 0.0, -1.0),
+            32.0,
+        )
+        .expect("the ray reaches the block");
+        assert_eq!(hit.cell, GridCoord3::new(0, 0, 0));
+        assert_eq!(hit.face, TileFace::Top);
+        // Which is what "click the top of a block to stack on it" means.
+        assert_eq!(hit.against(), GridCoord3::new(0, 0, 1));
+    }
+
+    /// And at its side, which is the half a flat plane could never answer.
+    #[test]
+    fn a_ray_from_the_west_arrives_at_the_west_side() {
+        let volume = volume(r#"{ "position": [0, 0, 0], "tile": "stone" }"#);
+        let hit = pick(
+            &volume,
+            [1.0, 1.0, 1.0],
+            Vec3::new(-5.0, 0.0, 0.5),
+            Vec3::new(1.0, 0.0, 0.0),
+            32.0,
+        )
+        .expect("the ray reaches the block");
+        assert_eq!(hit.cell, GridCoord3::new(0, 0, 0));
+        assert_eq!(hit.face, TileFace::West);
+        assert_eq!(hit.against(), GridCoord3::new(-1, 0, 0));
+    }
+
+    /// The near block, not the one behind it.
+    #[test]
+    fn a_ray_stops_at_the_first_block_it_meets() {
+        let volume = volume(
+            r#"{ "position": [0, 0, 0], "tile": "stone" },
+               { "position": [3, 0, 0], "tile": "stone" }"#,
+        );
+        let hit = pick(
+            &volume,
+            [1.0, 1.0, 1.0],
+            Vec3::new(-5.0, 0.0, 0.5),
+            Vec3::new(1.0, 0.0, 0.0),
+            32.0,
+        )
+        .expect("the ray reaches a block");
+        assert_eq!(hit.cell, GridCoord3::new(0, 0, 0), "the far block answered");
+    }
+
+    #[test]
+    fn a_ray_that_misses_everything_hits_nothing() {
+        let volume = volume(r#"{ "position": [0, 0, 0], "tile": "stone" }"#);
+        // Parallel to the ground, a level above the only block there is.
+        assert!(
+            pick(
+                &volume,
+                [1.0, 1.0, 1.0],
+                Vec3::new(-5.0, 0.0, 1.5),
+                Vec3::new(1.0, 0.0, 0.0),
+                32.0,
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn a_block_beyond_reach_is_not_picked() {
+        let volume = volume(r#"{ "position": [20, 0, 0], "tile": "stone" }"#);
+        let ray = (Vec3::new(-1.0, 0.0, 0.5), Vec3::new(1.0, 0.0, 0.0));
+        assert!(pick(&volume, [1.0, 1.0, 1.0], ray.0, ray.1, 5.0).is_none());
+        assert!(pick(&volume, [1.0, 1.0, 1.0], ray.0, ray.1, 64.0).is_some());
+    }
+
+    /// Cells are not cubes when the grid is not cubic, and the traversal has
+    /// to answer in cells rather than in distance.
+    #[test]
+    fn a_grid_of_flatter_cells_still_picks_the_right_one() {
+        let volume = volume(r#"{ "position": [2, 0, 0], "tile": "stone" }"#);
+        let hit = pick(
+            &volume,
+            [1.0, 1.0, 0.5],
+            Vec3::new(-5.0, 0.0, 0.25),
+            Vec3::new(1.0, 0.0, 0.0),
+            32.0,
+        )
+        .expect("the ray reaches the block");
+        assert_eq!(hit.cell, GridCoord3::new(2, 0, 0));
+        assert_eq!(hit.face, TileFace::West);
+    }
+
     #[test]
     fn a_face_the_art_never_drew_is_still_drawn() {
         // The tile set above names `top`, `south`, `east` and `bottom` only,
@@ -300,4 +394,161 @@ mod tests {
             );
         }
     }
+}
+
+/// Which block a ray reaches, and the side it arrives through.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct VoxelHit {
+    /// The block the ray struck.
+    pub cell: GridCoord3,
+    /// The side it entered by — the face you are looking at.
+    pub face: TileFace,
+}
+
+impl VoxelHit {
+    /// The empty cell against this face: where a block placed here would go.
+    ///
+    /// This is the whole of what "click a face to attach a block" means, and
+    /// the reason picking has to report a face rather than a cell. A cell
+    /// alone cannot say which of its six neighbours you meant.
+    #[must_use]
+    pub fn against(self) -> GridCoord3 {
+        let [dx, dy, dz] = self.face.neighbour_offset();
+        GridCoord3::new(self.cell.x + dx, self.cell.y + dy, self.cell.z + dz)
+    }
+}
+
+/// The first block a ray meets, walking the grid cell by cell.
+///
+/// Amanatides and Woo's traversal: step to whichever axis boundary is nearest,
+/// which visits every cell the ray passes through and no others. The cost is
+/// the length of the ray in cells rather than the number of cells there are,
+/// so picking against a large volume costs what picking against a small one
+/// does.
+///
+/// This replaces intersecting a horizontal plane at a level the caller had to
+/// name. That is why the editor grew a `Level` field, a `Target` mode and a
+/// `Place`/`Remove` pair: a plane cannot say which block you clicked, whether
+/// a block is there at all, or which of its sides you are looking at, so every
+/// one of those had to be answered by hand first.
+///
+/// Blocks are picked as whole cells even where a tile fills less of one. A
+/// slab's cell answers for the slab, which is right for placing against it and
+/// wrong only for a ray passing through the empty air above it -- an error of
+/// half a cell, on a shape you can see, in exchange for the traversal staying
+/// the simple thing it is.
+///
+/// `reach` bounds the walk in cells. Nothing is hit beyond it, which is what
+/// stops a ray aimed at the sky from walking to the horizon.
+#[must_use]
+pub fn pick(
+    volume: &TileVolumeComponent,
+    cell_size: [f32; 3],
+    origin: Vec3,
+    direction: Vec3,
+    reach: f32,
+) -> Option<VoxelHit> {
+    let cells: BTreeMap<GridCoord3, &str> = volume.occupied().collect();
+    if cells.is_empty() {
+        return None;
+    }
+    // Into a space where every cell is the unit cube from its own coordinate:
+    // X and Y are centred on their column and row, Z stands on its level, and
+    // the traversal below need know none of that.
+    let [sx, sy, sz] = cell_size;
+    if sx <= 0.0 || sy <= 0.0 || sz <= 0.0 {
+        return None;
+    }
+    let start = Vec3::new(origin.x / sx + 0.5, origin.y / sy + 0.5, origin.z / sz);
+    let step_by = Vec3::new(direction.x / sx, direction.y / sy, direction.z / sz);
+    if !start.is_finite() || !step_by.is_finite() || step_by.length_squared() <= 0.0 {
+        return None;
+    }
+
+    let mut cell = [cell_of(start.x), cell_of(start.y), cell_of(start.z)];
+    let mut next = [0.0_f32; 3];
+    let mut delta = [0.0_f32; 3];
+    let mut step = [0_i64; 3];
+    // Which face the ray enters by, per axis, given the way it is going: a ray
+    // travelling east enters through a block's west side.
+    let entering = [
+        [TileFace::East, TileFace::West],
+        [TileFace::South, TileFace::North],
+        [TileFace::Top, TileFace::Bottom],
+    ];
+    for axis in 0..3 {
+        let at = start[axis];
+        let towards = step_by[axis];
+        if towards > 0.0 {
+            step[axis] = 1;
+            next[axis] = (boundary(cell[axis] + 1) - at) / towards;
+            delta[axis] = 1.0 / towards;
+        } else if towards < 0.0 {
+            step[axis] = -1;
+            next[axis] = (at - boundary(cell[axis])) / -towards;
+            delta[axis] = -1.0 / towards;
+        } else {
+            // Never crosses a boundary on this axis, so it never decides one.
+            step[axis] = 0;
+            next[axis] = f32::INFINITY;
+            delta[axis] = f32::INFINITY;
+        }
+    }
+
+    let mut face = None;
+    let mut travelled = 0.0_f32;
+    while travelled <= reach {
+        if let Some(coord) = coord_of(cell)
+            && cells.contains_key(&coord)
+        {
+            return Some(VoxelHit {
+                cell: coord,
+                // A ray starting inside a block has entered by no face; the
+                // block it is in is still the answer, and the side it would
+                // have come through is its top.
+                face: face.unwrap_or(TileFace::Top),
+            });
+        }
+        // Whichever boundary is nearest is the one crossed next.
+        let axis = if next[0] < next[1] && next[0] < next[2] {
+            0
+        } else if next[1] < next[2] {
+            1
+        } else {
+            2
+        };
+        if !next[axis].is_finite() {
+            return None;
+        }
+        travelled = next[axis];
+        cell[axis] += step[axis];
+        next[axis] += delta[axis];
+        face = Some(entering[axis][usize::from(step[axis] > 0)]);
+    }
+    None
+}
+
+/// Which cell a coordinate falls in, as the traversal counts them.
+///
+/// Named so the narrowing reads as the intent it is: a ray aimed far enough
+/// outside any grid to overflow this is a ray that hits nothing, which is the
+/// answer it gets.
+#[allow(clippy::cast_possible_truncation)]
+fn cell_of(at: f32) -> i64 {
+    at.floor() as i64
+}
+
+/// Where one cell's edge sits along its own axis.
+#[allow(clippy::cast_precision_loss)]
+fn boundary(cell: i64) -> f32 {
+    cell as f32
+}
+
+/// A traversal coordinate as a grid one, where it fits in a grid at all.
+fn coord_of(cell: [i64; 3]) -> Option<GridCoord3> {
+    Some(GridCoord3::new(
+        i32::try_from(cell[0]).ok()?,
+        i32::try_from(cell[1]).ok()?,
+        i32::try_from(cell[2]).ok()?,
+    ))
 }
