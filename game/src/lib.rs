@@ -1,4 +1,4 @@
-//! Gather: the companion game.
+//! Causeway: the companion game.
 //!
 //! Five orbs on a floor, a thing you drive with a keyboard or touch stick, and
 //! a row of lamps that fills as you collect them. That is the whole game, and
@@ -27,6 +27,7 @@ mod app;
 mod assets;
 mod error;
 mod session;
+pub mod worldgen;
 
 // The crate's public surface: what `bin/`, `tests/`, and the browser host
 // reach for. Where an item lives inside the crate is not their business.
@@ -38,7 +39,7 @@ pub use assets::{
     scenes, sources, stylesheets, world,
 };
 pub use assets::{extractor, presented_world};
-pub use error::GatherError;
+pub use error::CausewayError;
 pub use session::Session;
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen(start))]
@@ -46,7 +47,7 @@ pub fn run() {
     #[cfg(not(target_arch = "wasm32"))]
     {
         env_logger::init();
-        if let Err(error) = sindri_desktop::run::<app::GatherApp>(WindowConfig {
+        if let Err(error) = sindri_desktop::run::<app::CausewayApp>(WindowConfig {
             title: "Gather".to_owned(),
             ..WindowConfig::default()
         }) {
@@ -58,7 +59,7 @@ pub fn run() {
     {
         console_error_panic_hook::set_once();
         let _ = console_log::init_with_level(log::Level::Info);
-        if let Err(error) = sindri_desktop::run::<browser::BrowserGatherApp>(WindowConfig {
+        if let Err(error) = sindri_desktop::run::<browser::BrowserCausewayApp>(WindowConfig {
             title: "Gather".to_owned(),
             ..WindowConfig::default()
         }) {

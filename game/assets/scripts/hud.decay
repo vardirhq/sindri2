@@ -1,0 +1,34 @@
+// What the player needs to know, and nothing else.
+//
+// Which block is in hand and how many are left are the two facts a build
+// decision turns on, so they are on screen rather than in a menu. Two elements
+// rather than one sentence, because a name is text and a count is a number and
+// the host formats each properly -- a script gluing them together would be a
+// script deciding how numbers look.
+script Hud {
+    fn named(which: f32) -> String {
+        if which < 0.5 {
+            return "planks";
+        }
+        if which < 1.5 {
+            return "earth";
+        }
+        return "stone";
+    }
+
+    fn update(dt: f32) {
+        let kind = World.find("Kind");
+        let stock = World.find("Stock");
+        if kind == null || stock == null {
+            return;
+        }
+        // A game that ends without saying so has not ended.
+        if Game.get("arrived", 0.0) > 0.0 {
+            Ui.set_text(kind, "The way is open.");
+            Ui.set_text(stock, "");
+            return;
+        }
+        Ui.set_text(kind, named(Game.get("chosen", 0.0)));
+        Ui.set_number(stock, Game.get("left", 0.0));
+    }
+}

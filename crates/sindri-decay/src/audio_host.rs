@@ -63,6 +63,8 @@ pub struct HostServices<'a> {
     pub physics: Option<crate::Physics2d<'a>>,
     /// Where the screen elements are and what the pointer is doing to them.
     pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    /// Which block the pointer is on, when the host picked one this frame.
+    pub aim: Option<sindri_scene::voxel::VolumeAim>,
     /// The run's random stream, when the host is running one.
     pub random: Option<&'a mut sindri_core::Rng>,
     /// What the game remembers, when the host is keeping a save.
@@ -97,6 +99,7 @@ impl<'a> WorldHost<'a> {
             profiles,
             physics,
             screen_ui,
+            aim,
             random,
             saves,
             effects,
@@ -118,6 +121,7 @@ impl<'a> WorldHost<'a> {
                     effects,
                     physics,
                     screen_ui,
+                    aim,
                     random,
                     animations,
                     scenes,
@@ -289,6 +293,7 @@ mod tests {
                 spawning: spawning(&prefabs, &started, &mut spawned),
                 physics: None,
                 screen_ui: None,
+                aim: None,
                 random: None,
                 saves: None,
                 effects: None,
@@ -362,6 +367,7 @@ mod tests {
                 spawning: spawning(&prefabs, &started, &mut spawned),
                 physics: None,
                 screen_ui: None,
+                aim: None,
                 random: None,
                 saves: None,
                 effects: None,

@@ -28,6 +28,7 @@ What the entity a script runs on offers, beyond the script's own fields.
 
 Names in scope without qualification. Decay has no imports, so each of these is a name a script cannot use for its own.
 
+- `Aim`: `Aim`
 - `Animation`: `Animation`
 - `Audio`: `Audio`
 - `Effects`: `Effects`
@@ -57,6 +58,16 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `sqrt(f32)` → `f32`
 
 ## Types
+
+### `Aim`
+
+- `hit`: `bool`
+- `place_x`: `f32`
+- `place_y`: `f32`
+- `place_z`: `f32`
+- `x`: `f32`
+- `y`: `f32`
+- `z`: `f32`
 
 ### `Animation`
 

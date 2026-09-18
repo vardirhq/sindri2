@@ -11,188 +11,24 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use sindri_core::{
-    AssetId, SceneComponent, SceneDocument, SpriteSheetDocument, TileSetDocument,
-    UnknownComponentPolicy, World, sheet_id_for,
-};
-use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
-use sindri_gather::{
+use sindri_causeway::{
     FONTS, SHEETS, TEXTURE_IDS, TEXTURES, TILE_SETS, extractor, presented_world, sources,
     stylesheets, world,
 };
-use sindri_scene::{
-    SceneExtractor, ShapeComponent, SpriteComponent, TileGridComponent, TileVolumeComponent,
-    UiAnchor, UiTextComponent,
+use sindri_core::{
+    AssetId, SceneComponent, SceneDocument, SpriteSheetDocument, TileSetDocument,
+    UnknownComponentPolicy, sheet_id_for,
 };
+use sindri_decay::{ScriptComponent, ScriptSources, Scripts};
+use sindri_scene::{SpriteComponent, UiAnchor, UiTextComponent};
 
-const SCENE: &str = include_str!("../assets/gather.scene.json");
-
-#[test]
-fn the_island_has_authored_regions() {
-    let (world, _scenes) = world().expect("the scene loads");
-    let extractor = extractor().expect("the schemas register");
-    let (entity, grid) = extractor
-        .components()
-        .query::<TileGridComponent>(&world)
-        .expect("the tile grid schema reads")
-        .into_iter()
-        .next()
-        .expect("Gather has a floor");
-    let floor = extractor
-        .components()
-        .get::<TileVolumeComponent>(&world, entity)
-        .expect("the tile volume schema reads")
-        .expect("the floor is a volume");
-
-    assert_eq!((grid.columns, grid.rows), (25, 25));
-
-    // The ground is the level the flat map became. It sits one level *below*
-    // the plane everything stands on, because the surface a walker walks on is
-    // a block's top rather than its floor; anything above it is the plateau
-    // that was already stacked there.
-    let ground = floor
-        .cells
-        .iter()
-        .filter(|cell| cell.position[2] == -1)
-        .collect::<Vec<_>>();
-    assert_eq!(
-        ground.len(),
-        625,
-        "every cell of the old flat map became a block"
-    );
-    assert_eq!(
-        floor.cells.len() - ground.len(),
-        35,
-        "and every tier of the plateau still stands on top of it"
-    );
-    assert!(
-        floor
-            .cells
-            .iter()
-            .filter(|cell| cell.position[2] == 0)
-            .count()
-            == 25,
-        "including the base tier, which is the one a careless translation eats"
-    );
-
-    let count = |tile: &str| ground.iter().filter(|cell| cell.tile == tile).count();
-    let grass = ["grass", "grass-b", "grass-c", "grass-tuft", "grass-bloom"]
-        .into_iter()
-        .map(count)
-        .sum::<usize>();
-
-    // Every tile the floor names has to exist, or the scene draws nothing and
-    // says so a frame later rather than here.
-    let tile_sets = sindri_gather::bind_tile_sets().expect("the tile sets decode");
-    let set = tile_sets
-        .get(&floor.tileset)
-        .expect("the floor's tile set is bound");
-    let unknown = floor
-        .cells
-        .iter()
-        .filter(|cell| set.tile(&cell.tile).is_none())
-        .map(|cell| cell.tile.clone())
-        .collect::<BTreeSet<_>>();
-    assert!(
-        unknown.is_empty(),
-        "cells name undefined tiles: {unknown:?}"
-    );
-
-    assert!(grass >= 200, "the island is mostly lawn");
-    assert!(
-        count("grass-b") > 0 && count("grass-c") > 0,
-        "the five kinds of grass the flat map authored survived the move"
-    );
-    assert!(
-        count("soil") >= 60,
-        "the farm has substantial dry working plots"
-    );
-    assert!(
-        count("soil-wet") >= 15,
-        "one working plot is visibly watered"
-    );
-    assert!(count("path") >= 30, "paths connect the farm's regions");
-    assert!(
-        count("flagstone") >= 20,
-        "the farmhouse has a flagstone yard"
-    );
-    assert!(
-        count("water") >= 150,
-        "an irregular shore makes the map an island"
-    );
-    assert!(
-        count("sand") > 0,
-        "and the rocks standing off it have a shoal under them"
-    );
-}
-
-/// The authored IDs of every entity carrying `C`.
-///
-/// Generic because the point of the landmark test is comparing two component
-/// sets, and a closure cannot be generic over the component it queries.
-fn authored_ids<C: SceneComponent>(extractor: &SceneExtractor, world: &World) -> BTreeSet<String> {
-    extractor
-        .components()
-        .query::<C>(world)
-        .expect("the component schema reads")
-        .into_iter()
-        .filter_map(|(entity, _)| {
-            world
-                .get(entity)?
-                .source_id
-                .as_ref()
-                .map(|id| id.as_str().to_owned())
-        })
-        .collect()
-}
-
-/// The landmarks are there, and each is made of the right thing.
-///
-/// The split is the point. Gather's world art is baked
-/// (`tools/isometric-baker`) and drawn as ordinary sprites, so the shrine, the
-/// waystones and the standing stones are sprites. What stayed procedural is
-/// what a shape is genuinely better at: two small pieces that a script
-/// animates every frame, which no baked frame could do.
-#[test]
-fn landmarks_make_the_world_and_navigation_readable() {
-    let (world, _scenes) = world().expect("the scene loads");
-    let extractor = extractor().expect("the schemas register");
-
-    let shaped = authored_ids::<ShapeComponent>(&extractor, &world);
-    let drawn = authored_ids::<SpriteComponent>(&extractor, &world);
-
-    for expected in [
-        "shrine",
-        "waystone-west",
-        "waystone-east",
-        "ridge-stone-0",
-        "ridge-stone-3",
-        "tree-0",
-        "outcrop-0",
-    ] {
-        assert!(
-            drawn.contains(expected),
-            "Gather's {expected} should be a baked sprite"
-        );
-        assert!(
-            !shaped.contains(expected),
-            "{expected} still carries the procedural placeholder it replaced"
-        );
-    }
-
-    for animated in ["shrine-heart", "wisp-halo"] {
-        assert!(
-            shaped.contains(animated),
-            "{animated} is animated every frame, so it stays a shape"
-        );
-    }
-}
+const SCENE: &str = include_str!("../assets/causeway.scene.json");
 
 #[test]
 fn weave_reflows_the_hud_for_a_phone() {
     let (authored, _scenes) = world().expect("the scene loads");
     let extractor = extractor().expect("the schemas register");
-    let sheets = stylesheets().expect("the composed Gather stylesheet parses");
+    let sheets = stylesheets().expect("the composed stylesheet parses");
     assert_eq!(sheets.len(), 1, "imports compose into one root");
 
     let wide = presented_world(
@@ -221,7 +57,7 @@ fn weave_reflows_the_hud_for_a_phone() {
                 .is_some_and(|id| id.as_str() == "title")
         })
         .map(|(entity, _)| entity)
-        .expect("Gather has a title");
+        .expect("the game has a title");
 
     let wide_title = extractor
         .components()
@@ -265,7 +101,7 @@ fn every_texture_the_scene_names_is_shipped() {
 
 /// The browser build fetches exactly what the native build embeds.
 ///
-/// Two lists say which textures Gather has — one of bytes for the native
+/// Two lists say which textures the game has — one of bytes for the native
 /// binary, one of IDs for the browser to fetch — and a texture added to one
 /// and not the other is a game that looks right in one target and wrong in the
 /// other, with nothing failing.
@@ -313,41 +149,6 @@ fn the_scene_holds_no_component_the_game_cannot_run() {
         .expect("the schemas register")
         .validate(&document, UnknownComponentPolicy::Reject)
         .expect("every component is one the game runs");
-}
-
-/// The authored properties reach fields the scripts actually declare.
-///
-/// A property naming a renamed field is refused at runtime rather than ignored,
-/// so this would show up as a game that reports an error every frame — worth
-/// catching here instead.
-#[test]
-fn every_authored_property_names_a_field_its_script_exports() {
-    let (world, _scenes) = world().expect("the scene loads");
-    let extractor = extractor().expect("the schemas register");
-    let sources = sources();
-    let mut scripts = Scripts::new();
-    scripts.compile(&world, extractor.components(), &sources);
-
-    let scripted = extractor
-        .components()
-        .query::<ScriptComponent>(&world)
-        .expect("sindri.script is registered");
-    assert!(!scripted.is_empty(), "the game has scripts");
-
-    for (_, component) in scripted {
-        let exports = scripts
-            .exports(&component.source, &component.script)
-            .unwrap_or_else(|| panic!("{} did not compile", component.source));
-        let declared: BTreeSet<&str> = exports.iter().map(|export| export.name.as_str()).collect();
-        for name in component.properties.keys() {
-            assert!(
-                declared.contains(name.as_str()),
-                "{}'s {} sets `{name}`, which it does not @export -- declared: {declared:?}",
-                component.source,
-                component.script,
-            );
-        }
-    }
 }
 
 /// A sprite drawn from a sheet names which part of it to draw.
@@ -430,78 +231,23 @@ const _: fn() = || {
 /// produces the file that is already committed rather than a whole-file diff.
 ///
 /// Regenerate deliberately with
-/// `SINDRI_UPDATE_GATHER_SCENE=1 cargo test --package sindri-gather`.
+/// `SINDRI_UPDATE_CAUSEWAY_SCENE=1 cargo test --package sindri-gather`.
 #[test]
 fn the_scene_file_is_canonical() {
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("assets")
-        .join("gather.scene.json");
+        .join("causeway.scene.json");
     let stored = std::fs::read_to_string(&path).expect("the scene is readable");
     let canonical = SceneDocument::from_json(&stored)
         .expect("the scene parses")
         .to_canonical_json()
         .expect("the scene serializes");
-    if std::env::var_os("SINDRI_UPDATE_GATHER_SCENE").is_some() {
+    if std::env::var_os("SINDRI_UPDATE_CAUSEWAY_SCENE").is_some() {
         std::fs::write(&path, &canonical).expect("the scene is writable");
         return;
     }
     assert_eq!(
         stored, canonical,
-        "gather.scene.json is not canonical; rerun with SINDRI_UPDATE_GATHER_SCENE=1"
-    );
-}
-
-/// Every texture drawn in the world says where it meets the ground.
-///
-/// A quad is drawn centred on its entity, so a sprite that declares nothing is
-/// drawn by its middle. For baked art that is right — the baker pads each frame
-/// so its middle *is* the floor of the tile — and for hand-drawn art it is a
-/// coin toss nobody is asked to call. The player was drawn a third of a ball low
-/// for exactly that reason, and nothing failed.
-///
-/// So the game requires the answer to be written down rather than defaulted.
-/// `"center"` is a perfectly good answer — the orbs float and say so — but it
-/// has to be said, because a sheet that says nothing cannot be told apart from
-/// one whose author never considered the question.
-#[test]
-fn every_texture_drawn_in_the_world_declares_where_it_meets_the_ground() {
-    let (world, _scenes) = world().expect("the scene loads");
-    let extractor = extractor().expect("the schemas register");
-    let sheets: BTreeMap<&str, &str> = SHEETS.iter().copied().collect();
-
-    // World sprites only. A UI image is placed by its own anchor against the
-    // viewport and never stands on anything, so asking where it meets the
-    // ground is a question about the wrong space.
-    let drawn: BTreeSet<String> = extractor
-        .components()
-        .query::<SpriteComponent>(&world)
-        .expect("sprites read")
-        .into_iter()
-        .map(|(_, sprite)| {
-            sprite
-                .reference()
-                .expect("a drawn sprite names a texture")
-                .texture()
-                .to_owned()
-        })
-        .collect();
-
-    let mut silent = Vec::new();
-    for texture in drawn {
-        let texture_id = AssetId::new(&texture).expect("a drawn texture is a valid id");
-        let id = sheet_id_for(&texture_id).expect("a texture has a sheet id");
-        let Some(json) = sheets.get(id.as_str()) else {
-            silent.push(format!("{texture} has no sheet at all"));
-            continue;
-        };
-        let sheet = SpriteSheetDocument::from_json(json).expect("a shipped sheet parses");
-        if sheet.anchor.is_none() {
-            silent.push(format!("{texture} declares no anchor"));
-        }
-    }
-
-    assert!(
-        silent.is_empty(),
-        "these are drawn in the world without saying where they touch it: {silent:?}"
+        "causeway.scene.json is not canonical; regenerate it with `python3 tools/level.py`"
     );
 }

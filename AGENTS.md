@@ -15,25 +15,32 @@ applies.
 
 Two games serve two different purposes, and confusing them wastes both.
 
-**Gather is the showcase.** It demonstrates capabilities the engine already has,
-in a real gameplay context. A unit test, component type, editor control, or
-callable Decay API is necessary evidence but is not a substitute for a feature
-being used in a game — and Gather is where a finished capability proves it can
-be used. It is not a disposable demo.
+**Causeway is the showcase.** It demonstrates capabilities the engine already
+has, in a real gameplay context. A unit test, component type, editor control,
+or callable Decay API is necessary evidence but is not a substitute for a
+feature being used in a game — and Causeway is where a finished capability
+proves it can be used. It is not a disposable demo.
 
-Gather is an isometric farming game, and it is held to the standard of a game
-somebody would choose to play rather than of a demo that proves a point. That
-is deliberate: a showcase nobody wants to play does not showcase anything, and
-the previous Gather — a walkable diorama of six scripts — was a fraction of the
-size of the game meant to be *stressing* the engine.
+Causeway is a builder: the world is made of voxels, you place and remove blocks
+by clicking their faces, and somebody walks the way you build. It is held to
+the standard of a game somebody would choose to play rather than of a demo that
+proves a point, because a showcase nobody wants to play does not showcase
+anything.
 
-Being the showcase no longer means it may only use what already exists. Where
-the game needs a capability Sindri lacks, that capability is added, as a
-general one, on the same terms as any other. What separates it from the
-forcing function below is *why* the gap is found: Gather finds gaps by trying
-to be a good game, Orbital by trying to be a faithful recreation. Gather also
-carries the art: it is the one place the isometric baker is pushed as far as it
-goes, because a showcase that looks approximate sells an engine that looks
+It replaced Causeway, an isometric farming game, when the engine stopped drawing
+a picture of blocks and started drawing blocks. Causeway was authored as a
+projection all the way down — its art baked as isometric silhouettes, its
+scene written in screen coordinates, its scripts assuming a flat plane — and
+migrating it would have carried a design shaped around a limitation the engine
+no longer has. The history holds it if it is ever wanted.
+
+Being the showcase does not mean it may only use what already exists. Where the
+game needs a capability Sindri lacks, that capability is added, as a general
+one, on the same terms as any other. What separates it from the forcing
+function below is *why* the gap is found: Causeway finds gaps by trying to be a
+good game, Orbital by trying to be a faithful recreation. Causeway also carries
+the art: it is the one place the isometric baker is pushed as far as it goes,
+because a showcase that looks approximate sells an engine that looks
 approximate.
 
 **Orbital Last Stand is the forcing function.** It is a recreation of a real,
@@ -43,10 +50,10 @@ as a *general* Sindri capability, never as something shaped around that game.
 A new gameplay capability is proven there first. See
 `docs/orbital-last-stand-plan.md`.
 
-So: a capability the engine already had is not complete until Gather uses it;
+So: a capability the engine already had is not complete until Causeway uses it;
 a capability found by recreating a known game is proven in Orbital Last Stand;
-a capability found by making Gather good is added for Gather, generally rather
-than shaped around it. Say which of the three a change is, in its
+a capability found by making Causeway good is added for Causeway, generally
+rather than shaped around it. Say which of the three a change is, in its
 documentation.
 
 ## Read before changing architecture
@@ -92,7 +99,7 @@ sindri-physics    -> sindri-core (+ sindri-grid only when a real integration nee
 sindri-scene      -> sindri-core + sindri-grid + sindri-render + sindri-physics
 sindri-decay      -> core + grid + physics + platform + scene + decay language crates
 editor            -> assets + core + decay + physics + platform + render + scene
-sindri-gather     -> consumer of the engine; nothing depends on it
+sindri-causeway   -> consumer of the engine; nothing depends on it
 ```
 
 Important constraints:
@@ -100,7 +107,7 @@ Important constraints:
 - `sindri-core` has no window, GPU, browser, editor, physics, scripting, or async
   executor dependency.
 - `sindri-render` does not depend on `sindri-core`; `sindri-scene` is the seam.
-- Engine crates never depend on the editor or Gather.
+- Engine crates never depend on the editor or the companion game.
 - `decay/` is a separate Cargo workspace and may not depend on `sindri-*` crates.
   `sindri-decay` is the one-way bridge into the language.
 - Create a new crate only at a proven platform or dependency boundary.
@@ -130,7 +137,7 @@ When a capability changes, update the relevant documentation in the same commit:
 - `CHANGELOG.md` for user-visible behaviour.
 - `ROADMAP.md` only when an item's real acceptance criteria are complete.
 
-For gameplay capabilities, name the game that exercises them — Gather for a
+For gameplay capabilities, name the game that exercises them — Causeway for a
 capability that already existed, Orbital Last Stand for one being added — in the
 same feature track. A capability exercised by neither is not complete, and
 saying so is better than an unqualified checkmark.

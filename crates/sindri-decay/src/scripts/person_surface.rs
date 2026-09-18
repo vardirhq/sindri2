@@ -8,8 +8,8 @@
 use decay_semantic::{Environment, FunctionType, HostType, Type};
 
 use crate::surface::{
-    POINTER, POINTER_QUERIES, POINTER_VALUES, PointerValue, STICK, STICK_VALUES, StickValue, TOUCH,
-    TOUCH_CALLS, TOUCH_COUNT, VIEWPORT, VIEWPORT_VALUES,
+    AIM, AIM_VALUES, AimValue, POINTER, POINTER_QUERIES, POINTER_VALUES, PointerValue, STICK,
+    STICK_VALUES, StickValue, TOUCH, TOUCH_CALLS, TOUCH_COUNT, VIEWPORT, VIEWPORT_VALUES,
 };
 
 /// The shape of the screen the host is drawing into.
@@ -20,6 +20,22 @@ pub(super) fn add_viewport_surface(environment: &mut Environment) {
     }
     environment.add_type(VIEWPORT, viewport);
     environment.add_value(VIEWPORT, Type::Named(VIEWPORT.to_owned()));
+}
+
+/// Which block the person is pointing at.
+pub(super) fn add_aim_surface(environment: &mut Environment) {
+    let mut aim = HostType::new();
+    for (name, value) in AIM_VALUES {
+        aim = aim.with_value(
+            *name,
+            match value {
+                AimValue::Hit => Type::Bool,
+                _ => Type::F32,
+            },
+        );
+    }
+    environment.add_type(AIM, aim);
+    environment.add_value(AIM, Type::Named(AIM.to_owned()));
 }
 
 /// Where the person is pointing, and the fingers behind it.

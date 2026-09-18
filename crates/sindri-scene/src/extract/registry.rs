@@ -124,7 +124,10 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
                 "multiply": [1.0, 1.0, 1.0, 1.0],
                 "offset": [0.0, 0.0, 0.0, 0.0]
             },
-            "layer": 0
+            "layer": 0,
+            // Off by default: a new sprite is as likely to be something
+            // lying on the ground as somebody standing on it.
+            "billboard": false
         }),
     )?;
     // The UI half of the same picture: anchored to the middle of the

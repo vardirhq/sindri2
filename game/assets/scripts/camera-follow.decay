@@ -1,23 +1,50 @@
-// Keeps a large world playable without putting camera behaviour in the Rust
-// host. Following this game's active player is a game rule, so it belongs with
-// its movement and doors in Decay.
+// Keeps the walker in frame in a world too big to frame at once.
+//
+// The offset is exported rather than measured on the first frame, and the
+// world being generated is why: the walker starts wherever this seed put dry
+// land, so a camera that captured "where I am now, relative to them" would
+// capture whatever gap the scene file happened to leave and keep it for ever.
+// Stating the viewpoint makes it the same shot in every world.
 script CameraFollow {
     @export
-    let ease: f32 = 7.5;
+    let ease: f32 = 4.0;
+
+    // A thirty-unit arm at forty-five degrees round and thirty-three up, which
+    // is the isometric viewpoint this game is drawn from.
+    @export
+    let offset_x: f32 = 17.79;
+
+    @export
+    let offset_y: f32 = 16.34;
+
+    @export
+    let offset_z: f32 = 17.79;
+
+    var framed: bool = false;
 
     fn update(dt: f32) {
-        let player = World.find("Player");
-        if player == null {
+        let walker = World.find("Wanderer");
+        if walker == null {
+            return;
+        }
+        let want_x = walker.transform.position.x + offset_x;
+        let want_y = walker.transform.position.y + offset_y;
+        let want_z = walker.transform.position.z + offset_z;
+
+        // The first frame snaps. Easing in from wherever the scene file left
+        // the camera would be a long slow glide across the map before the game
+        // started, once per run.
+        if !framed {
+            framed = true;
+            this.transform.position.x = want_x;
+            this.transform.position.y = want_y;
+            this.transform.position.z = want_z;
             return;
         }
 
-        // Frame-rate-independent enough for a visual follow: the capped step
-        // cannot overshoot after a slow frame, while ordinary fixed frames ease
-        // rather than snapping and keep the farmer away from the exact centre.
         let amount = min(1.0, ease * dt);
-        this.transform.position.x +=
-            (player.transform.position.x - this.transform.position.x) * amount;
-        this.transform.position.y +=
-            (player.transform.position.y - this.transform.position.y) * amount;
+        this.transform.position.x += (want_x - this.transform.position.x) * amount;
+        this.transform.position.y += (want_y - this.transform.position.y) * amount;
+        this.transform.position.z += (want_z - this.transform.position.z) * amount;
     }
 }

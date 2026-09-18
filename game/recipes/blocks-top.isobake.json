@@ -1,0 +1,3185 @@
+{
+  "format_version": 1,
+  "id": "blocks-top",
+  "texture": "textures/blocks-top.png",
+  "view": "top-down",
+  "pixels_per_unit": 48,
+  "directions": 1,
+  "footprint": {
+    "width": 1,
+    "height": 1
+  },
+  "render": {
+    "supersample": 1,
+    "padding": 0,
+    "palette_snap": true,
+    "alpha_cutoff": 128,
+    "outline": {
+      "enabled": false
+    }
+  },
+  "variants": [
+    {
+      "name": "ground-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "earth-deep": {
+            "colour": "#623c1f",
+            "grain": {
+              "strength": 0.4,
+              "size": 0.065,
+              "seed": 5
+            },
+            "ramp": {
+              "lightness": [
+                -0.15,
+                -0.08,
+                0.0,
+                0.06
+              ]
+            }
+          },
+          "earth": {
+            "colour": "#7d5132",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.055,
+              "seed": 23
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.07
+              ]
+            }
+          },
+          "earth-top": {
+            "colour": "#94643f",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.05,
+              "seed": 3
+            },
+            "ramp": {
+              "lightness": [
+                -0.19,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "grass": {
+            "colour": "#5f9741",
+            "grain": {
+              "strength": 0.22,
+              "size": 0.036,
+              "seed": 11
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.09
+              ]
+            }
+          },
+          "grass-deep": {
+            "colour": "#4f8037",
+            "grain": {
+              "strength": 0.22,
+              "size": 0.04,
+              "seed": 17
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth-deep",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth-top",
+            "position": [
+              0.0,
+              0.21,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.26,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              0.0,
+              0.43,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.14,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              -0.0380963571921451,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.1648,
+              0.1,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              0.3393684672189835,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.1573,
+              0.1,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              0.0062730184498168695,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.167,
+              0.1,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "ground-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "earth-deep": {
+            "colour": "#623c1f",
+            "grain": {
+              "strength": 0.4,
+              "size": 0.065,
+              "seed": 5
+            },
+            "ramp": {
+              "lightness": [
+                -0.15,
+                -0.08,
+                0.0,
+                0.06
+              ]
+            }
+          },
+          "earth": {
+            "colour": "#7d5132",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.055,
+              "seed": 23
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.07
+              ]
+            }
+          },
+          "earth-top": {
+            "colour": "#94643f",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.05,
+              "seed": 3
+            },
+            "ramp": {
+              "lightness": [
+                -0.19,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "grass": {
+            "colour": "#5f9741",
+            "grain": {
+              "strength": 0.22,
+              "size": 0.036,
+              "seed": 11
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.09
+              ]
+            }
+          },
+          "grass-deep": {
+            "colour": "#4f8037",
+            "grain": {
+              "strength": 0.22,
+              "size": 0.04,
+              "seed": 17
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth-deep",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth-top",
+            "position": [
+              0.0,
+              0.21,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.26,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              0.0,
+              0.43,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.14,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              -0.020343457049161517,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.1726,
+              0.1,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              0.13312837689987045,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.1314,
+              0.1,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              -0.3913116455279457,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.15,
+              0.1,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass-deep",
+            "position": [
+              0.18620883134105026,
+              0.455,
+              0.11435559182321076
+            ],
+            "size": [
+              0.2384,
+              0.09,
+              0.2384
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass-deep",
+            "position": [
+              0.03491402865200882,
+              0.455,
+              0.0967926515232006
+            ],
+            "size": [
+              0.2842,
+              0.09,
+              0.2842
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "ground-2",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "earth-deep": {
+            "colour": "#623c1f",
+            "grain": {
+              "strength": 0.4,
+              "size": 0.065,
+              "seed": 5
+            },
+            "ramp": {
+              "lightness": [
+                -0.15,
+                -0.08,
+                0.0,
+                0.06
+              ]
+            }
+          },
+          "earth": {
+            "colour": "#7d5132",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.055,
+              "seed": 23
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.07
+              ]
+            }
+          },
+          "earth-top": {
+            "colour": "#94643f",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.05,
+              "seed": 3
+            },
+            "ramp": {
+              "lightness": [
+                -0.19,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "grass": {
+            "colour": "#5f9741",
+            "grain": {
+              "strength": 0.22,
+              "size": 0.036,
+              "seed": 11
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.09
+              ]
+            }
+          },
+          "grass-deep": {
+            "colour": "#4f8037",
+            "grain": {
+              "strength": 0.22,
+              "size": 0.04,
+              "seed": 17
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth-deep",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth-top",
+            "position": [
+              0.0,
+              0.21,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.26,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              0.0,
+              0.43,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.14,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              -0.19279320662762114,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.1748,
+              0.1,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              0.1472655344128886,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.1879,
+              0.1,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              -0.25142066090101167,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.1384,
+              0.1,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass-deep",
+            "position": [
+              -0.1649022386627324,
+              0.455,
+              0.14041416132766377
+            ],
+            "size": [
+              0.2206,
+              0.09,
+              0.2206
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass-deep",
+            "position": [
+              0.018788851108210936,
+              0.455,
+              -0.17165548170495556
+            ],
+            "size": [
+              0.2182,
+              0.09,
+              0.2182
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "ground-3",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "earth-deep": {
+            "colour": "#623c1f",
+            "grain": {
+              "strength": 0.4,
+              "size": 0.065,
+              "seed": 5
+            },
+            "ramp": {
+              "lightness": [
+                -0.15,
+                -0.08,
+                0.0,
+                0.06
+              ]
+            }
+          },
+          "earth": {
+            "colour": "#7d5132",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.055,
+              "seed": 23
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.07
+              ]
+            }
+          },
+          "earth-top": {
+            "colour": "#94643f",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.05,
+              "seed": 3
+            },
+            "ramp": {
+              "lightness": [
+                -0.19,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "grass": {
+            "colour": "#5f9741",
+            "grain": {
+              "strength": 0.22,
+              "size": 0.036,
+              "seed": 11
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.09
+              ]
+            }
+          },
+          "grass-deep": {
+            "colour": "#4f8037",
+            "grain": {
+              "strength": 0.22,
+              "size": 0.04,
+              "seed": 17
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth-deep",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth-top",
+            "position": [
+              0.0,
+              0.21,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.26,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              0.0,
+              0.43,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.14,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              -0.31453716983867547,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.1762,
+              0.1,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              0.12163361625142033,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.1952,
+              0.1,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass",
+            "position": [
+              -0.18310781875174148,
+              0.3,
+              0.0
+            ],
+            "size": [
+              0.1405,
+              0.1,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass-deep",
+            "position": [
+              0.09507001094404544,
+              0.455,
+              -0.11820721566698694
+            ],
+            "size": [
+              0.3028,
+              0.09,
+              0.3028
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass-deep",
+            "position": [
+              -0.061995812980191634,
+              0.455,
+              0.16650995273406738
+            ],
+            "size": [
+              0.2958,
+              0.09,
+              0.2958
+            ]
+          },
+          {
+            "type": "box",
+            "material": "grass-deep",
+            "position": [
+              -0.16604033021265024,
+              0.455,
+              0.2408778517648193
+            ],
+            "size": [
+              0.2166,
+              0.09,
+              0.2166
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "earth-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "stone": {
+            "colour": "#6f6a62",
+            "grain": {
+              "strength": 0.28,
+              "size": 0.045,
+              "seed": 7
+            }
+          },
+          "earth": {
+            "colour": "#7d5132",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.055,
+              "seed": 23
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.07
+              ]
+            }
+          },
+          "earth-top": {
+            "colour": "#94643f",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.05,
+              "seed": 3
+            },
+            "ramp": {
+              "lightness": [
+                -0.19,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "earth-deep": {
+            "colour": "#623c1f",
+            "grain": {
+              "strength": 0.4,
+              "size": 0.065,
+              "seed": 5
+            },
+            "ramp": {
+              "lightness": [
+                -0.15,
+                -0.08,
+                0.0,
+                0.06
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth-deep",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth-top",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              -0.030649636930465463,
+              0.1441,
+              0.0
+            ],
+            "size": [
+              0.1146,
+              0.1146,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              0.15773210166261392,
+              -0.0852,
+              0.0
+            ],
+            "size": [
+              0.1706,
+              0.1706,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              0.022372961956948545,
+              -0.3255,
+              0.0
+            ],
+            "size": [
+              0.18,
+              0.18,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "earth-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "stone": {
+            "colour": "#6f6a62",
+            "grain": {
+              "strength": 0.28,
+              "size": 0.045,
+              "seed": 7
+            }
+          },
+          "earth": {
+            "colour": "#7d5132",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.055,
+              "seed": 23
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.07
+              ]
+            }
+          },
+          "earth-top": {
+            "colour": "#94643f",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.05,
+              "seed": 3
+            },
+            "ramp": {
+              "lightness": [
+                -0.19,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "earth-deep": {
+            "colour": "#623c1f",
+            "grain": {
+              "strength": 0.4,
+              "size": 0.065,
+              "seed": 5
+            },
+            "ramp": {
+              "lightness": [
+                -0.15,
+                -0.08,
+                0.0,
+                0.06
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth-deep",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth-top",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              -0.20756694303678705,
+              0.2764,
+              0.0
+            ],
+            "size": [
+              0.1581,
+              0.1581,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              -0.02234569882605769,
+              0.0712,
+              0.0
+            ],
+            "size": [
+              0.1924,
+              0.1924,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "stone-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "stone": {
+            "colour": "#6f6a62",
+            "grain": {
+              "strength": 0.28,
+              "size": 0.045,
+              "seed": 7
+            }
+          },
+          "stone-pale": {
+            "colour": "#8b867c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.042,
+              "seed": 29
+            },
+            "ramp": {
+              "lightness": [
+                -0.17,
+                -0.09,
+                0.0,
+                0.08
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              -0.2016560570935685,
+              0.1022,
+              0.0
+            ],
+            "size": [
+              0.1046,
+              0.1046,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              0.24480747150720467,
+              -0.1986,
+              0.0
+            ],
+            "size": [
+              0.1143,
+              0.1143,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              -0.040820030549851616,
+              -0.2663,
+              0.0
+            ],
+            "size": [
+              0.1011,
+              0.1011,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              -0.15086706177278034,
+              -0.0673,
+              0.0
+            ],
+            "size": [
+              0.1016,
+              0.1016,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "stone-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "stone": {
+            "colour": "#6f6a62",
+            "grain": {
+              "strength": 0.28,
+              "size": 0.045,
+              "seed": 7
+            }
+          },
+          "stone-pale": {
+            "colour": "#8b867c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.042,
+              "seed": 29
+            },
+            "ramp": {
+              "lightness": [
+                -0.17,
+                -0.09,
+                0.0,
+                0.08
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              -0.11859230305377938,
+              -0.3775,
+              0.0
+            ],
+            "size": [
+              0.1067,
+              0.1067,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              0.171831500199841,
+              0.0918,
+              0.0
+            ],
+            "size": [
+              0.1283,
+              0.1283,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              0.17251024800597553,
+              -0.0733,
+              0.0
+            ],
+            "size": [
+              0.147,
+              0.147,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "rock-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "rock-dark": {
+            "colour": "#42464c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.06,
+              "seed": 131
+            }
+          },
+          "rock": {
+            "colour": "#585c63",
+            "grain": {
+              "strength": 0.32,
+              "size": 0.05,
+              "seed": 127
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "stone-pale": {
+            "colour": "#8b867c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.042,
+              "seed": 29
+            },
+            "ramp": {
+              "lightness": [
+                -0.17,
+                -0.09,
+                0.0,
+                0.08
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "rock-dark",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rock",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rock",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              -0.10559729652186667,
+              -0.379,
+              0.0
+            ],
+            "size": [
+              0.1598,
+              0.1598,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              0.21974828280466402,
+              -0.0921,
+              0.0
+            ],
+            "size": [
+              0.1346,
+              0.1346,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              -0.23003600774000615,
+              -0.0892,
+              0.0
+            ],
+            "size": [
+              0.158,
+              0.158,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "rock-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "rock-dark": {
+            "colour": "#42464c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.06,
+              "seed": 131
+            }
+          },
+          "rock": {
+            "colour": "#585c63",
+            "grain": {
+              "strength": 0.32,
+              "size": 0.05,
+              "seed": 127
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.08
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "rock-dark",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rock",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rock",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rock-dark",
+            "position": [
+              0.20361368490423754,
+              -0.0445,
+              0.0
+            ],
+            "size": [
+              0.1399,
+              0.1399,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rock-dark",
+            "position": [
+              -0.17949470784006558,
+              0.0745,
+              0.0
+            ],
+            "size": [
+              0.1459,
+              0.1459,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rock-dark",
+            "position": [
+              0.3203664682943281,
+              -0.2146,
+              0.0
+            ],
+            "size": [
+              0.1255,
+              0.1255,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rock-dark",
+            "position": [
+              -0.27512790595901443,
+              -0.0765,
+              0.0
+            ],
+            "size": [
+              0.1962,
+              0.1962,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "sand-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "sand-deep": {
+            "colour": "#bda874",
+            "grain": {
+              "strength": 0.26,
+              "size": 0.05,
+              "seed": 103
+            }
+          },
+          "sand": {
+            "colour": "#d8c48f",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.045,
+              "seed": 101
+            },
+            "ramp": {
+              "lightness": [
+                -0.16,
+                -0.08,
+                0.0,
+                0.07
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              -0.1674188097176021,
+              0.1728,
+              0.0
+            ],
+            "size": [
+              0.1308,
+              0.1308,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              0.19008006698546293,
+              -0.0683,
+              0.0
+            ],
+            "size": [
+              0.1566,
+              0.1566,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              0.23838260209208656,
+              -0.008,
+              0.0
+            ],
+            "size": [
+              0.1936,
+              0.1936,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "sand-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "sand-deep": {
+            "colour": "#bda874",
+            "grain": {
+              "strength": 0.26,
+              "size": 0.05,
+              "seed": 103
+            }
+          },
+          "sand": {
+            "colour": "#d8c48f",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.045,
+              "seed": 101
+            },
+            "ramp": {
+              "lightness": [
+                -0.16,
+                -0.08,
+                0.0,
+                0.07
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              -0.04917372465674624,
+              0.1802,
+              0.0
+            ],
+            "size": [
+              0.1498,
+              0.1498,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              0.19982188883734148,
+              -0.1132,
+              0.0
+            ],
+            "size": [
+              0.1795,
+              0.1795,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              -0.21263383232513067,
+              0.1581,
+              0.0
+            ],
+            "size": [
+              0.1954,
+              0.1954,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              -0.21253107156819034,
+              0.2617,
+              0.0
+            ],
+            "size": [
+              0.1669,
+              0.1669,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "snow-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "rock": {
+            "colour": "#585c63",
+            "grain": {
+              "strength": 0.32,
+              "size": 0.05,
+              "seed": 127
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "stone": {
+            "colour": "#6f6a62",
+            "grain": {
+              "strength": 0.28,
+              "size": 0.045,
+              "seed": 7
+            }
+          },
+          "snow": {
+            "colour": "#e8eef5",
+            "grain": {
+              "strength": 0.18,
+              "size": 0.04,
+              "seed": 107
+            },
+            "ramp": {
+              "lightness": [
+                -0.12,
+                -0.06,
+                0.0,
+                0.05
+              ]
+            }
+          },
+          "snow-deep": {
+            "colour": "#c6d3e0",
+            "grain": {
+              "strength": 0.2,
+              "size": 0.05,
+              "seed": 109
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "stone",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rock",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "snow-deep",
+            "position": [
+              0.0,
+              0.21,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.26,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "snow",
+            "position": [
+              0.0,
+              0.41,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.18,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "snow",
+            "position": [
+              0.2696805262269903,
+              0.45,
+              0.04697913885949151
+            ],
+            "size": [
+              0.2557,
+              0.1,
+              0.2557
+            ]
+          },
+          {
+            "type": "box",
+            "material": "snow",
+            "position": [
+              0.15357673331011334,
+              0.45,
+              -0.07441906833870135
+            ],
+            "size": [
+              0.1907,
+              0.1,
+              0.1907
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "snow-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "rock-dark": {
+            "colour": "#42464c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.06,
+              "seed": 131
+            }
+          },
+          "rock": {
+            "colour": "#585c63",
+            "grain": {
+              "strength": 0.32,
+              "size": 0.05,
+              "seed": 127
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "snow": {
+            "colour": "#e8eef5",
+            "grain": {
+              "strength": 0.18,
+              "size": 0.04,
+              "seed": 107
+            },
+            "ramp": {
+              "lightness": [
+                -0.12,
+                -0.06,
+                0.0,
+                0.05
+              ]
+            }
+          },
+          "snow-deep": {
+            "colour": "#c6d3e0",
+            "grain": {
+              "strength": 0.2,
+              "size": 0.05,
+              "seed": 109
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "rock-dark",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "rock",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "snow-deep",
+            "position": [
+              0.0,
+              0.21,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.26,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "snow",
+            "position": [
+              0.0,
+              0.41,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.18,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "snow",
+            "position": [
+              0.07723668226746339,
+              0.45,
+              -0.15544639242016134
+            ],
+            "size": [
+              0.2367,
+              0.1,
+              0.2367
+            ]
+          },
+          {
+            "type": "box",
+            "material": "snow",
+            "position": [
+              -0.09812780083550574,
+              0.45,
+              -0.08165950847416961
+            ],
+            "size": [
+              0.2568,
+              0.1,
+              0.2568
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "ice-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "ice": {
+            "colour": "#9fc6dd",
+            "grain": {
+              "strength": 0.2,
+              "size": 0.06,
+              "seed": 113
+            },
+            "ramp": {
+              "lightness": [
+                -0.14,
+                -0.07,
+                0.0,
+                0.1
+              ]
+            }
+          },
+          "water-deep": {
+            "colour": "#2f5d8a",
+            "grain": {
+              "strength": 0.2,
+              "size": 0.08,
+              "seed": 53
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "water-deep",
+            "position": [
+              0.0,
+              -0.25,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "ice",
+            "position": [
+              0.0,
+              0.25,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "mud-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "mud": {
+            "colour": "#4e4433",
+            "grain": {
+              "strength": 0.38,
+              "size": 0.06,
+              "seed": 137
+            },
+            "ramp": {
+              "lightness": [
+                -0.17,
+                -0.09,
+                0.0,
+                0.07
+              ]
+            }
+          },
+          "moss": {
+            "colour": "#4f6b34",
+            "grain": {
+              "strength": 0.26,
+              "size": 0.04,
+              "seed": 149
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "mud-wet": {
+            "colour": "#3b3527",
+            "grain": {
+              "strength": 0.34,
+              "size": 0.07,
+              "seed": 139
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "mud-wet",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mud",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mud",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "moss",
+            "position": [
+              -0.10607608266177826,
+              -0.0812,
+              0.0
+            ],
+            "size": [
+              0.1941,
+              0.1941,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "moss",
+            "position": [
+              0.292726260944371,
+              -0.1144,
+              0.0
+            ],
+            "size": [
+              0.1957,
+              0.1957,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "moss",
+            "position": [
+              0.2807134333344132,
+              0.0911,
+              0.0
+            ],
+            "size": [
+              0.1444,
+              0.1444,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "mud-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "mud": {
+            "colour": "#4e4433",
+            "grain": {
+              "strength": 0.38,
+              "size": 0.06,
+              "seed": 137
+            },
+            "ramp": {
+              "lightness": [
+                -0.17,
+                -0.09,
+                0.0,
+                0.07
+              ]
+            }
+          },
+          "mud-wet": {
+            "colour": "#3b3527",
+            "grain": {
+              "strength": 0.34,
+              "size": 0.07,
+              "seed": 139
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "mud-wet",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mud",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mud",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mud-wet",
+            "position": [
+              0.04572327354027028,
+              0.1193,
+              0.0
+            ],
+            "size": [
+              0.1193,
+              0.1193,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mud-wet",
+            "position": [
+              0.1559923828922306,
+              -0.0413,
+              0.0
+            ],
+            "size": [
+              0.1109,
+              0.1109,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mud-wet",
+            "position": [
+              0.2239933036482607,
+              -0.1365,
+              0.0
+            ],
+            "size": [
+              0.1866,
+              0.1866,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "moss-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "mud": {
+            "colour": "#4e4433",
+            "grain": {
+              "strength": 0.38,
+              "size": 0.06,
+              "seed": 137
+            },
+            "ramp": {
+              "lightness": [
+                -0.17,
+                -0.09,
+                0.0,
+                0.07
+              ]
+            }
+          },
+          "earth": {
+            "colour": "#7d5132",
+            "grain": {
+              "strength": 0.46,
+              "size": 0.055,
+              "seed": 23
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.07
+              ]
+            }
+          },
+          "moss": {
+            "colour": "#4f6b34",
+            "grain": {
+              "strength": 0.26,
+              "size": 0.04,
+              "seed": 149
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "earth-deep": {
+            "colour": "#623c1f",
+            "grain": {
+              "strength": 0.4,
+              "size": 0.065,
+              "seed": 5
+            },
+            "ramp": {
+              "lightness": [
+                -0.15,
+                -0.08,
+                0.0,
+                0.06
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "earth-deep",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "mud",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "earth",
+            "position": [
+              0.0,
+              0.21,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.26,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "moss",
+            "position": [
+              0.0,
+              0.42,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.16,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "moss",
+            "position": [
+              -0.18490570732267553,
+              0.45,
+              0.11990290678268734
+            ],
+            "size": [
+              0.1799,
+              0.1,
+              0.1799
+            ]
+          },
+          {
+            "type": "box",
+            "material": "moss",
+            "position": [
+              0.06878829356342103,
+              0.45,
+              -0.10571369446590476
+            ],
+            "size": [
+              0.2602,
+              0.1,
+              0.2602
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "gravel-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "rock-dark": {
+            "colour": "#42464c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.06,
+              "seed": 131
+            }
+          },
+          "gravel": {
+            "colour": "#7c7468",
+            "grain": {
+              "strength": 0.4,
+              "size": 0.035,
+              "seed": 151
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "stone-pale": {
+            "colour": "#8b867c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.042,
+              "seed": 29
+            },
+            "ramp": {
+              "lightness": [
+                -0.17,
+                -0.09,
+                0.0,
+                0.08
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "rock-dark",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "gravel",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "gravel",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              0.3059078118370094,
+              -0.3477,
+              0.0
+            ],
+            "size": [
+              0.1671,
+              0.1671,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              0.007332283730930256,
+              -0.1666,
+              0.0
+            ],
+            "size": [
+              0.1453,
+              0.1453,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              -0.19533742236118593,
+              -0.2351,
+              0.0
+            ],
+            "size": [
+              0.1032,
+              0.1032,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "stone-pale",
+            "position": [
+              0.02610334350037874,
+              0.1846,
+              0.0
+            ],
+            "size": [
+              0.1941,
+              0.1941,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "clay-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "sand-deep": {
+            "colour": "#bda874",
+            "grain": {
+              "strength": 0.26,
+              "size": 0.05,
+              "seed": 103
+            }
+          },
+          "clay": {
+            "colour": "#a9705a",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.05,
+              "seed": 157
+            },
+            "ramp": {
+              "lightness": [
+                -0.16,
+                -0.08,
+                0.0,
+                0.07
+              ]
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "clay",
+            "position": [
+              0.0,
+              -0.34,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.32,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clay",
+            "position": [
+              0.0,
+              -0.03,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.3,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "clay",
+            "position": [
+              0.0,
+              0.29,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.42,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              -0.18474257368732014,
+              0.1351,
+              0.0
+            ],
+            "size": [
+              0.1937,
+              0.1937,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              0.13369368915267704,
+              0.1088,
+              0.0
+            ],
+            "size": [
+              0.1661,
+              0.1661,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "sand-deep",
+            "position": [
+              -0.03850646887938991,
+              -0.0078,
+              0.0
+            ],
+            "size": [
+              0.1053,
+              0.1053,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "water",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "water": {
+            "colour": "#3f76a8",
+            "grain": {
+              "strength": 0.24,
+              "size": 0.07,
+              "seed": 47
+            },
+            "ramp": {
+              "lightness": [
+                -0.16,
+                -0.08,
+                0.0,
+                0.1
+              ]
+            }
+          },
+          "water-deep": {
+            "colour": "#2f5d8a",
+            "grain": {
+              "strength": 0.2,
+              "size": 0.08,
+              "seed": 53
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "water-deep",
+            "position": [
+              0.0,
+              -0.25,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "water",
+            "position": [
+              0.0,
+              0.25,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.5,
+              1.0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "plank",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "plank": {
+            "colour": "#a8763f",
+            "grain": {
+              "strength": 0.34,
+              "size": 0.05,
+              "seed": 41
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "plank-dark": {
+            "colour": "#8a5c2d",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.055,
+              "seed": 43
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "plank-dark",
+            "position": [
+              0.0,
+              -0.275,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.45,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              0.225,
+              -0.375
+            ],
+            "size": [
+              1.0,
+              0.55,
+              0.215
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              0.225,
+              -0.125
+            ],
+            "size": [
+              1.0,
+              0.55,
+              0.215
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              0.225,
+              0.125
+            ],
+            "size": [
+              1.0,
+              0.55,
+              0.215
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              0.225,
+              0.375
+            ],
+            "size": [
+              1.0,
+              0.55,
+              0.215
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "plank-slab",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "plank": {
+            "colour": "#a8763f",
+            "grain": {
+              "strength": 0.34,
+              "size": 0.05,
+              "seed": 41
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "plank-dark": {
+            "colour": "#8a5c2d",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.055,
+              "seed": 43
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "plank-dark",
+            "position": [
+              0.0,
+              -0.44,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.12,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              -0.31,
+              -0.375
+            ],
+            "size": [
+              1.0,
+              0.14,
+              0.215
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              -0.31,
+              -0.125
+            ],
+            "size": [
+              1.0,
+              0.14,
+              0.215
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              -0.31,
+              0.125
+            ],
+            "size": [
+              1.0,
+              0.14,
+              0.215
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              -0.31,
+              0.375
+            ],
+            "size": [
+              1.0,
+              0.14,
+              0.215
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

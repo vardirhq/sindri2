@@ -22,13 +22,13 @@ use crate::assets::{
     bind_audio, bind_fonts, bind_textures, bind_tile_sets, extractor, presented_world, scenes,
     stylesheets, world,
 };
-use crate::error::GatherError;
-use crate::session::{GatherAudio, Session, gather_audio_backend};
+use crate::error::CausewayError;
+use crate::session::{CausewayAudio, Session, causeway_audio_backend};
 
-/// Native Gather keeps the standalone embedded-project path.
+/// Native Causeway keeps the standalone embedded-project path.
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) struct GatherApp {
-    engine: EngineHost<Session, GatherAudio>,
+pub(crate) struct CausewayApp {
+    engine: EngineHost<Session, CausewayAudio>,
     scene: SceneExtractor,
     bindings: TextureBindings,
     tile_sets: TileSetBindings,
@@ -43,23 +43,23 @@ pub(crate) struct GatherApp {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl DesktopApp for GatherApp {
-    type Error = GatherError;
+impl DesktopApp for CausewayApp {
+    type Error = CausewayError;
 
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let scene = extractor()?;
         let (textures, bindings) = bind_textures(context.device(), context.queue())?;
-        let mut audio = gather_audio_backend()?;
+        let mut audio = causeway_audio_backend()?;
         bind_audio(&mut audio)?;
 
         let mut session =
             Session::new(scene.components().clone()).with_tile_sets(bind_tile_sets()?);
         // Beside the executable rather than in an application data directory:
-        // Gather is a demonstration that gets run from a checkout, and a save
+        // Causeway is a demonstration that gets run from a checkout, and a save
         // buried in a per-user folder is one nobody can find to delete. A real
         // game names a path its platform expects.
         session.keep_saves_in(Box::new(sindri_platform::FileSaves::at(
-            std::path::Path::new("gather-save.json"),
+            std::path::Path::new("causeway-save.json"),
         )));
         let (opened, loaded) = world()?;
         let session = session.with_scenes(scenes()?, loaded);
@@ -134,7 +134,7 @@ impl DesktopApp for GatherApp {
             context
                 .device()
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Sindri gather encoder"),
+                    label: Some("Sindri Causeway encoder"),
                 });
         encode_prepared_frame(
             FrameRenderers {

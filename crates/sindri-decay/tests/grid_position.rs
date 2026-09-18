@@ -99,7 +99,13 @@ fn isometric_grid_position_uses_the_maps_full_transform_and_round_trips() {
         }),
     );
 
-    assert!(run(&mut world, &sources).is_empty());
+    assert_eq!(
+        run(&mut world, &sources)
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>(),
+        Vec::<String>::new()
+    );
     let transform = world
         .get(actor)
         .and_then(|data| data.transform_3d)
@@ -280,5 +286,155 @@ fn reading_a_flat_cell_on_a_tile_grid_says_which_component_is_missing() {
     assert!(
         reported.contains("sindri.tilemap") && reported.contains("sindri.tile_grid"),
         "the failure should name both the component needed and the one present: {reported}"
+    );
+}
+
+/// A floor whose cells are boxes, standing at the origin so that a cell's
+/// world position reads off the grid coordinate directly.
+fn solid_world(script: &str) -> (World, EntityId, ScriptSources) {
+    let mut world = World::default();
+    world.spawn(EntityData {
+        name: Some("Floor".to_owned()),
+        transform_3d: Some(Transform3D {
+            position: [10.0, 0.0, -4.0],
+            ..Transform3D::default()
+        }),
+        components: [(
+            "sindri.tile_grid".to_owned(),
+            json!({
+                "columns": 8, "rows": 8, "cell_size": [1.1, 1.1],
+                "cell_height": 1.1, "projection": "isometric", "space": "solid"
+            }),
+        )]
+        .into_iter()
+        .collect(),
+        ..EntityData::default()
+    });
+    let actor = world.spawn(EntityData {
+        transform_3d: Some(Transform3D {
+            position: [0.0, 5.0, 0.0],
+            ..Transform3D::default()
+        }),
+        components: [(
+            ScriptComponent::TYPE_NAME.to_owned(),
+            json!({ "source": "grid.decay", "script": "Mover" }),
+        )]
+        .into_iter()
+        .collect(),
+        ..EntityData::default()
+    });
+    let mut sources = ScriptSources::new();
+    sources.insert("grid.decay", script);
+    (world, actor, sources)
+}
+
+#[test]
+fn a_solid_grid_places_across_and_into_the_scene_rather_than_in_a_picture() {
+    // The whole of the migration to real coordinates, in one assertion. On a
+    // projected grid a cell becomes a point on the plane the map is drawn on,
+    // and a script's Y is a screen direction. Here a column is a distance
+    // across the world and a row a distance into it, so the coordinate the
+    // script names lands on X and Z -- and height, which the ground owns
+    // rather than the script, is left exactly as it was found.
+    let (mut world, actor, sources) = solid_world(
+        r#"
+        script Mover {
+            fn update(dt: f32) {
+                let floor = World.find("Floor");
+                Grid.place(this.entity, floor, 2.0, 3.0);
+            }
+        }
+        "#,
+    );
+    assert!(run(&mut world, &sources).is_empty());
+    let position = world
+        .get(actor)
+        .and_then(|data| data.transform_3d)
+        .expect("the actor kept its transform")
+        .position;
+    assert!(
+        (position[0] - (10.0 + 2.2)).abs() < 1.0e-5 && (position[2] - (-4.0 + 3.3)).abs() < 1.0e-5,
+        "a cell on a solid grid is a place in the world: {position:?}"
+    );
+    assert_eq!(
+        position[1].to_bits(),
+        5.0_f32.to_bits(),
+        "placing on a solid grid leaves height to whatever holds the walker up"
+    );
+}
+
+#[test]
+fn a_stretched_solid_grid_stretches_across_and_into_the_scene() {
+    // A round trip on its own proves nothing here: a projected grid inverts
+    // its own projection just as faithfully, so a test that only placed and
+    // read back would pass whichever plane the host chose. What separates
+    // them is which axes the floor's scale reaches. A solid grid is stretched
+    // across the world and into it -- X and Z -- and a walker put on a cell of
+    // a stretched floor has to land on the stretched place.
+    let (mut world, actor, sources) = solid_world(
+        r#"
+        script Mover {
+            fn update(dt: f32) {
+                let floor = World.find("Floor");
+                Grid.place(this.entity, floor, 5.0, 1.0);
+                this.transform.scale.x = Grid.position_x(this.entity, floor);
+                this.transform.scale.y = Grid.position_y(this.entity, floor);
+            }
+        }
+        "#,
+    );
+    let floor = world
+        .entities()
+        .find(|(_, data)| data.name.as_deref() == Some("Floor"))
+        .map(|(entity, _)| entity)
+        .expect("the floor is there");
+    let mut stretched = world.get(floor).and_then(|data| data.transform_3d).unwrap();
+    stretched.scale = [2.0, 1.0, 3.0];
+    world.get_mut(floor).unwrap().transform_3d = Some(stretched);
+
+    assert!(run(&mut world, &sources).is_empty());
+    let transform = world
+        .get(actor)
+        .and_then(|data| data.transform_3d)
+        .expect("the actor kept its transform");
+    assert!(
+        (transform.position[0] - (10.0 + 5.0 * 1.1 * 2.0)).abs() < 1.0e-5
+            && (transform.position[2] - (-4.0 + 1.0 * 1.1 * 3.0)).abs() < 1.0e-5,
+        "a stretched solid floor stretches along X and Z: {:?}",
+        transform.position
+    );
+    assert!(
+        (transform.scale[0] - 5.0).abs() < 1.0e-5 && (transform.scale[1] - 1.0).abs() < 1.0e-5,
+        "and reading it back undoes exactly that stretch: {transform:?}"
+    );
+}
+
+#[test]
+fn a_turned_solid_grid_is_refused_rather_than_silently_mis_placed() {
+    let (mut world, _actor, sources) = solid_world(
+        r#"
+        script Mover {
+            fn update(dt: f32) {
+                let floor = World.find("Floor");
+                Grid.place(this.entity, floor, 1.0, 1.0);
+            }
+        }
+        "#,
+    );
+    let floor = world
+        .entities()
+        .find(|(_, data)| data.name.as_deref() == Some("Floor"))
+        .map(|(entity, _)| entity)
+        .expect("the floor is there");
+    let mut transform = world.get(floor).and_then(|data| data.transform_3d).unwrap();
+    transform.rotation = [0.0, 0.0, 0.383, 0.924];
+    world.get_mut(floor).unwrap().transform_3d = Some(transform);
+
+    let failures = run(&mut world, &sources);
+    assert!(
+        failures
+            .iter()
+            .any(|failure| failure.to_string().contains("turned")),
+        "a turned solid grid should say so: {failures:?}"
     );
 }

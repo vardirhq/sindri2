@@ -70,7 +70,7 @@ fn an_asset_only_a_script_names_is_carried_because_the_project_said_so() {
         .ids_of(AssetKind::Audio)
         .map(sindri_core::AssetId::as_str)
         .collect();
-    assert!(audio.contains(&"audio/pickup.wav"), "{audio:?}");
+    assert!(audio.contains(&"audio/victory.wav"), "{audio:?}");
 }
 
 /// Every file the manifest promises has to be where it says.

@@ -6,8 +6,8 @@
 
 use std::collections::BTreeMap;
 
-use glam::Vec3;
-use sindri_core::TileFace;
+use glam::{Mat4, Quat, Vec3};
+use sindri_core::{TileFace, Transform3D};
 use sindri_grid::GridCoord3;
 
 use crate::components::TileVolumeComponent;
@@ -198,4 +198,51 @@ fn coord_of(cell: [i64; 3]) -> Option<GridCoord3> {
         i32::try_from(cell[1]).ok()?,
         i32::try_from(cell[2]).ok()?,
     ))
+}
+
+/// The matrix placing a volume's own space in the world.
+#[must_use]
+pub fn model_of(transform: Transform3D) -> Mat4 {
+    Mat4::from_scale_rotation_translation(
+        Vec3::from_array(transform.scale),
+        Quat::from_array(transform.rotation),
+        Vec3::from_array(transform.position),
+    )
+}
+
+/// The ray a pointer sends into a volume's own space.
+///
+/// `point` is the fraction across and down the picture, so a caller hands over
+/// where the pointer is rather than how big its window happens to be. The ray
+/// comes back in the volume's space rather than the world's, because that is
+/// the space `pick` walks: undoing the model here means the walk never has to
+/// know the volume moved.
+///
+/// Beside `pick` rather than beside the editor that first needed it. A click
+/// and a script's aim are the same question, and two unprojections that had to
+/// agree would eventually not.
+#[must_use]
+pub fn ray_at_viewport(
+    transform: Transform3D,
+    view_projection: Mat4,
+    point: [f32; 2],
+) -> Option<(Vec3, Vec3)> {
+    if !(0.0..=1.0).contains(&point[0]) || !(0.0..=1.0).contains(&point[1]) {
+        return None;
+    }
+    let inverse_view = view_projection.inverse();
+    let inverse_model = model_of(transform).inverse();
+    if !finite(inverse_view) || !finite(inverse_model) {
+        return None;
+    }
+    let x = point[0] * 2.0 - 1.0;
+    let y = 1.0 - point[1] * 2.0;
+    let near = inverse_model.transform_point3(inverse_view.project_point3(Vec3::new(x, y, 0.0)));
+    let far = inverse_model.transform_point3(inverse_view.project_point3(Vec3::new(x, y, 1.0)));
+    let direction = far - near;
+    (direction.length_squared() > f32::EPSILON).then_some((near, direction.normalize()))
+}
+
+fn finite(matrix: Mat4) -> bool {
+    matrix.to_cols_array().into_iter().all(f32::is_finite)
 }

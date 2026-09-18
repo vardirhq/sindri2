@@ -40,9 +40,10 @@ use self::convert::{as_f32, describe, number};
 use crate::{
     Blackboard, PrefabSources, ProfileSources,
     surface::{
-        FUNCTIONS, Handle, HostFunction, Leaf, POINTER, POINTER_VALUES, PRINT, PointerValue, STICK,
-        STICK_VALUES, StickValue, TIME, TIME_VALUES, TOUCH, TOUCH_COUNT, TimeValue, TouchCall,
-        VIEWPORT, VIEWPORT_VALUES, ViewportValue, follow_mut, handle, leaf, leaf_through_reference,
+        AIM, AIM_VALUES, AimValue, FUNCTIONS, Handle, HostFunction, Leaf, POINTER, POINTER_VALUES,
+        PRINT, PointerValue, STICK, STICK_VALUES, StickValue, TIME, TIME_VALUES, TOUCH,
+        TOUCH_COUNT, TimeValue, TouchCall, VIEWPORT, VIEWPORT_VALUES, ViewportValue, follow_mut,
+        handle, leaf, leaf_through_reference,
     },
 };
 
@@ -117,6 +118,13 @@ pub struct WorldHost<'a> {
     /// host before scripts ran. A script that could change them would be
     /// deciding what the person did.
     screen_ui: Option<&'a sindri_scene::ScreenUi>,
+    /// Which block the person is pointing at, decided before scripts ran.
+    ///
+    /// Read-only and for the same reason `screen_ui` is: what the pointer is
+    /// over is an answer about this frame, worked out from a camera and a
+    /// pointer that no script owns. A script that could set it would be
+    /// deciding what the person was looking at.
+    aim: Option<sindri_scene::voxel::VolumeAim>,
     /// Where each animated sprite has got to, when the host advances any.
     ///
     /// Mutable for one call: playing the clip already playing has to reset the
@@ -175,6 +183,11 @@ impl Host for WorldHost<'_> {
                 // and the platform bounds it to ten regardless.
                 #[allow(clippy::cast_precision_loss)]
                 return Ok(Some(Value::Number(self.context.input.touch_count() as f64)));
+            }
+            if *namespace == AIM
+                && let Some((_, value)) = AIM_VALUES.iter().find(|(known, _)| known == name)
+            {
+                return Ok(Some(self.aim_value(*value)));
             }
             if *namespace == VIEWPORT
                 && let Some((_, value)) = VIEWPORT_VALUES.iter().find(|(known, _)| known == name)
@@ -435,6 +448,31 @@ impl WorldHost<'_> {
                     .anchor(self.context.input.presses())
                     .unwrap_or([0.0, 0.0])[1],
             )),
+        }
+    }
+
+    /// What the person is pointing at, in a world made of blocks.
+    ///
+    /// Every cell reads zero when nothing was hit, which is why `hit` exists
+    /// and is not a convenience: zero is a real cell, and a script that
+    /// skipped the question would build a tower at the origin every time the
+    /// pointer left the world. Reporting it as an error instead would be
+    /// wrong -- pointing at the sky is an ordinary thing to do.
+    fn aim_value(&self, value: AimValue) -> Value {
+        let Some(aim) = self.aim else {
+            return match value {
+                AimValue::Hit => Value::Bool(false),
+                _ => Value::Number(0.0),
+            };
+        };
+        match value {
+            AimValue::Hit => Value::Bool(true),
+            AimValue::X => Value::Number(f64::from(aim.cell.x)),
+            AimValue::Y => Value::Number(f64::from(aim.cell.y)),
+            AimValue::Z => Value::Number(f64::from(aim.cell.z)),
+            AimValue::PlaceX => Value::Number(f64::from(aim.against.x)),
+            AimValue::PlaceY => Value::Number(f64::from(aim.against.y)),
+            AimValue::PlaceZ => Value::Number(f64::from(aim.against.z)),
         }
     }
 

@@ -57,7 +57,7 @@ jobs:
           # Every example is exported through the real project pipeline. This
           # keeps Pages honest about exactly what desktop/browser exports ship.
           for project in \
-            "game:gather" \
+            "game:causeway" \
             "games/orbital-last-stand:orbital-last-stand" \
             "games/orbital-baked:orbital-baked" \
             "games/graphics-lab:graphics-lab" \
@@ -101,11 +101,11 @@ jobs:
           CHECK
           test -f target/pages/docs/scripting/index.html
           test -f target/pages/docs/language/index.html
-          for route in gather orbital-last-stand orbital-baked graphics-lab weave-poc; do
+          for route in causeway orbital-last-stand orbital-baked graphics-lab weave-poc; do
             test -f "target/pages/examples/$route/index.html"
             test -f "target/pages/examples/$route/assets/sindri.manifest.json"
-            test -f "target/pages/examples/$route/pkg/sindri_gather.js"
-            test -f "target/pages/examples/$route/pkg/sindri_gather_bg.wasm"
+            test -f "target/pages/examples/$route/pkg/sindri_causeway.js"
+            test -f "target/pages/examples/$route/pkg/sindri_causeway_bg.wasm"
             grep -q '"kind": "scene"' "target/pages/examples/$route/assets/sindri.manifest.json"
           done
           grep -q '"kind": "prefab"' target/pages/examples/orbital-last-stand/assets/sindri.manifest.json

@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use glam::{Mat4, Vec3};
+use glam::{Mat4, Quat, Vec3};
 use sindri_core::{EntityId, SpriteRef, World};
 use sindri_render::{
     ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage, SpriteDepth,
@@ -21,6 +21,26 @@ use crate::{SpriteAnimationComponent, SpriteAnimations, SpriteComponent, Texture
 use super::camera::ResolvedCameras;
 use super::camera::view::camera_distance;
 use super::{SceneExtractError, SceneExtractor, transform_matrix};
+
+/// The same entity, turned so its picture meets the camera square on.
+///
+/// The camera's own orientation in the world is the inverse of the view's, and
+/// wearing it is what makes a flat picture face the viewer exactly: every
+/// texel keeps its size and shape however the camera is pitched or turned,
+/// which for pixel art is the whole point -- a foreshortened pixel is a
+/// smeared one.
+///
+/// The entity's authored rotation is replaced rather than composed with. A
+/// billboard's facing is the camera's to decide; keeping a turn the scene
+/// authored would spin the picture in its own plane for no reason anybody
+/// looking at the scene could see.
+fn facing_the_viewer(transform: sindri_core::Transform3D, view: Mat4) -> Mat4 {
+    Mat4::from_scale_rotation_translation(
+        Vec3::from_array(transform.scale),
+        Quat::from_mat4(&view).inverse(),
+        Vec3::from_array(transform.position),
+    )
+}
 
 /// Which projection and pipeline a batch of images is drawn with.
 ///
@@ -165,8 +185,12 @@ impl SceneExtractor {
             // rotates with the sprite: an anchor at the foot of a picture stays
             // at its foot however the entity is scaled.
             let [offset_x, offset_y] = textures.sprite_anchor(&reference).offset();
-            let model = transform_matrix(transform)
-                * Mat4::from_translation(Vec3::new(offset_x, offset_y, 0.0));
+            let placed = if sprite.billboard {
+                facing_the_viewer(transform, camera.view)
+            } else {
+                transform_matrix(transform)
+            };
+            let model = placed * Mat4::from_translation(Vec3::new(offset_x, offset_y, 0.0));
             let order = TransparentOrder::new(
                 sprite.layer,
                 camera_distance(camera.view, model.w_axis.truncate()),

@@ -20,6 +20,110 @@ use super::geometry;
 pub(super) struct MapGrid {
     pub(super) space: GridSpace,
     pub(super) transform: Transform3D,
+    /// How wide and how deep a cell is, when the grid's cells are boxes.
+    ///
+    /// Present or absent decides which plane a logical coordinate means. A
+    /// projected grid draws its map on world XY and derives a depth; a solid
+    /// grid stands its cells on world XZ and leaves height to whatever holds
+    /// the occupant up. Nothing else about a `Grid.*` call differs.
+    pub(super) solid: Option<[f64; 2]>,
+}
+
+impl MapGrid {
+    /// Where a logical point is in the world, keeping whatever the grid does
+    /// not own.
+    ///
+    /// A projected grid owns X and Y and leaves Z to the depth resolver; a
+    /// solid grid owns X and Z and leaves height to the ground. `was` supplies
+    /// the axis that is not this grid's to answer.
+    pub(super) fn to_world(
+        self,
+        path: &Path,
+        point: GridPoint,
+        was: [f32; 3],
+    ) -> Result<[f32; 3], RuntimeError> {
+        if let Some([across, into]) = self.solid {
+            return Ok([
+                self.transform.position[0] + as_f32(point.x * across) * self.transform.scale[0],
+                was[1],
+                self.transform.position[2] + as_f32(point.y * into) * self.transform.scale[2],
+            ]);
+        }
+        let local = self
+            .space
+            .project(point)
+            .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+        let flat = map_to_world(self.transform, local);
+        Ok([flat[0], flat[1], was[2]])
+    }
+
+    /// Which logical point a world position stands on.
+    pub(super) fn to_grid(self, path: &Path, world: [f32; 3]) -> Result<GridPoint, RuntimeError> {
+        if let Some([across, into]) = self.solid {
+            return Ok(GridPoint::new(
+                f64::from((world[0] - self.transform.position[0]) / self.transform.scale[0])
+                    / across,
+                f64::from((world[2] - self.transform.position[2]) / self.transform.scale[2]) / into,
+            ));
+        }
+        let local = world_to_map(self.transform, [world[0], world[1]]);
+        self.space
+            .unproject(local)
+            .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))
+    }
+
+    /// The cell a world position stands in.
+    ///
+    /// Half-open on both axes, exactly as `GridSpace::plane_to_grid` is, so a
+    /// boundary belongs to the same cell whichever grid asked.
+    pub(super) fn cell_at(self, path: &Path, world: [f32; 3]) -> Result<GridCoord, RuntimeError> {
+        if self.solid.is_none() {
+            let local = world_to_map(self.transform, [world[0], world[1]]);
+            return self
+                .space
+                .plane_to_grid(local)
+                .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())));
+        }
+        let point = self.to_grid(path, world)?;
+        let cell = |value: f64| {
+            let cell = (value + 0.5).floor();
+            (cell.is_finite() && cell >= f64::from(i32::MIN) && cell <= f64::from(i32::MAX))
+                .then_some(cell)
+                .ok_or_else(|| {
+                    RuntimeError::Host(format!(
+                        "{} was asked about a cell too far away",
+                        path.dotted()
+                    ))
+                })
+        };
+        #[allow(clippy::cast_possible_truncation)]
+        Ok(GridCoord::new(cell(point.x)? as i32, cell(point.y)? as i32))
+    }
+}
+
+/// What a solid grid's transform is allowed to be.
+///
+/// A projected grid may be turned within the picture it draws, because its Z
+/// rotation turns the map on the surface it is painted on. A solid grid has no
+/// picture: its cells are boxes standing on world XZ, and a rotation would
+/// leave a cell's box and a script's idea of where that cell is pointing in
+/// different directions. Rather than quietly place things into the gap, a
+/// turned solid grid is refused.
+pub(super) fn validate_solid_map(path: &Path, transform: Transform3D) -> Result<(), RuntimeError> {
+    let finite = transform.position.into_iter().all(f32::is_finite);
+    let square = transform.rotation[0].abs() <= f32::EPSILON
+        && transform.rotation[1].abs() <= f32::EPSILON
+        && transform.rotation[2].abs() <= f32::EPSILON;
+    let usable_scale = [transform.scale[0], transform.scale[2]]
+        .into_iter()
+        .all(|value| value.is_finite() && value.abs() > f32::EPSILON);
+    if !finite || !square || !usable_scale {
+        return Err(RuntimeError::Host(format!(
+            "{} needs a solid grid that is not turned and has non-zero X and Z scale",
+            path.dotted()
+        )));
+    }
+    Ok(())
 }
 
 pub(super) fn validate_planar_map(path: &Path, transform: Transform3D) -> Result<(), RuntimeError> {
@@ -74,10 +178,14 @@ impl WorldHost<'_> {
         })?;
         let (geometry, _) = geometry::read(path, data)?;
         let transform = data.transform_3d.unwrap_or_default();
-        validate_planar_map(path, transform)?;
+        match geometry.solid {
+            Some(_) => validate_solid_map(path, transform)?,
+            None => validate_planar_map(path, transform)?,
+        }
         Ok(MapGrid {
             space: geometry.space,
             transform,
+            solid: geometry.solid,
         })
     }
 
@@ -107,12 +215,8 @@ impl WorldHost<'_> {
                     path.dotted()
                 ))
             })?
-            .position_2d();
-        let local = world_to_map(grid.transform, target_world);
-        let goal = navigation
-            .space()
-            .plane_to_grid(local)
-            .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+            .position;
+        let goal = grid.cell_at(path, target_world)?;
         navigation
             .find_path(GridPathfinder::default(), entity, goal)
             .map(|route| route.map(sindri_grid::GridPath::into_nodes))
@@ -149,12 +253,8 @@ impl WorldHost<'_> {
                             path.dotted()
                         ))
                     })?
-                    .position_2d();
-                let local = world_to_map(grid.transform, world);
-                let point = grid
-                    .space
-                    .unproject(local)
-                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+                    .position;
+                let point = grid.to_grid(path, world)?;
                 Ok(Value::Number(match call {
                     GridCall::PositionX => point.x,
                     GridCall::PositionY => point.y,
@@ -174,18 +274,14 @@ impl WorldHost<'_> {
                         RuntimeError::Host(format!("{} needs a grid Y", path.dotted()))
                     })?,
                 )?;
-                let local = grid
-                    .space
-                    .project(GridPoint::new(x, y))
-                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
-                let world = map_to_world(grid.transform, local);
                 let Some(mut transform) = self.transform_of(entity) else {
                     return Err(RuntimeError::Host(format!(
                         "{} needs the positioned object to have a transform",
                         path.dotted()
                     )));
                 };
-                transform.set_position_2d(world);
+                transform.position =
+                    grid.to_world(path, GridPoint::new(x, y), transform.position)?;
                 let Some(data) = self.world.get_mut(entity) else {
                     return Err(RuntimeError::Host(format!(
                         "{}'s positioned object no longer exists",
@@ -204,18 +300,13 @@ impl WorldHost<'_> {
                 let Some(next) = route.as_deref().and_then(|nodes| nodes.get(1)).copied() else {
                     return Ok(Value::Bool(false));
                 };
-                let local = grid
-                    .space
-                    .grid_to_plane(next)
-                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
-                let world = map_to_world(grid.transform, local);
                 let Some(mut transform) = self.transform_of(entity) else {
                     return Err(RuntimeError::Host(format!(
                         "{} needs the moving occupant to have a transform",
                         path.dotted()
                     )));
                 };
-                transform.set_position_2d(world);
+                transform.position = grid.to_world(path, next.into(), transform.position)?;
                 self.world
                     .get_mut(entity)
                     .expect("entity argument was validated above")

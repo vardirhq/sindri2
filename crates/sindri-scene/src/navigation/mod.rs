@@ -12,10 +12,10 @@ use thiserror::Error;
 
 use crate::{
     GridNavigationComponent, GridOccupantComponent, TileGridError, TileSetBindings,
-    TileSurfaceError, TilemapError,
+    TileSurfaceError, TilemapError, placement::nearest_cell,
 };
 
-use self::floor::{GridFloor, block_unwalkable_steps, grid_geometry};
+use self::floor::{GridFloor, GridGeometry, block_unwalkable_steps, grid_geometry};
 
 /// One entity's derived placement on a world grid.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -77,9 +77,16 @@ impl WorldGridNavigation {
             .source_id
             .as_ref()
             .ok_or(GridNavigationError::UnstableGrid(grid_entity))?;
-        let (bounds, space, floor) = grid_geometry(grid_entity, grid_data)?;
+        let GridGeometry {
+            bounds,
+            space,
+            floor,
+            solid,
+        } = grid_geometry(grid_entity, grid_data)?;
         let grid_transform = grid_data.transform_3d.unwrap_or_default();
-        validate_planar_grid(grid_entity, grid_transform)?;
+        if solid.is_none() {
+            validate_planar_grid(grid_entity, grid_transform)?;
+        }
 
         let authored = grid_data
             .components
@@ -153,6 +160,14 @@ impl WorldGridNavigation {
             // occupying one cell and drawn on another. The authored fact wins.
             let anchor = if let Some(cell) = placed_cell(data) {
                 cell
+            } else if let Some(cell_size) = solid {
+                // A grid of boxes stands its cells on world XZ, and a walker's
+                // height is the ground's answer rather than part of its
+                // coordinate. Unprojecting X and Y here would read a walker
+                // standing on a raised block as one standing several rows
+                // further north -- the projected grid's own trap, arrived at
+                // from the other direction.
+                solid_cell_at(grid_transform, cell_size, transform.position)
             } else {
                 let local = world_to_grid_plane(grid_transform, transform.position_2d());
                 space.plane_to_grid(local).map_err(|source| {
@@ -272,6 +287,19 @@ fn validate_planar_grid(grid: EntityId, transform: Transform3D) -> Result<(), Gr
         return Err(GridNavigationError::InvalidGridTransform(grid));
     }
     Ok(())
+}
+
+/// Which cell of a grid of boxes a world position stands in.
+///
+/// The same rounding `sindri_scene::nearest_cell` and `GridSpace` use, so a
+/// walker asking navigation where it is and a script asking placement where it
+/// is cannot disagree about which cell that is.
+fn solid_cell_at(transform: Transform3D, cell_size: [f32; 2], position: [f32; 3]) -> GridCoord {
+    let [across, into] = cell_size;
+    nearest_cell(
+        f64::from((position[0] - transform.position[0]) / (across * transform.scale[0])),
+        f64::from((position[2] - transform.position[2]) / (into * transform.scale[2])),
+    )
 }
 
 fn world_to_grid_plane(transform: Transform3D, point: [f32; 2]) -> PlanePoint {

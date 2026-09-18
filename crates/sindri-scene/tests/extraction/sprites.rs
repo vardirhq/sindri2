@@ -404,3 +404,82 @@ fn a_colour_transform_that_is_not_finite_is_refused() {
         "a finite transform outside zero to one is authoring, not an error"
     );
 }
+
+/// A camera off to one side and above, which is where the difference shows.
+///
+/// Facing the viewer is invisible from a camera looking straight down an axis:
+/// the quad already faces it. The fault this guards only appears once the
+/// camera has been turned onto the world, which is what a world of boxes needs.
+fn cornered_camera() -> String {
+    r#"
+    { "id": "camera",
+      "transform_3d": { "position": [6.0, 6.0, 6.0],
+        "rotation": [-0.2706, 0.3536, 0.1036, 0.8887] },
+      "components": { "sindri.camera": {
+        "projection": "orthographic", "vertical_size": 10.0,
+        "near": 0.1, "far": 100.0 } } }"#
+        .to_owned()
+}
+
+fn only_instance(scene: &str) -> sindri_render::SpriteInstance {
+    let mut bindings = TextureBindings::new();
+    bindings.bind("a.png", TextureId::new(1));
+    SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world_from(&document(scene)),
+            VIEWPORT,
+            CameraView::default(),
+            &bindings,
+        )
+        .expect("the scene extracts")
+        .passes()
+        .iter()
+        .flat_map(|pass| match &pass.command {
+            FrameCommand::SpriteBatch { instances, .. } => instances.clone(),
+            _ => Vec::new(),
+        })
+        .next()
+        .expect("the sprite draws")
+}
+
+#[test]
+fn a_billboard_turns_its_face_to_the_camera() {
+    let scene = format!(
+        "{},\n{}",
+        cornered_camera(),
+        r#"{ "id": "walker", "transform_3d": { "position": [0.0, 0.0, 0.0] },
+           "components": { "sindri.sprite": {
+             "texture": "a.png", "billboard": true } } }"#
+    );
+    let model = only_instance(&scene).model();
+    // The quad's own normal is +Z in its own space. Facing the viewer means
+    // that normal points back along the direction the camera looks.
+    let normal = model.transform_vector3(glam::Vec3::Z).normalize();
+    let to_camera = glam::Vec3::new(6.0, 6.0, 6.0).normalize();
+    assert!(
+        normal.dot(to_camera) > 0.999,
+        "a billboard's face should point at the camera: {normal:?}"
+    );
+}
+
+#[test]
+fn an_ordinary_sprite_keeps_the_facing_the_scene_gave_it() {
+    // The default, and it has to stay the default: a picture lying flat on the
+    // ground is a decal, and standing it up to face the viewer would be a
+    // silent change to every scene that already draws one.
+    let scene = format!(
+        "{},\n{}",
+        cornered_camera(),
+        r#"{ "id": "decal", "transform_3d": { "position": [0.0, 0.0, 0.0] },
+           "components": { "sindri.sprite": { "texture": "a.png" } } }"#
+    );
+    let normal = only_instance(&scene)
+        .model()
+        .transform_vector3(glam::Vec3::Z)
+        .normalize();
+    assert!(
+        (normal - glam::Vec3::Z).length() < 1.0e-4,
+        "an unturned sprite keeps facing +Z: {normal:?}"
+    );
+}

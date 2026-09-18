@@ -100,6 +100,42 @@ pub(crate) const POINTER_VALUES: &[(&str, PointerValue)] = &[
     ("over_ui", PointerValue::OverUi),
 ];
 
+/// A value a script reads about the block under the pointer.
+///
+/// The cell is split into three numbers for the reason `Grid.position_x` and
+/// `position_y` are: Decay has no vector value yet.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum AimValue {
+    /// Whether the pointer is on a block at all.
+    ///
+    /// Asked first, because every other value here reads zero when it is
+    /// false and zero is a real cell. A builder script that skipped this would
+    /// quietly stack blocks at the origin whenever the pointer left the world.
+    Hit,
+    /// The block under the pointer -- what removing removes.
+    X,
+    Y,
+    Z,
+    /// The empty cell against the side being looked at -- what placing fills.
+    ///
+    /// The whole of "click a face to attach a block": a cell alone cannot say
+    /// which of its six neighbours was meant, so the host answers the
+    /// neighbour rather than making every game work out the face itself.
+    PlaceX,
+    PlaceY,
+    PlaceZ,
+}
+
+pub(crate) const AIM_VALUES: &[(&str, AimValue)] = &[
+    ("hit", AimValue::Hit),
+    ("x", AimValue::X),
+    ("y", AimValue::Y),
+    ("z", AimValue::Z),
+    ("place_x", AimValue::PlaceX),
+    ("place_y", AimValue::PlaceY),
+    ("place_z", AimValue::PlaceZ),
+];
+
 /// A value a script reads about the viewport it is running in.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ViewportValue {

@@ -29,6 +29,14 @@ pub(super) struct GridGeometry {
     pub(super) space: GridSpace,
     pub(super) columns: usize,
     pub(super) rows: usize,
+    /// How wide and how deep a cell is, when the grid's cells are boxes
+    /// standing in the world rather than shapes drawn on a picture of it.
+    ///
+    /// A solid grid has no projection to apply: a column is a distance across
+    /// and a row is a distance into the scene. `space` is still filled in, so
+    /// that anything asking a purely logical question -- how many cells, which
+    /// cell contains a point -- gets the same answer either way.
+    pub(super) solid: Option<[f64; 2]>,
 }
 
 /// Which component answered, so a caller needing more than geometry can say
@@ -53,7 +61,13 @@ pub(super) fn read(
         return Ok((geometry, GridSource::Tilemap));
     }
     if let Some(payload) = data.components.get(TILE_GRID_COMPONENT) {
-        let geometry = from_payload(path, payload, "cell_size")?;
+        let mut geometry = from_payload(path, payload, "cell_size")?;
+        // Only here, and deliberately not in `from_payload`: a tilemap has a
+        // `space` of its own, meaning whether it is drawn in the world or on
+        // the screen, and it has never been anything but projected.
+        geometry.solid = is_solid(path, payload)?
+            .then(|| cell_size(path, payload, "cell_size"))
+            .transpose()?;
         return Ok((geometry, GridSource::TileGrid));
     }
     Err(RuntimeError::Host(format!(
@@ -84,6 +98,7 @@ fn from_payload(
         space,
         columns: count(path, payload, "columns")?,
         rows: count(path, payload, "rows")?,
+        solid: None,
     })
 }
 
@@ -106,6 +121,26 @@ fn cell_size(path: &Path, payload: &Json, field: &str) -> Result<[f64; 2], Runti
         })
     };
     Ok([read(width, "width")?, read(height, "height")?])
+}
+
+/// Whether this grid's cells are boxes in the world.
+///
+/// Absent means the long-standing answer: a flat map drawn in projection. Only
+/// `sindri.tile_grid` carries the field at all, and a `sindri.tilemap` has
+/// never been anything but projected.
+fn is_solid(path: &Path, payload: &Json) -> Result<bool, RuntimeError> {
+    match payload
+        .get("space")
+        .and_then(Json::as_str)
+        .unwrap_or("projected")
+    {
+        "projected" => Ok(false),
+        "solid" => Ok(true),
+        other => Err(RuntimeError::Host(format!(
+            "{} found an unknown tile space `{other}`",
+            path.dotted()
+        ))),
+    }
 }
 
 fn projection(path: &Path, payload: &Json) -> Result<Projection, RuntimeError> {

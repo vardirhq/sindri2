@@ -1,4 +1,4 @@
-//! Gather's browser host.
+//! Causeway's browser host.
 //!
 //! The old browser build proved only that `include_bytes!` survives WASM. This
 //! one does not own a scene, script, texture, font, sheet, or sound until the
@@ -23,10 +23,10 @@ use weave::{Stylesheet, Viewport as WeaveViewport};
 
 use self::loader::{BrowserProjectAssets, BrowserProjectLoader};
 use crate::assets::{extractor, presented_world};
-use crate::error::GatherError;
+use crate::error::CausewayError;
 use crate::session::Session;
 
-pub(super) struct BrowserGatherApp {
+pub(super) struct BrowserCausewayApp {
     loader: Option<BrowserProjectLoader>,
     pending: Option<BrowserProjectAssets>,
     audio: Option<BrowserAudioBackend>,
@@ -49,7 +49,7 @@ pub(super) struct BrowserGatherApp {
     stylesheets: Vec<Stylesheet>,
 }
 
-impl BrowserGatherApp {
+impl BrowserCausewayApp {
     #[allow(clippy::cast_possible_truncation)]
     fn weave_viewport(&self) -> WeaveViewport {
         WeaveViewport {
@@ -58,7 +58,7 @@ impl BrowserGatherApp {
         }
     }
 
-    fn apply_styles(&mut self) -> Result<(), GatherError> {
+    fn apply_styles(&mut self) -> Result<(), CausewayError> {
         let viewport = self.weave_viewport();
         let Some(engine) = &mut self.engine else {
             return Ok(());
@@ -71,7 +71,7 @@ impl BrowserGatherApp {
         &mut self,
         context: &AppContext<'_>,
         project: BrowserProjectAssets,
-    ) -> Result<(), GatherError> {
+    ) -> Result<(), CausewayError> {
         let mut loaded_textures: Vec<AssetId> = Vec::new();
         for (id, asset) in project.textures {
             let texture = Texture2D::from_rgba8(
@@ -106,7 +106,7 @@ impl BrowserGatherApp {
         }
 
         let mut audio = self.audio.take().ok_or_else(|| {
-            GatherError::BrowserAsset("browser audio backend was already moved".into())
+            CausewayError::BrowserAsset("browser audio backend was already moved".into())
         })?;
         for (id, asset) in project.audio {
             audio.register(AudioClip::new(
@@ -121,10 +121,13 @@ impl BrowserGatherApp {
         // like native does, and give the session the complete scene set so a
         // Decay `Scene.go` request has somewhere real to go.
         let (entry_name, entry_document) =
-            project.scenes.first().ok_or(GatherError::MissingScene)?;
+            project.scenes.first().ok_or(CausewayError::MissingScene)?;
         let mut world = World::default();
         let mut loaded_scenes = LoadedScenes::new();
         loaded_scenes.enter_keeping_identities(&mut world, entry_name, entry_document)?;
+        // The same ground the native host builds. The scene carries an empty
+        // grid on purpose, so without this the browser opens onto nothing.
+        crate::assets::fill_the_world(&mut world)?;
         world = presented_world(&world, &project.stylesheets, self.weave_viewport())?;
 
         let mut session = Session::with_sources(self.scene.components().clone(), project.scripts)
@@ -136,7 +139,7 @@ impl BrowserGatherApp {
             // cannot reach would be the worst of both.
             .with_tile_sets(self.tile_sets.clone());
         session.keep_saves_in(Box::new(sindri_platform::BrowserSaves::under(
-            "sindri.gather.save",
+            "sindri.causeway.save",
         )));
 
         let mut engine =
@@ -148,13 +151,13 @@ impl BrowserGatherApp {
         self.engine = Some(engine);
         self.sync_page_lifecycle()?;
         log::info!(
-            "Gather loaded {} project assets through browser fetch",
+            "Causeway loaded {} project assets through browser fetch",
             project.asset_count
         );
         Ok(())
     }
 
-    fn sync_page_lifecycle(&mut self) -> Result<(), GatherError> {
+    fn sync_page_lifecycle(&mut self) -> Result<(), CausewayError> {
         let should_pause = !self.page_visible || self.platform_suspended;
         let Some(engine) = &mut self.engine else {
             return Ok(());
@@ -175,11 +178,11 @@ impl BrowserGatherApp {
             context
                 .device()
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Sindri Gather loading encoder"),
+                    label: Some("Sindri Causeway loading encoder"),
                 });
         {
             let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Sindri Gather loading pass"),
+                label: Some("Sindri Causeway loading pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view,
                     depth_slice: None,
@@ -204,8 +207,8 @@ impl BrowserGatherApp {
     }
 }
 
-impl DesktopApp for BrowserGatherApp {
-    type Error = GatherError;
+impl DesktopApp for BrowserCausewayApp {
+    type Error = CausewayError;
 
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -324,7 +327,7 @@ impl DesktopApp for BrowserGatherApp {
             context
                 .device()
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                    label: Some("Sindri gather browser encoder"),
+                    label: Some("Sindri Causeway browser encoder"),
                 });
         encode_prepared_frame(
             FrameRenderers {

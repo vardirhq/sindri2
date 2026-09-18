@@ -1,0 +1,51 @@
+// The one who walks, and the reason any of it matters.
+//
+// It knows nothing about building. It asks the ground whether the beacon can
+// be reached and takes one step if it can, which means the player is not
+// giving it instructions -- they are changing the world it is asking about.
+// A block laid across the channel is not a command; it is the answer becoming
+// yes.
+script Wanderer {
+    // Seconds a step takes. Slow enough to watch, so a way opening reads as
+    // the walker setting off rather than as it teleporting.
+    @export
+    let step_seconds: f32 = 0.34;
+
+    var elapsed: f32 = 0.0;
+    var waiting: bool = true;
+
+    fn update(dt: f32) {
+        let floor = World.find("Floor");
+        let beacon = World.find("Beacon");
+        if floor == null || beacon == null {
+            return;
+        }
+
+        elapsed += dt;
+        if elapsed < step_seconds {
+            return;
+        }
+        elapsed = 0.0;
+
+        // Asked every step rather than once, because the ground changes under
+        // it: a route that existed a moment ago can be taken apart, and one
+        // that did not can be built.
+        if !Grid.can_reach(this.entity, floor, beacon) {
+            if !waiting {
+                waiting = true;
+                Animation.stop(this.entity);
+            }
+            return;
+        }
+        if waiting {
+            waiting = false;
+            Animation.play(this.entity, "bob");
+        }
+        // False when there is nowhere further to go, which on a route that
+        // exists means it has arrived.
+        if !Grid.step_toward(this.entity, floor, beacon) {
+            Game.set("arrived", 1.0);
+            Animation.stop(this.entity);
+        }
+    }
+}

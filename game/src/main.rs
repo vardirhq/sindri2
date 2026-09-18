@@ -1,3 +1,3 @@
 fn main() {
-    sindri_gather::run();
+    sindri_causeway::run();
 }

@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 23,
+    "rows": 1,
+    "names": [
+      "ground-0",
+      "ground-1",
+      "ground-2",
+      "ground-3",
+      "earth-0",
+      "earth-1",
+      "stone-0",
+      "stone-1",
+      "rock-0",
+      "rock-1",
+      "sand-0",
+      "sand-1",
+      "snow-0",
+      "snow-1",
+      "ice-0",
+      "mud-0",
+      "mud-1",
+      "moss-0",
+      "gravel-0",
+      "clay-0",
+      "water",
+      "plank",
+      "plank-slab"
+    ],
+    "size": [
+      1196,
+      52
+    ],
+    "margin": [
+      2,
+      2
+    ],
+    "spacing": [
+      4,
+      4
+    ]
+  }
+}

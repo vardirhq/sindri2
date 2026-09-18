@@ -12,7 +12,7 @@ pub const PAGE_TEMPLATE: &str = include_str!("page.html");
 /// Named here rather than spelled at each call, because the page and the writer
 /// have to agree on it and a second spelling is a page that imports a module
 /// nobody built.
-pub const HOST_MODULE: &str = "sindri_gather";
+pub const HOST_MODULE: &str = "sindri_causeway";
 
 /// The page for a project, served from `base_path`.
 ///
@@ -148,17 +148,20 @@ mod build_stamp_tests {
         // Both, because the query on the module does not reach the file the
         // module fetches: versioning only the JavaScript leaves the actual code
         // cacheable, which is the whole fault this exists to close.
-        let page = page_for_host("Orbital", "/sindri2/", "sindri_gather", "a1b2c3d");
-        assert!(page.contains("./pkg/sindri_gather.js?v=a1b2c3d"), "{page}");
+        let page = page_for_host("Orbital", "/sindri2/", "sindri_causeway", "a1b2c3d");
         assert!(
-            page.contains("./pkg/sindri_gather_bg.wasm?v=a1b2c3d"),
+            page.contains("./pkg/sindri_causeway.js?v=a1b2c3d"),
+            "{page}"
+        );
+        assert!(
+            page.contains("./pkg/sindri_causeway_bg.wasm?v=a1b2c3d"),
             "{page}"
         );
     }
 
     #[test]
     fn the_build_is_on_the_page_where_somebody_can_read_it_off_a_phone() {
-        let page = page_for_host("Orbital", "/", "sindri_gather", "a1b2c3d");
+        let page = page_for_host("Orbital", "/", "sindri_causeway", "a1b2c3d");
         assert!(page.contains(r#"id="sindri-build">a1b2c3d<"#), "{page}");
     }
 
@@ -168,7 +171,7 @@ mod build_stamp_tests {
         // holding one has not got the other and the export would be its own
         // cache-miss on every deployment that forgot the flag.
         let page = page_for("Orbital", "/");
-        assert!(page.contains("./pkg/sindri_gather.js\""), "{page}");
+        assert!(page.contains("./pkg/sindri_causeway.js\""), "{page}");
         assert!(!page.contains("?v="), "{page}");
     }
 

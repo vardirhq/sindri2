@@ -18,7 +18,7 @@ use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, TileSetDocument};
 use sindri_decay::{PrefabSources, ProfileSources, ScriptSources};
 use weave::Stylesheet;
 
-use crate::error::GatherError;
+use crate::error::CausewayError;
 
 pub(super) struct BrowserProjectAssets {
     /// Every scene the manifest ships, entry scene first.
@@ -49,7 +49,7 @@ pub(super) enum LoadPhase {
 }
 
 impl BrowserProjectLoader {
-    pub(super) fn new() -> Result<Self, GatherError> {
+    pub(super) fn new() -> Result<Self, CausewayError> {
         let source = FetchAssetSource::new("assets")?;
         let mut manifest =
             AssetLoader::new(source, AssetLoadQueueConfig::default(), TextAssetDecoder)?;
@@ -59,7 +59,7 @@ impl BrowserProjectLoader {
         })
     }
 
-    pub(super) fn poll(&mut self) -> Result<Option<BrowserProjectAssets>, GatherError> {
+    pub(super) fn poll(&mut self) -> Result<Option<BrowserProjectAssets>, CausewayError> {
         let Some(phase) = self.phase.take() else {
             return Ok(None);
         };
@@ -110,7 +110,7 @@ fn queue_config(manifest: &AssetManifest, kind: AssetKind) -> AssetLoadQueueConf
 }
 
 impl ProjectLoaders {
-    pub(super) fn new(manifest: AssetManifest) -> Result<Self, GatherError> {
+    pub(super) fn new(manifest: AssetManifest) -> Result<Self, CausewayError> {
         // Where the export put the assets, which the manifest names because it
         // is the one file that is never cached. A project served straight from
         // a source tree says nothing, and then the assets sit beside the
@@ -207,7 +207,7 @@ impl ProjectLoaders {
         })
     }
 
-    pub(super) fn poll(&mut self) -> Result<Option<BrowserProjectAssets>, GatherError> {
+    pub(super) fn poll(&mut self) -> Result<Option<BrowserProjectAssets>, CausewayError> {
         poll_loader(&mut self.scene)?;
         poll_loader(&mut self.scripts)?;
         poll_loader(&mut self.textures)?;
@@ -242,7 +242,7 @@ impl ProjectLoaders {
         };
         let scene_ids = ids(AssetKind::Scene);
         if scene_ids.is_empty() {
-            return Err(GatherError::MissingScene);
+            return Err(CausewayError::MissingScene);
         }
         let scenes = scene_ids
             .iter()
@@ -277,7 +277,7 @@ impl ProjectLoaders {
             .map(|id| loaded(&self.styles, id).map(|source| (id.clone(), source)))
             .collect::<Result<BTreeMap<_, _>, _>>()?;
         let stylesheets = weave::compose_all(&style_sources)
-            .map_err(|error| GatherError::BrowserAsset(error.to_string()))?
+            .map_err(|error| CausewayError::BrowserAsset(error.to_string()))?
             .into_iter()
             .map(|(_, sheet)| sheet)
             .collect();
@@ -303,14 +303,16 @@ pub(super) fn request_kind<D: AssetDecoder>(
     loader: &mut AssetLoader<D>,
     manifest: &AssetManifest,
     kind: AssetKind,
-) -> Result<(), GatherError> {
+) -> Result<(), CausewayError> {
     for id in manifest.ids_of(kind) {
         loader.request(id.clone())?;
     }
     Ok(())
 }
 
-pub(super) fn poll_loader<D: AssetDecoder>(loader: &mut AssetLoader<D>) -> Result<(), GatherError> {
+pub(super) fn poll_loader<D: AssetDecoder>(
+    loader: &mut AssetLoader<D>,
+) -> Result<(), CausewayError> {
     for outcome in loader.poll() {
         if let AssetLoadOutcome::Failed(error) = outcome {
             return Err(error.into());
@@ -319,7 +321,7 @@ pub(super) fn poll_loader<D: AssetDecoder>(loader: &mut AssetLoader<D>) -> Resul
     Ok(())
 }
 
-pub(super) fn loaded<D>(loader: &AssetLoader<D>, id: &str) -> Result<D::Asset, GatherError>
+pub(super) fn loaded<D>(loader: &AssetLoader<D>, id: &str) -> Result<D::Asset, CausewayError>
 where
     D: AssetDecoder,
     D::Asset: Clone,
@@ -328,13 +330,13 @@ where
     loader
         .get(&id)
         .cloned()
-        .ok_or_else(|| GatherError::BrowserAsset(format!("'{id}' completed without a value")))
+        .ok_or_else(|| CausewayError::BrowserAsset(format!("'{id}' completed without a value")))
 }
 
 pub(super) fn loaded_many<D>(
     loader: &AssetLoader<D>,
     ids: &[String],
-) -> Result<Vec<(AssetId, D::Asset)>, GatherError>
+) -> Result<Vec<(AssetId, D::Asset)>, CausewayError>
 where
     D: AssetDecoder,
     D::Asset: Clone,
@@ -343,7 +345,7 @@ where
         .map(|id| {
             let asset_id = AssetId::new(id.clone())?;
             let asset = loader.get(&asset_id).cloned().ok_or_else(|| {
-                GatherError::BrowserAsset(format!("'{asset_id}' completed without a value"))
+                CausewayError::BrowserAsset(format!("'{asset_id}' completed without a value"))
             })?;
             Ok((asset_id, asset))
         })

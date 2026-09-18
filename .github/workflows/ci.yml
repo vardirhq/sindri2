@@ -120,17 +120,20 @@ jobs:
             node src/cli.ts "$recipe" --out ../../games/orbital-baked/assets --check
           done
 
-      # Gather's floor is a tile volume now, so every block on the island comes
-      # out of this one recipe. Art drifting from its source used to cost a
-      # slightly wrong sprite; it now costs the ground.
+      # The companion game's ground is a tile volume, so every block in the
+      # world comes out of these recipes. Art drifting from its source used to
+      # cost a slightly wrong sprite; it now costs the ground.
       #
-      # This recipe rather than all of Gather's: standing-stones, tree and
-      # waystone are already out of date against their own recipes, which
-      # predates the volume work and is not its to fix. Widen the glob in the
-      # change that re-bakes them.
-      - name: Check Gather's blocks are still what their recipe bakes
+      # The block recipes rather than every recipe in the folder: the beacon is
+      # art carried over from the game this replaced and is already out of date
+      # against its own recipe, which is not this check's to fix. Widen the
+      # glob in the change that re-bakes it.
+      - name: Check the game's blocks are still what their recipes bake
         working-directory: tools/isometric-baker
-        run: node src/cli.ts ../../game/assets/textures/gather-blocks.isobake.json --out ../../game/assets --check
+        run: |
+          for recipe in ../../game/recipes/blocks-*.isobake.json; do
+            node src/cli.ts "$recipe" --out ../../game/assets --check
+          done
 
   clippy:
     needs: [quick, decay_preflight]
@@ -224,7 +227,7 @@ jobs:
       - name: Capture the companion game mid-run
         env:
           WGPU_BACKEND: vulkan
-        run: cargo run --package sindri-gather --bin gather-capture -- target/render-artifacts/gather.png
+        run: cargo run --package sindri-causeway --bin causeway-capture -- target/render-artifacts/causeway.png
       - name: Capture Last Stand spectacle on desktop and phone
         env:
           WGPU_BACKEND: vulkan
@@ -248,7 +251,7 @@ jobs:
             target/render-artifacts/editor-runtime-viewport.png
             target/render-artifacts/editor-tile-volume.png
             target/render-artifacts/scene-frame-pipeline.png
-            target/render-artifacts/gather.png
+            target/render-artifacts/causeway.png
             target/render-artifacts/orbital-spectacle-desktop.png
             target/render-artifacts/orbital-spectacle-phone.png
             target/render-artifacts/orbital-combat-lab.png
@@ -292,7 +295,7 @@ jobs:
           cargo test --package sindri-assets --target wasm32-unknown-unknown \
             --test decode_compatibility
 
-  # Compiling for wasm32 says nothing about whether the engine runs. Gather
+  # Compiling for wasm32 says nothing about whether the engine runs. The game
   # makes this gate stricter still: its static site includes the actual project
   # asset tree plus a manifest generated from those exact bytes, and the browser
   # must request every asset category over HTTP under a non-root base path
@@ -355,8 +358,8 @@ jobs:
       - name: Export the browser projects
         run: |
           cargo run --quiet --package sindri-export --bin sindri-export -- \
-            game target/dist/gather --base /sindri2/
-          cp -R game/pkg/. target/dist/gather/pkg/
+            game target/dist/causeway --base /sindri2/
+          cp -R game/pkg/. target/dist/causeway/pkg/
           # The acceptance project, exported and served the same way. It is the
           # one with prefabs — including prefabs only another prefab names —
           # and with screens that are switched off until something shows them,
@@ -380,7 +383,7 @@ jobs:
         run: |
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
-            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-gather.png
+            node scripts/browser/smoke.mjs target/dist/causeway target/render-artifacts/browser-causeway.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/orbital target/render-artifacts/browser-orbital.png
           SINDRI_EXPECT_ASSETS=1 \
@@ -393,11 +396,11 @@ jobs:
       - name: Smoke the startup failure paths
         run: |
           SINDRI_EXPECT_FAILURE=canvas SINDRI_BASE_PATH=/sindri2/ \
-            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-canvas.png
+            node scripts/browser/smoke.mjs target/dist/causeway target/render-artifacts/browser-no-canvas.png
           SINDRI_EXPECT_FAILURE=adapter SINDRI_BASE_PATH=/sindri2/ \
-            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-adapter.png
+            node scripts/browser/smoke.mjs target/dist/causeway target/render-artifacts/browser-no-adapter.png
           SINDRI_EXPECT_FAILURE=device SINDRI_BASE_PATH=/sindri2/ \
-            node scripts/browser/smoke.mjs target/dist/gather target/render-artifacts/browser-no-device.png
+            node scripts/browser/smoke.mjs target/dist/causeway target/render-artifacts/browser-no-device.png
       - name: Upload browser captures
         if: always()
         uses: actions/upload-artifact@v7
@@ -405,7 +408,7 @@ jobs:
           name: browser-captures
           path: |
             target/render-artifacts/browser-cube.png
-            target/render-artifacts/browser-gather.png
+            target/render-artifacts/browser-causeway.png
             target/render-artifacts/browser-orbital.png
             target/render-artifacts/browser-weave-phone.png
             target/render-artifacts/browser-orbital-baked-phone.png

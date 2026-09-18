@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sindri_core::SceneComponent;
 use sindri_grid::{
     GridBounds, GridCoord, GridCoord3, GridError, GridPoint, GridSpace, PlanePoint, PlaneYAxis,
@@ -277,11 +277,16 @@ impl SceneComponent for TileGridComponent {
 }
 
 /// One occupied cell in the serialized sparse volume.
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+///
+/// Writable as well as readable, because a volume is not always authored: a
+/// world built from a seed has to be handed to the same component a scene
+/// would have filled in, and going through raw JSON to do it would be a second
+/// spelling of this format that only has to disagree once.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct TileCellDocument {
     pub position: [i32; 3],
     pub tile: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub visual_override: Option<String>,
 }
 
@@ -293,12 +298,12 @@ impl TileCellDocument {
 }
 
 /// Sparse tile IDs for a stackable volume.
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct TileVolumeComponent {
     pub tileset: String,
     #[serde(default)]
     pub cells: Vec<TileCellDocument>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_zero_layer")]
     pub layer: i32,
     /// Rerolls every variant choice in this volume.
     ///
@@ -308,8 +313,20 @@ pub struct TileVolumeComponent {
     /// Changing it rearranges the whole volume at once, which is what an author
     /// wants from a reroll and is why it is one number rather than a state per
     /// cell.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_zero_seed")]
     pub variant_seed: u64,
+}
+
+// By reference because that is the shape `skip_serializing_if` hands them,
+// whatever the lint would rather have.
+#[allow(clippy::trivially_copy_pass_by_ref)]
+const fn is_zero_layer(value: &i32) -> bool {
+    *value == 0
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+const fn is_zero_seed(value: &u64) -> bool {
+    *value == 0
 }
 
 #[derive(Clone, Debug, Error, PartialEq, Eq)]

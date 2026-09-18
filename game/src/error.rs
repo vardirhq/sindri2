@@ -6,7 +6,10 @@ use sindri_scene::SheetBindError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum GatherError {
+pub enum CausewayError {
+    /// The world is built rather than authored, so it can fail on its own.
+    #[error("the world could not be generated: {0}")]
+    Generated(String),
     #[error(transparent)]
     Scene(#[from] sindri_scene::SceneExtractError),
     #[error(transparent)]
@@ -64,11 +67,11 @@ pub enum GatherError {
     #[error("browser project asset error: {0}")]
     BrowserAsset(String),
     #[error(transparent)]
-    Host(#[from] Box<HostError<GatherError>>),
+    Host(#[from] Box<HostError<CausewayError>>),
 }
 
-impl From<HostError<GatherError>> for GatherError {
-    fn from(error: HostError<GatherError>) -> Self {
+impl From<HostError<CausewayError>> for CausewayError {
+    fn from(error: HostError<CausewayError>) -> Self {
         Self::Host(Box::new(error))
     }
 }
