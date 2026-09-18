@@ -141,7 +141,14 @@ pub fn cube_faces(
             if covers(face, fill, height_at(neighbour)) {
                 continue;
             }
-            let Some((_, visual)) = definition.faces.resolved(face) else {
+            // Which of a tile's looks this cell wears. Without this every
+            // block of one kind is the same block, and whatever pattern its
+            // faces carry repeats on the grid -- a field of grass reads as
+            // tiling rather than as grass.
+            let Some((_, visual)) = definition
+                .faces_at(volume.variant_seed, [cell.x, cell.y, cell.z], tile)
+                .resolved(face)
+            else {
                 continue;
             };
             let (normal, right, up) = basis_of(face);

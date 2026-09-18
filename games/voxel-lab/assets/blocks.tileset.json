@@ -1,134 +1,135 @@
 {
   "format_version": 1,
   "tiles": {
-    "grass": {
+    "ground": {
       "faces": {
         "top": {
-          "sprite": "textures/block-tops.png#grass",
+          "sprite": "textures/ground-top.png#ground-0",
           "size": [
             1.0,
             1.0
           ]
         },
         "bottom": {
-          "sprite": "textures/block-tops.png#grass",
+          "sprite": "textures/ground-top.png#ground-0",
           "size": [
             1.0,
             1.0
           ]
         },
         "south": {
-          "sprite": "textures/block-sides.png#grass",
+          "sprite": "textures/ground-side.png#ground-0",
           "size": [
             1.0,
             1.0
           ]
         },
         "east": {
-          "sprite": "textures/block-sides.png#grass",
-          "size": [
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    "earth": {
-      "faces": {
-        "top": {
-          "sprite": "textures/block-tops.png#earth",
-          "size": [
-            1.0,
-            1.0
-          ]
-        },
-        "bottom": {
-          "sprite": "textures/block-tops.png#earth",
-          "size": [
-            1.0,
-            1.0
-          ]
-        },
-        "south": {
-          "sprite": "textures/block-sides.png#earth",
-          "size": [
-            1.0,
-            1.0
-          ]
-        },
-        "east": {
-          "sprite": "textures/block-sides.png#earth",
-          "size": [
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    "stone": {
-      "faces": {
-        "top": {
-          "sprite": "textures/block-tops.png#stone",
-          "size": [
-            1.0,
-            1.0
-          ]
-        },
-        "bottom": {
-          "sprite": "textures/block-tops.png#stone",
-          "size": [
-            1.0,
-            1.0
-          ]
-        },
-        "south": {
-          "sprite": "textures/block-sides.png#stone",
-          "size": [
-            1.0,
-            1.0
-          ]
-        },
-        "east": {
-          "sprite": "textures/block-sides.png#stone",
-          "size": [
-            1.0,
-            1.0
-          ]
-        }
-      }
-    },
-    "slab": {
-      "faces": {
-        "top": {
-          "sprite": "textures/block-tops.png#stone",
-          "size": [
-            1.0,
-            1.0
-          ]
-        },
-        "bottom": {
-          "sprite": "textures/block-tops.png#stone",
-          "size": [
-            1.0,
-            1.0
-          ]
-        },
-        "south": {
-          "sprite": "textures/block-sides.png#stone",
-          "size": [
-            1.0,
-            1.0
-          ]
-        },
-        "east": {
-          "sprite": "textures/block-sides.png#stone",
+          "sprite": "textures/ground-side.png#ground-0",
           "size": [
             1.0,
             1.0
           ]
         }
       },
-      "height": 0.5
+      "variants": [
+        {
+          "faces": {
+            "top": {
+              "sprite": "textures/ground-top.png#ground-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "bottom": {
+              "sprite": "textures/ground-top.png#ground-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "south": {
+              "sprite": "textures/ground-side.png#ground-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "east": {
+              "sprite": "textures/ground-side.png#ground-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            }
+          }
+        },
+        {
+          "faces": {
+            "top": {
+              "sprite": "textures/ground-top.png#ground-2",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "bottom": {
+              "sprite": "textures/ground-top.png#ground-2",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "south": {
+              "sprite": "textures/ground-side.png#ground-2",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "east": {
+              "sprite": "textures/ground-side.png#ground-2",
+              "size": [
+                1.0,
+                1.0
+              ]
+            }
+          }
+        },
+        {
+          "faces": {
+            "top": {
+              "sprite": "textures/ground-top.png#ground-3",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "bottom": {
+              "sprite": "textures/ground-top.png#ground-3",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "south": {
+              "sprite": "textures/ground-side.png#ground-3",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "east": {
+              "sprite": "textures/ground-side.png#ground-3",
+              "size": [
+                1.0,
+                1.0
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }
