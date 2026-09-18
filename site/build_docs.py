@@ -166,7 +166,7 @@ TEMPLATE = """<!doctype html>
 <a href="../documentation/">docs</a>
 <a href="../scripting/">decay</a>
 <a href="../weave/">weave</a>
-<a href="../../examples/gather/">gather</a>
+<a href="../../examples/causeway/">causeway</a>
 <a class="ghost" href="https://github.com/vardirhq/sindri2">github ↗</a>
 </nav>
 </div>
