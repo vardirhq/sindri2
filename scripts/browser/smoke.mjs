@@ -164,9 +164,11 @@ if (EXPECT_FAILURE) {
   const expected = {
     canvas: 'missing the #sindri-canvas',
     adapter: 'WebGPU is unavailable',
-    // Not the message's wording, which belongs to wgpu: what matters is that a
-    // failure raised after startup finished arrived on the page at all.
-    device: 'Gather stopped',
+    // Not the message's wording, which belongs to wgpu, and not the project's
+    // name, which belongs to whichever project this was pointed at: what
+    // matters is that a failure raised after startup finished arrived on the
+    // page at all. Naming the game here meant renaming the game broke this.
+    device: 'stopped',
   }[EXPECT_FAILURE];
   if (SHOT) await page.screenshot({ path: SHOT });
   await browser.close();
