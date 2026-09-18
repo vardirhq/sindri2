@@ -20,7 +20,7 @@
 use sindri_core::{TileSetDocument, World};
 use sindri_render::{FrameCommand, TextureId};
 use sindri_scene::{
-    CameraView, SceneExtractor, SceneRuntime, TextureBindings, TileSetBindings,
+    CameraView, GridSurfaces, SceneExtractor, SceneRuntime, TextureBindings, TileSetBindings,
     resolve_grid_placements,
 };
 
@@ -109,8 +109,13 @@ fn draw_order(marked: &[[i32; 2]], extra: &str) -> Vec<TextureId> {
     let mut world = scene_with(marked, extra);
     let extractor = SceneExtractor::new().expect("the schemas register");
     let sets = tile_sets();
-    resolve_grid_placements(&mut world, extractor.components(), Some(&sets))
-        .expect("the walker is placed");
+    resolve_grid_placements(
+        &mut world,
+        extractor.components(),
+        Some(&sets),
+        &mut GridSurfaces::default(),
+    )
+    .expect("the walker is placed");
     extractor
         .extract_animated(
             &world,

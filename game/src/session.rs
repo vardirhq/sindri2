@@ -70,6 +70,13 @@ pub struct Session {
     saves: sindri_core::SaveStore,
     /// The live flecks a script has thrown.
     effects: sindri_scene::Effects2d,
+    /// The ground under each grid, remembered between frames.
+    ///
+    /// Kept on the session rather than made each frame, because that is the
+    /// whole of the saving: the derivation walks every cell of the volume, and
+    /// a generated landscape has enough of them that doing it per frame costs
+    /// more than everything else in a frame put together.
+    surfaces: sindri_scene::GridSurfaces,
     since_written: f32,
     /// Where the save actually goes.
     ///
@@ -118,6 +125,7 @@ impl Session {
             random: sindri_core::Rng::default(),
             saves: sindri_core::SaveStore::default(),
             effects: sindri_scene::Effects2d::default(),
+            surfaces: sindri_scene::GridSurfaces::default(),
             since_written: 0.0,
             save_backend: Box::new(sindri_platform::MemorySaves::new()),
             pending_audio: Vec::new(),
@@ -318,9 +326,12 @@ impl Session {
         // this step left it, and before anything draws. Props settle on the
         // first pass and never move again; only what moved costs anything.
         let tile_sets = (!self.tile_sets.is_empty()).then_some(&self.tile_sets);
-        if let Err(error) =
-            sindri_scene::resolve_grid_placements(world, &self.components, tile_sets)
-        {
+        if let Err(error) = sindri_scene::resolve_grid_placements(
+            world,
+            &self.components,
+            tile_sets,
+            &mut self.surfaces,
+        ) {
             log::error!("{error}");
         }
         // Last, so a script's request is performed with no script mid-call in

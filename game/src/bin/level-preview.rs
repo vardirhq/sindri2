@@ -133,7 +133,15 @@ async fn preview(path: &Path, overview: bool) -> Result<(), Box<dyn Error>> {
         "causeway.tileset.json",
         TileSetDocument::from_json(&fs::read_to_string(root.join("causeway.tileset.json"))?)?,
     )?;
-    resolve_grid_placements(&mut world, extractor.components(), Some(&tile_sets))?;
+    // One pass, so nothing is kept: the cache exists for hosts that resolve
+    // every frame.
+    let mut surfaces = sindri_scene::GridSurfaces::default();
+    resolve_grid_placements(
+        &mut world,
+        extractor.components(),
+        Some(&tile_sets),
+        &mut surfaces,
+    )?;
 
     let instance = wgpu::Instance::default();
     let gpu = GpuContext::request(&instance, None, &GpuRequestOptions::default()).await?;

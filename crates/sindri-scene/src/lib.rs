@@ -48,7 +48,8 @@ pub use occlusion::{
 pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
 pub use physics_sync::{PhysicsSyncError, ScenePhysics2d};
 pub use placement::{
-    GridPlacementError, blocking_step_ahead, nearest_cell, resolve_grid_placements, standing_depth,
+    GridPlacementError, GridSurfaces, blocking_step_ahead, nearest_cell, resolve_grid_placements,
+    standing_depth,
 };
 pub use screen_ui::{
     SafeArea, ScreenExtent, ScreenRect, ScreenUi, UiButtonComponent, UiDirection, UiHierarchy,

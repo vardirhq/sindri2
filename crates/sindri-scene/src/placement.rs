@@ -14,6 +14,8 @@
 //! settle on the first pass and never move again; a walker's X and Y come from
 //! its script and only its depth is answered here.
 
+use std::collections::BTreeMap;
+
 use sindri_core::{ComponentSchemaRegistry, EntityId, Transform3D, World};
 use sindri_grid::GridCoord;
 use thiserror::Error;
@@ -22,6 +24,43 @@ use crate::{
     GridPlacementComponent, TileGridComponent, TileSetBindings, TileSurfaceError, TileSurfaces,
     TileVolumeComponent,
 };
+
+/// The surfaces of each grid, kept between the frames that did not change it.
+///
+/// Deriving a volume's surfaces walks every occupied cell in it. That was free
+/// when a grid was a farmyard and is not free now that one is a landscape: a
+/// hundred and sixty cells square costs about 185ms a frame, which is the whole
+/// frame and then some. Nothing about it changes unless the volume does, so it
+/// is worked out once and kept until the volume's revision or the tile sets
+/// move under it.
+///
+/// Held by the caller rather than hidden in a static, so a host that runs two
+/// worlds gets two caches and a test gets a fresh one by writing
+/// `GridSurfaces::default()`.
+#[derive(Debug, Default)]
+pub struct GridSurfaces {
+    /// What was derived, and what it was derived from.
+    derived: BTreeMap<EntityId, (u64, u64, Option<TileSurfaces>)>,
+    /// How many times a surface was actually worked out.
+    ///
+    /// The saving is not visible in the result -- a cached answer and a fresh
+    /// one are the same answer -- so without this a test can only assert the
+    /// placement is right, which it was when it was also ruinously slow.
+    derivations: u64,
+}
+
+impl GridSurfaces {
+    /// Forgets everything, so the next resolve derives again.
+    pub fn clear(&mut self) {
+        self.derived.clear();
+    }
+
+    /// How many derivations this cache has paid for.
+    #[must_use]
+    pub const fn derivations(&self) -> u64 {
+        self.derivations
+    }
+}
 
 /// Resolves every `sindri.grid.placement` in the world.
 ///
@@ -33,6 +72,7 @@ pub fn resolve_grid_placements(
     world: &mut World,
     components: &ComponentSchemaRegistry,
     tile_sets: Option<&TileSetBindings>,
+    surfaces: &mut GridSurfaces,
 ) -> Result<usize, GridPlacementError> {
     let placements = components
         .query::<GridPlacementComponent>(world)
@@ -64,21 +104,57 @@ pub fn resolve_grid_placements(
                 grid: placement.grid.as_str().to_owned(),
             });
         };
-        let surfaces = surfaces_of(world, components, grid_entity, tile_sets)?;
+        let derived = surfaces_of(world, components, grid_entity, tile_sets, surfaces)?;
         let origin = world
             .get(grid_entity)
             .and_then(|data| data.transform_3d)
             .unwrap_or_default()
             .position;
 
-        place(world, entity, &placement, &grid, surfaces.as_ref(), origin)?;
+        place(world, entity, &placement, &grid, derived, origin)?;
         resolved += 1;
     }
     Ok(resolved)
 }
 
 /// The ground heights of the volume on the grid entity, when one is readable.
-fn surfaces_of(
+///
+/// Answered from `cache` whenever the volume and the tile sets are the ones it
+/// was derived from. Every placement on a grid asks this, and every frame asks
+/// it again, so deriving here rather than remembering is how a walk across a
+/// landscape came to cost more than drawing it.
+fn surfaces_of<'a>(
+    world: &World,
+    components: &ComponentSchemaRegistry,
+    grid_entity: EntityId,
+    tile_sets: Option<&TileSetBindings>,
+    cache: &'a mut GridSurfaces,
+) -> Result<Option<&'a TileSurfaces>, GridPlacementError> {
+    // A grid that was deleted and remade takes a new revision with it, and a
+    // rebound tile set takes a new generation, so a stale entry cannot survive
+    // either. Zero for "no tile sets" is not a collision: without them nothing
+    // is derived at all.
+    let revision = world.revision(grid_entity).unwrap_or_default();
+    let generation = tile_sets.map_or(0, TileSetBindings::generation);
+    let fresh =
+        cache
+            .derived
+            .get(&grid_entity)
+            .is_some_and(|&(was_revision, was_generation, _)| {
+                was_revision == revision && was_generation == generation
+            });
+    if !fresh {
+        let derived = derive_surfaces(world, components, grid_entity, tile_sets)?;
+        cache.derivations = cache.derivations.saturating_add(1);
+        cache
+            .derived
+            .insert(grid_entity, (revision, generation, derived));
+    }
+    Ok(cache.derived[&grid_entity].2.as_ref())
+}
+
+/// The derivation itself, with nothing remembered.
+fn derive_surfaces(
     world: &World,
     components: &ComponentSchemaRegistry,
     grid_entity: EntityId,
