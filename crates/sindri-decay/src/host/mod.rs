@@ -103,6 +103,14 @@ pub struct WorldHost<'a> {
     random: Option<&'a mut sindri_core::Rng>,
     /// What a stacked volume's cells mean, when the host has loaded any.
     tile_sets: Option<&'a sindri_scene::TileSetBindings>,
+    /// The walkable surface last derived, and the volume it came from.
+    ///
+    /// One update asks several times -- "can I step here" is asked once per
+    /// axis, so a walker refused diagonally still slides along a wall -- and
+    /// reducing a whole island's columns to their walkable tops per question
+    /// would cost more than drawing it. Keyed by the grid and its revision, so
+    /// a volume a script just wrote to is derived again rather than remembered.
+    walkable: Option<(EntityId, u64, sindri_scene::TileSurfaces)>,
     /// Where the screen elements are and what the pointer is doing to them.
     ///
     /// Read-only: hover and click are answers about this frame, computed by the

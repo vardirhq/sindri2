@@ -489,6 +489,16 @@
             "f32"
           ],
           "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "walkable",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32"
+          ],
+          "returns": "bool"
         }
       ],
       "name": "Grid"

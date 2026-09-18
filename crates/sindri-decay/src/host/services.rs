@@ -72,6 +72,7 @@ impl<'a> WorldHost<'a> {
             animations,
             scenes,
             tile_sets,
+            walkable: None,
             printed: Vec::new(),
         }
     }

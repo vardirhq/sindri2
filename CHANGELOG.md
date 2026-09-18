@@ -20,7 +20,25 @@ requests, commit history, and subsystem documentation rather than this file.
   grid, its transform, the art it draws from, or whether it takes part in the
   scene at all — is picked up on the next frame.
 
+### Added
+
+- `Grid.walkable(floor, x, y)` tells a script whether a walker can stand where a
+  point falls, read from the same walkable surface the pathfinder uses. A script
+  could previously ask only about a route between two entities, so a game moving
+  its own player had no way to ask about terrain at all.
+
 ### Fixed
+
+- Gather's player no longer walks across its moat or into its outcrop. It
+  compared positions against tagged props, which are entities; water and the
+  hill are not, so neither stopped it while the Wisp routed around both.
+- Gather's player no longer starts inside the hill. Its scene authored no
+  starting position, so it began at the world origin — the middle of a 25x25
+  island, which is the top of the outcrop. It now starts on the path just north
+  of the ridge.
+- A walker standing over water is no longer lifted onto it. An authored occupant
+  rests on whatever holds it up, but a walker stands only on what it can stand
+  on.
 
 - The editor's grid chooser offers entities carrying `sindri.tile_grid` as well
   as `sindri.tilemap`. It asked for the flat map alone, and no scene has carried

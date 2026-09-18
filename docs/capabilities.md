@@ -596,6 +596,40 @@ That last part is what a companion game is for. "Every occupant has ground under
 it" was not expressible against a flat map, where every cell was ground by
 definition; it became a thing that could be false, and was, in three places.
 
+**A script can ask what the ground is.** `Grid.walkable(floor, x, y)` answers
+whether a walker can stand where a point falls, from the walkable surface the
+pathfinder walks. Continuous coordinates, because a script asks where it is
+about to step and that is a fraction of the way into a cell; which cell that is
+comes from `sindri_scene::nearest_cell`, the same rule that decides which column
+a walker's own placement reads from, so a walker cannot stand in one cell and
+ask about another. Off the grid, water, decoration and empty columns all answer
+the same way, because none of them is ground.
+
+This closes a gap the companion game had been living with. Occupancy was the
+engine's own answer and `WorldGridNavigation` read it directly, but the only
+question a script could ask was about a route between two *entities* — so
+Gather's player tagged every solid prop and compared positions, which knows
+nothing about terrain. Its pond and its outcrop are not entities, so the player
+walked over water and into the hill while the Wisp, reading the same surface
+from Rust, went round them. `game/tests/the_island_has_a_shape.rs` walks the
+player at each edge of the island in turn and fails if it ever stands on a
+column that is not walkable; with the check taken back out of `player.decay` it
+reproduces the original bug at column (3, 2).
+
+A walker's placement follows the same distinction. An authored occupant rests on
+whatever *supports* it, which is what a pier or a lily on water is; a walker
+stands only on what is *walkable*, so over water it sits on the grid's plane
+rather than being lifted onto the surface. Making water support things is what
+made that difference visible: before it, water had no surface at all and a
+walker over it was already at plane height by accident.
+
+What a script still cannot ask is whether a step is *legal from where it is*.
+`Grid.walkable` is about a cell, not about an edge, so a script-driven walker
+does not honour the `max_step` that decides for navigation whether a rise is a
+step or a wall. Gather does not hit this — its outcrop is a stepped pyramid, so
+every route up it is one level at a time — but a scene with a cliff beside low
+ground would let a scripted walker climb it.
+
 **A volume is resolved once, not every frame.** An island's faces do not move
 while the player walks around it, and rebuilding them per frame was most of what
 extracting Gather's scene cost: 6.7 ms a frame, of which the volume was 5.7 ms,
