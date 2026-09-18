@@ -23,7 +23,7 @@ use sindri_causeway::{
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_platform::{InputEvent, InputState, MouseButton};
+use sindri_platform::{InputEvent, InputState, Key, MouseButton};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_render::{
     DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, OffscreenTarget, ShapeRenderer,
@@ -59,10 +59,36 @@ const RUN: &[((i32, i32, i32), bool)] = &[
     ((7, 7, 0), true),
     ((8, 7, 0), true),
     ((9, 7, 0), true),
-    ((15, 7, 0), false),
-    ((15, 7, 1), false),
-    ((16, 7, 0), false),
 ];
+
+/// The stair, once the run has switched to a block that fills its cell.
+///
+/// Slabs are the wrong tool here and the level says so: two of them stack to a
+/// step of one and a half, which is more than a walker can climb. A walkway
+/// across water and a way up a pillar are different jobs.
+const STAIR: &[(i32, i32, i32)] = &[(15, 7, 0), (15, 7, 1), (16, 7, 0)];
+
+/// One click, pressed and released as a host would deliver it.
+#[cfg(not(target_arch = "wasm32"))]
+fn click(
+    world: &mut sindri_core::World,
+    session: &mut Session,
+    point: [f32; 2],
+) -> Result<(), Box<dyn Error>> {
+    let mut held = InputState::default();
+    held.apply(InputEvent::PointerMoved {
+        x: point[0] * VIEWPORT.0,
+        y: point[1] * VIEWPORT.1,
+    });
+    held.apply(InputEvent::ButtonPressed(MouseButton::Left));
+    session.step(world, &held, VIEWPORT, STEP_SECONDS)?;
+    // A frame boundary, exactly as a host puts one there: without it the press
+    // edge is still set on the next step and one click lays two blocks.
+    held.begin_frame(std::time::Duration::from_secs_f32(STEP_SECONDS));
+    held.apply(InputEvent::ButtonReleased(MouseButton::Left));
+    session.step(world, &held, VIEWPORT, STEP_SECONDS)?;
+    Ok(())
+}
 
 /// Where the top of a cell lands on the picture, as a fraction across and down.
 #[cfg(not(target_arch = "wasm32"))]
@@ -106,19 +132,15 @@ fn play(
         } else {
             top_of(*cell, camera.view_projection)
         };
-        let mut held = InputState::default();
-        held.apply(InputEvent::PointerMoved {
-            x: point[0] * VIEWPORT.0,
-            y: point[1] * VIEWPORT.1,
-        });
-        held.apply(InputEvent::ButtonPressed(MouseButton::Left));
-        session.step(world, &held, VIEWPORT, STEP_SECONDS)?;
-        // A frame boundary, exactly as a host puts one there: without it the
-        // press edge is still set on the next step and one click lays two
-        // blocks.
-        held.begin_frame(std::time::Duration::from_secs_f32(STEP_SECONDS));
-        held.apply(InputEvent::ButtonReleased(MouseButton::Left));
-        session.step(world, &held, VIEWPORT, STEP_SECONDS)?;
+        click(world, session, point)?;
+    }
+
+    // Second block in the palette: earth, which fills its cell.
+    let mut choose = InputState::default();
+    choose.apply(InputEvent::KeyPressed(Key::Digit2));
+    session.step(world, &choose, VIEWPORT, STEP_SECONDS)?;
+    for cell in STAIR {
+        click(world, session, top_of(*cell, camera.view_projection))?;
     }
 
     // Long enough for the walk itself: the way is open, and the picture should

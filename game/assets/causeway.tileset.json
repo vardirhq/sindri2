@@ -350,6 +350,32 @@
       },
       "walkable": false,
       "supports": true
+    },
+    "plank-slab": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#plank-slab",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/slabs-side.png#plank-slab",
+          "size": [
+            1.0,
+            0.5
+          ]
+        },
+        "east": {
+          "sprite": "textures/slabs-side.png#plank-slab",
+          "size": [
+            1.0,
+            0.5
+          ]
+        }
+      },
+      "height": 0.5
     }
   }
 }

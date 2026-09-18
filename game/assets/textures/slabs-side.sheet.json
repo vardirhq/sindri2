@@ -2,24 +2,14 @@
   "format_version": 1,
   "anchor": "center",
   "grid": {
-    "columns": 11,
+    "columns": 1,
     "rows": 1,
     "names": [
-      "ground-0",
-      "ground-1",
-      "ground-2",
-      "ground-3",
-      "earth-0",
-      "earth-1",
-      "stone-0",
-      "stone-1",
-      "plank",
-      "water",
       "plank-slab"
     ],
     "size": [
-      572,
-      52
+      52,
+      28
     ],
     "margin": [
       2,

@@ -57,6 +57,7 @@ pub const WEAVE_SOURCES: &[(&str, &str)] = &[
 pub const TEXTURE_IDS: &[&str] = &[
     "textures/blocks-top.png",
     "textures/blocks-side.png",
+    "textures/slabs-side.png",
     "textures/wanderer.png",
     "textures/beacon.png",
 ];
@@ -106,6 +107,10 @@ pub const TEXTURES: &[(&str, &[u8])] = &[
     (
         "textures/blocks-side.png",
         include_bytes!("../assets/textures/blocks-side.png"),
+    ),
+    (
+        "textures/slabs-side.png",
+        include_bytes!("../assets/textures/slabs-side.png"),
     ),
     (
         "textures/wanderer.png",
@@ -172,6 +177,10 @@ pub const SHEETS: &[(&str, &str)] = &[
     (
         "textures/blocks-side.sheet.json",
         include_str!("../assets/textures/blocks-side.sheet.json"),
+    ),
+    (
+        "textures/slabs-side.sheet.json",
+        include_str!("../assets/textures/slabs-side.sheet.json"),
     ),
     (
         "textures/wanderer.sheet.json",

@@ -1,0 +1,133 @@
+{
+  "format_version": 1,
+  "id": "slabs-side",
+  "texture": "textures/slabs-side.png",
+  "view": "side",
+  "pixels_per_unit": 48,
+  "directions": 1,
+  "footprint": {
+    "width": 1,
+    "height": 1
+  },
+  "render": {
+    "supersample": 1,
+    "padding": 0,
+    "palette_snap": true,
+    "alpha_cutoff": 128,
+    "outline": {
+      "enabled": false
+    }
+  },
+  "variants": [
+    {
+      "name": "plank-slab",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "plank": {
+            "colour": "#a8763f",
+            "grain": {
+              "strength": 0.34,
+              "size": 0.05,
+              "seed": 41
+            },
+            "ramp": {
+              "lightness": [
+                -0.18,
+                -0.09,
+                0.0,
+                0.08
+              ],
+              "hue": [
+                0.01,
+                0.005,
+                0.0,
+                -0.004
+              ]
+            }
+          },
+          "plank-dark": {
+            "colour": "#8a5c2d",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.055,
+              "seed": 43
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "plank-dark",
+            "position": [
+              0.0,
+              -0.15,
+              0.0
+            ],
+            "size": [
+              1.0,
+              0.2,
+              1.0
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              0.1,
+              -0.375
+            ],
+            "size": [
+              1.0,
+              0.3,
+              0.215
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              0.1,
+              -0.125
+            ],
+            "size": [
+              1.0,
+              0.3,
+              0.215
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              0.1,
+              0.125
+            ],
+            "size": [
+              1.0,
+              0.3,
+              0.215
+            ]
+          },
+          {
+            "type": "box",
+            "material": "plank",
+            "position": [
+              0.0,
+              0.1,
+              0.375
+            ],
+            "size": [
+              1.0,
+              0.3,
+              0.215
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

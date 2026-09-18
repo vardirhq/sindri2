@@ -188,7 +188,8 @@ def entities():
                 "sindri.ui.text": {
                     "anchor": "top_left", "color": [0.949, 0.722, 0.294, 1.0],
                     "font": "fonts/Inter.ttf", "font_size": 0.0407,
-                    "layer": 101, "line_height": 0.0519, "text": "12",
+                    "layer": 101, "line_height": 0.0519, "text": "x {}",
+                    "values": [12.0],
                 },
             },
         },

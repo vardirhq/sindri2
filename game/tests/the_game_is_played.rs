@@ -29,6 +29,10 @@ const CROSSING: &[(i32, i32, i32)] = &[(6, 7, 0), (7, 7, 0), (8, 7, 0), (9, 7, 0
 /// front of cannot be clicked at all. Aiming at one hits the pillar's own
 /// south face and builds a staircase down its hidden side, which is what the
 /// first version of this list did.
+///
+/// Built with earth rather than the walkway slab, and the level says why: two
+/// slabs stack to a step of one and a half, which is more than a walker can
+/// climb. Bridging water and climbing a pillar are different jobs.
 const STAIR: &[(i32, i32, i32)] = &[(15, 7, 0), (15, 7, 1), (16, 7, 0)];
 
 fn session() -> (World, SceneExtractor, Session) {
@@ -90,6 +94,15 @@ fn click(world: &mut World, session: &mut Session, at: [f32; 2], button: MouseBu
         .expect("the release steps");
 }
 
+/// The second block in the palette: earth, which fills its cell.
+fn choose_earth(world: &mut World, session: &mut Session) {
+    let mut held = InputState::default();
+    held.apply(InputEvent::KeyPressed(sindri_platform::Key::Digit2));
+    session
+        .step(world, &held, VIEWPORT, STEP)
+        .expect("choosing steps");
+}
+
 fn settle(world: &mut World, session: &mut Session, steps: usize) {
     let idle = InputState::default();
     for _ in 0..steps {
@@ -145,8 +158,8 @@ fn clicking_the_top_of_a_block_puts_one_on_top_of_it() {
     );
     assert_eq!(
         block_at(&world, &scene, (7, 7, 0)).as_deref(),
-        Some("plank"),
-        "a click on the water's top lays a plank on it"
+        Some("plank-slab"),
+        "a click on the water's top lays a walkway on it"
     );
 }
 
@@ -167,7 +180,7 @@ fn a_click_lands_on_what_is_there_now_rather_than_on_the_authored_level() {
     );
     assert_eq!(
         block_at(&world, &scene, (15, 7, 1)).as_deref(),
-        Some("plank"),
+        Some("plank-slab"),
         "the first click laid one on the shore"
     );
     click(
@@ -178,7 +191,7 @@ fn a_click_lands_on_what_is_there_now_rather_than_on_the_authored_level() {
     );
     assert_eq!(
         block_at(&world, &scene, (15, 7, 2)).as_deref(),
-        Some("plank"),
+        Some("plank-slab"),
         "the second click stacked onto the block the first one made"
     );
 }
@@ -204,7 +217,7 @@ fn taking_a_block_back_returns_it_but_the_island_is_not_yours_to_carry_away() {
     assert_eq!(
         block_at(&world, &scene, (7, 7, 0)),
         None,
-        "a plank you laid comes back up"
+        "a walkway you laid comes back up"
     );
 
     // The shore is ground rather than something the player put there.
@@ -242,6 +255,7 @@ fn the_walker_waits_until_the_way_is_built_and_then_crosses_it() {
             MouseButton::Left,
         );
     }
+    choose_earth(&mut world, &mut session);
     for cell in STAIR {
         click(
             &mut world,
