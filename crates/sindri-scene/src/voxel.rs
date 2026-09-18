@@ -62,6 +62,38 @@ pub(super) const fn basis_of(face: TileFace) -> (Vec3, Vec3, Vec3) {
     }
 }
 
+/// How bright a corner is, by how many blocks crowd it.
+///
+/// The voxel lighting trick, and it is not lighting: no light is traced and no
+/// light source exists. A corner is dark in proportion to how enclosed it is,
+/// which is a property of the blocks alone, so it is as static as they are and
+/// costs nothing once baked.
+///
+/// The two edge neighbours closing on a corner shut it completely -- the
+/// diagonal behind them cannot make it darker, and asking would let a block
+/// nobody can see change one that is visible.
+const AO_LEVELS: [f32; 4] = [0.48, 0.66, 0.84, 1.0];
+
+fn corner_light(side_a: bool, side_b: bool, diagonal: bool) -> f32 {
+    if side_a && side_b {
+        return AO_LEVELS[0];
+    }
+    let crowding = usize::from(side_a) + usize::from(side_b) + usize::from(diagonal);
+    AO_LEVELS[3 - crowding]
+}
+
+/// A direction in the world, as the step it is between cells.
+///
+/// Column across, level up, row into the scene -- the same mapping `floor_of`
+/// uses, read the other way about.
+fn step_of(direction: Vec3) -> [i32; 3] {
+    #[allow(clippy::cast_possible_truncation)]
+    fn whole(value: f32) -> i32 {
+        value.round() as i32
+    }
+    [whole(direction.x), whole(direction.z), whole(direction.y)]
+}
+
 /// Where a cell's floor sits, in world units.
 ///
 /// The one place the mapping lives: column across, level up, row into the
@@ -87,6 +119,10 @@ pub struct VoxelFace {
     pub sprite: String,
     /// What the face's own direction does to its brightness.
     pub shade: f32,
+    /// How much light reaches each corner, from the quad's own `[0, 0]` round
+    /// to `[0, 1]`: the crease where blocks meet, which is what tells the eye
+    /// these are solid things touching rather than lit shapes side by side.
+    pub corners: [f32; 4],
 }
 
 #[derive(Debug, Error)]
@@ -169,9 +205,35 @@ pub fn cube_faces(
                         TileFace::North | TileFace::South => sy * 0.5,
                         TileFace::East | TileFace::West => sx * 0.5,
                     };
+            // The four corners of this face, in the quad's own order. Each is
+            // crowded by the two blocks along its edges and the one diagonally
+            // between them -- all of them in front of the face, since a block
+            // behind it is inside the one being drawn.
+            let ahead = face.neighbour_offset();
+            let corners = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].map(
+                |(along, up_by): (f32, f32)| {
+                    let step_right = step_of(right * along);
+                    let step_up = step_of(up * up_by);
+                    let at = |offset: [i32; 3]| {
+                        let neighbour = GridCoord3::new(
+                            cell.x + ahead[0] + offset[0],
+                            cell.y + ahead[1] + offset[1],
+                            cell.z + ahead[2] + offset[2],
+                        );
+                        height_at(neighbour).is_some_and(|fill| fill > 0.0)
+                    };
+                    let diagonal = [
+                        step_right[0] + step_up[0],
+                        step_right[1] + step_up[1],
+                        step_right[2] + step_up[2],
+                    ];
+                    corner_light(at(step_right), at(step_up), at(diagonal))
+                },
+            );
             faces.push(VoxelFace {
                 cell,
                 face,
+                corners,
                 model: Mat4::from_cols(
                     (right * width).extend(0.0),
                     (up * height).extend(0.0),

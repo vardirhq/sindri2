@@ -324,7 +324,9 @@ fn solid_faces(
         let shade = [face.shade, face.shade, face.shade, 1.0];
         grouped.entry(texture).or_default().push(BakedSolidFace {
             texture,
-            sprite: SpriteInstance::new(model * face.model, shade).with_uv_rect(rect),
+            sprite: SpriteInstance::new(model * face.model, shade)
+                .with_uv_rect(rect)
+                .with_corner_shade(face.corners),
         });
     }
     Ok(grouped.into_values().flatten().collect())

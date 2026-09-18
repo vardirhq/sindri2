@@ -209,3 +209,89 @@ fn a_face_the_art_never_drew_is_still_drawn() {
         );
     }
 }
+
+/// Occlusion is counted, not lit.
+///
+/// No light is traced and no light source exists: a corner is dark in
+/// proportion to how many blocks crowd it, which is a property of the blocks
+/// and so as static as they are.
+#[test]
+fn a_corner_darkens_with_the_blocks_that_crowd_it() {
+    // Nothing near it: every corner of a lone block is fully lit.
+    let alone = faces_of(r#"{ "position": [0, 0, 0], "tile": "stone" }"#, "");
+    for face in &alone {
+        assert!(
+            face.corners.iter().all(|value| *value >= 1.0),
+            "{:?} of a block standing on its own is shaded: {:?}",
+            face.face,
+            face.corners
+        );
+    }
+
+    // A block beside it at the same level shades nothing: the two tops are
+    // level with each other, so neither stands over the other.
+    let level = faces_of(
+        r#"{ "position": [0, 0, 0], "tile": "stone" },
+           { "position": [1, 0, 0], "tile": "stone" }"#,
+        "",
+    );
+    let flat = level
+        .iter()
+        .find(|face| face.cell == GridCoord3::new(0, 0, 0) && face.face == TileFace::Top)
+        .expect("the block has a top");
+    assert!(
+        flat.corners.iter().all(|value| *value >= 1.0),
+        "a floor shaded its own neighbour: {:?}",
+        flat.corners
+    );
+
+    // Raise that neighbour and it does: the top's two corners along the edge
+    // it now stands over darken, and the two away from it do not.
+    let pair = faces_of(
+        r#"{ "position": [0, 0, 0], "tile": "stone" },
+           { "position": [1, 0, 1], "tile": "stone" }"#,
+        "",
+    );
+    let top = pair
+        .iter()
+        .find(|face| face.cell == GridCoord3::new(0, 0, 0) && face.face == TileFace::Top)
+        .expect("the lower block has a top");
+    let lit = top.corners.iter().filter(|value| **value >= 1.0).count();
+    assert_eq!(lit, 2, "one neighbour shades one edge: {:?}", top.corners);
+
+    // And an inside corner, where two blocks and the one diagonally between
+    // them all meet: the darkest a corner gets.
+    let corner = faces_of(
+        r#"{ "position": [0, 0, 0], "tile": "stone" },
+           { "position": [1, 0, 1], "tile": "stone" },
+           { "position": [0, 1, 1], "tile": "stone" },
+           { "position": [1, 1, 1], "tile": "stone" }"#,
+        "",
+    );
+    let top = corner
+        .iter()
+        .find(|face| face.cell == GridCoord3::new(0, 0, 0) && face.face == TileFace::Top)
+        .expect("the floor block has a top");
+    assert!(
+        top.corners
+            .iter()
+            .any(|value| (*value - AO_LEVELS[0]).abs() < 1e-6),
+        "a corner boxed in on both sides is not at its darkest: {:?}",
+        top.corners
+    );
+}
+
+/// Two blocks meeting shut a corner completely, and the diagonal behind them
+/// cannot make it darker. Without this a block nobody can see changes one that
+/// is visible.
+#[test]
+fn two_blocks_closing_a_corner_hide_whatever_is_behind_them() {
+    assert!((corner_light(true, true, false) - AO_LEVELS[0]).abs() < 1e-6);
+    assert!((corner_light(true, true, true) - AO_LEVELS[0]).abs() < 1e-6);
+    // And the steps between: nothing, a diagonal only, one side, one side and
+    // a diagonal.
+    assert!((corner_light(false, false, false) - AO_LEVELS[3]).abs() < 1e-6);
+    assert!((corner_light(false, false, true) - AO_LEVELS[2]).abs() < 1e-6);
+    assert!((corner_light(true, false, false) - AO_LEVELS[2]).abs() < 1e-6);
+    assert!((corner_light(true, false, true) - AO_LEVELS[1]).abs() < 1e-6);
+}

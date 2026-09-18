@@ -2,7 +2,7 @@
   "format_version": 1,
   "anchor": "center",
   "grid": {
-    "columns": 25,
+    "columns": 36,
     "rows": 1,
     "names": [
       "grass-0",
@@ -29,7 +29,18 @@
       "grass-21",
       "grass-22",
       "grass-23",
-      "grass-24"
+      "grass-24",
+      "grass-25",
+      "grass-26",
+      "grass-27",
+      "grass-28",
+      "grass-29",
+      "grass-30",
+      "grass-31",
+      "grass-32",
+      "grass-33",
+      "grass-34",
+      "grass-35"
     ]
   }
 }

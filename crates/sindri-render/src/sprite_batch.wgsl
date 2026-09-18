@@ -23,6 +23,8 @@ struct VertexInput {
     @location(7) uv_rect: vec4<f32>,
     @location(8) color_multiply: vec4<f32>,
     @location(9) color_offset: vec4<f32>,
+    // Brightness at each corner, from the quad's own [0,0] round to [0,1].
+    @location(10) corner_shade: vec4<f32>,
 }
 
 struct VertexOutput {
@@ -31,6 +33,7 @@ struct VertexOutput {
     @location(1) tint: vec4<f32>,
     @location(2) color_multiply: vec4<f32>,
     @location(3) color_offset: vec4<f32>,
+    @location(4) shade: f32,
 }
 
 @vertex
@@ -44,13 +47,21 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     output.tint = input.tint;
     output.color_multiply = input.color_multiply;
     output.color_offset = input.color_offset;
+    // The quad's own coordinates run -0.5..0.5, so this is where the vertex
+    // sits across it. Bilinear between the four corner values, interpolated
+    // over the face for free by the rasteriser.
+    let across = input.position.xy + vec2<f32>(0.5, 0.5);
+    let lower = mix(input.corner_shade.x, input.corner_shade.y, across.x);
+    let upper = mix(input.corner_shade.w, input.corner_shade.z, across.x);
+    output.shade = mix(lower, upper, across.y);
     return output;
 }
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let sampled = textureSample(sprite_texture, sprite_sampler, input.uv);
-    return sampled * input.tint * input.color_multiply + input.color_offset;
+    let colour = sampled * input.tint * input.color_multiply + input.color_offset;
+    return vec4<f32>(colour.rgb * input.shade, colour.a);
 }
 
 // Opaque geometry, which writes depth.
@@ -65,5 +76,5 @@ fn fs_solid(input: VertexOutput) -> @location(0) vec4<f32> {
     if color.a < 0.5 {
         discard;
     }
-    return vec4<f32>(color.rgb, 1.0);
+    return vec4<f32>(color.rgb * input.shade, 1.0);
 }

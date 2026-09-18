@@ -57,10 +57,11 @@ pub struct SpriteInstance {
     uv_rect: [f32; 4],
     color_multiply: [f32; 4],
     color_offset: [f32; 4],
+    corner_shade: [f32; 4],
 }
 
 impl SpriteInstance {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 8] = wgpu::vertex_attr_array![
+    const ATTRIBUTES: [wgpu::VertexAttribute; 9] = wgpu::vertex_attr_array![
         2 => Float32x4,
         3 => Float32x4,
         4 => Float32x4,
@@ -68,7 +69,8 @@ impl SpriteInstance {
         6 => Float32x4,
         7 => Float32x4,
         8 => Float32x4,
-        9 => Float32x4
+        9 => Float32x4,
+        10 => Float32x4
     ];
 
     /// A sprite drawn from the whole of its texture with identity colour math.
@@ -79,6 +81,7 @@ impl SpriteInstance {
             uv_rect: UvRect::FULL.to_array(),
             color_multiply: [1.0; 4],
             color_offset: [0.0; 4],
+            corner_shade: [1.0; 4],
         }
     }
 
@@ -91,6 +94,20 @@ impl SpriteInstance {
     #[must_use]
     pub fn with_uv_rect(mut self, uv_rect: UvRect) -> Self {
         self.uv_rect = uv_rect.to_array();
+        self
+    }
+
+    /// How much light reaches each corner of the quad, from its own corner
+    /// outward: `[0, 0]`, `[1, 0]`, `[1, 1]`, `[0, 1]` in the quad's own space.
+    ///
+    /// One value a corner rather than one a quad, because the thing being
+    /// described happens at corners: where two blocks meet, the crease between
+    /// them is darker than either face's middle. A flat tint per face cannot
+    /// say that, and without it a stack of cubes reads as a flat arrangement of
+    /// lit shapes rather than as solid things touching.
+    #[must_use]
+    pub const fn with_corner_shade(mut self, corners: [f32; 4]) -> Self {
+        self.corner_shade = corners;
         self
     }
 
