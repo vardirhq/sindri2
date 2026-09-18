@@ -98,6 +98,14 @@ fence texture rather than a full block whose picture happens to be mostly
 transparent. Picking is unchanged and still treats a cell as a whole cell, so a
 click near a post's cell finds the post.
 
+Where one terrain gives way to another, the threshold that decides it is frayed
+rather than sharp: near the crossing the answer comes from a field sampled at a
+few cells' scale rather than from the comparison alone. A threshold on a smooth
+field draws a smooth line, and a smooth line through a landscape reads as a
+border on a map rather than as ground changing. Deciding each column on its own
+would fray it too, but into salt and pepper — single cells of snow scattered
+through grass read as dirt on the screen, not as snow lying in the hollows.
+
 Tile sets are assets rather than components so several scenes and volumes can
 share one definition without copying it into every scene. Optional terrain
 rules describe high-level surface painting: the surface tile, supporting fill,

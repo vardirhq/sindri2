@@ -94,3 +94,60 @@ fn the_same_seed_builds_the_same_world_twice() {
     );
     assert_eq!(generate(shape, "t").cells, generate(shape, "t").cells);
 }
+
+/// The top tile of every column, by where the column is.
+fn tops(shape: WorldShape) -> BTreeMap<(i32, i32), String> {
+    let volume = generate(shape, "causeway.tileset.json");
+    let mut highest: BTreeMap<(i32, i32), (i32, String)> = BTreeMap::new();
+    for cell in &volume.cells {
+        let [column, row, level] = cell.position;
+        let entry = highest
+            .entry((column, row))
+            .or_insert((i32::MIN, String::new()));
+        if level > entry.0 {
+            *entry = (level, cell.tile.clone());
+        }
+    }
+    highest
+        .into_iter()
+        .map(|(at, (_, tile))| (at, tile))
+        .collect()
+}
+
+/// Two terrains should meet in tongues and bays, not along a drawn line.
+///
+/// A threshold on a smooth field draws a smooth line, and the world read as a
+/// map with borders on it: snow stopped at one height all the way round a
+/// mountain, marsh ended along a contour.
+///
+/// What that looks like as a number is how much boundary there is. Fraying the
+/// thresholds does not move them -- the same columns are broadly the same
+/// terrain -- but it makes the edges longer, because an interlocking edge has
+/// more of itself than a drawn one does. Measured on the default world: 0.081
+/// of neighbouring column pairs were unlike before, and 0.109 after. The bar
+/// sits between the two, nearer the old number, so that retuning the noise has
+/// room to move this without failing.
+#[test]
+fn terrains_meet_in_tongues_rather_than_along_a_line() {
+    let shape = WorldShape::default();
+    let tops = tops(shape);
+    let (mut unlike, mut pairs) = (0usize, 0usize);
+    for ((column, row), tile) in &tops {
+        // East and south only: every pair is then counted once.
+        for (across, down) in [(1, 0), (0, 1)] {
+            if let Some(other) = tops.get(&(column + across, row + down)) {
+                pairs += 1;
+                if other != tile {
+                    unlike += 1;
+                }
+            }
+        }
+    }
+    #[allow(clippy::cast_precision_loss)]
+    let boundary = unlike as f32 / pairs as f32;
+    assert!(
+        boundary > 0.095,
+        "terrains interlock along their edges: {boundary:.4} of neighbouring \
+         columns are unlike, which is closer to a drawn line than to a coastline"
+    );
+}

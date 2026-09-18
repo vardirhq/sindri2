@@ -14,6 +14,13 @@
 //! is not a region drawn on a map here -- it is what those three numbers happen
 //! to be at a column, which is why beaches are long and swamps have edges
 //! nobody placed.
+//!
+//! Those edges are frayed rather than sharp. Comparing a smooth field against a
+//! fixed number draws a smooth line, and smooth lines through a landscape read
+//! as borders on a map: snow stopping at one height the whole way round a
+//! mountain, marsh ending along a contour. Near each threshold the answer comes
+//! instead from a field sampled at a few cells' scale, so the two terrains
+//! interlock in tongues and bays. See `past`.
 
 use sindri_scene::{TileCellDocument, TileVolumeComponent};
 
@@ -63,6 +70,47 @@ fn hashed(seed: u64, x: i32, y: i32) -> f32 {
     let unit = (value >> 40) as f32 / f32::from(u16::MAX) / 256.0;
     unit
 }
+
+/// Whether `value` has passed `threshold`, with the crossing frayed.
+///
+/// A threshold on a smooth field draws a smooth line, and a smooth line
+/// through a landscape reads as a border drawn on a map rather than as one
+/// ground giving way to another. Marsh does not stop along a contour.
+///
+/// Within a band either side of the threshold the answer is decided per column
+/// instead -- more often the further past it the column is -- by a hash of
+/// where that column is. The two terrains then interlock along their edge in a
+/// way that is different everywhere, and identical on every machine and every
+/// run, which is what the render captures depend on.
+///
+/// `band` is in whatever `value` is measured in: a fraction for moisture and
+/// warmth, levels for a height.
+fn past(seed: u64, x: i32, y: i32, value: f32, threshold: f32, band: f32) -> bool {
+    // How far through the band this column sits: 0 at its low edge, 1 at its
+    // high one. Outside the band there is nothing to decide.
+    let lean = (value - threshold) / (band * 2.0) + 0.5;
+    if lean <= 0.0 {
+        return false;
+    }
+    if lean >= 1.0 {
+        return true;
+    }
+    // A smooth field at a few cells' scale rather than a hash per column.
+    // Deciding each column on its own gives salt and pepper -- single cells of
+    // snow scattered through grass, which reads as dirt on the screen rather
+    // than as snow lying in the hollows. Sampling a field instead makes the
+    // decision agree with its neighbours' for a few cells at a time, so the
+    // two terrains meet in tongues and bays.
+    #[allow(clippy::cast_precision_loss)]
+    let (fx, fy) = (x as f32 / FRAY, y as f32 / FRAY);
+    noise(seed, fx, fy) < lean
+}
+
+/// How wide the tongues along a frayed boundary are, in cells.
+///
+/// Small enough that an edge is ragged rather than wandering, large enough
+/// that it is a shape rather than a dither.
+const FRAY: f32 = 2.6;
 
 /// Smoothly interpolated value noise at one frequency.
 fn noise(seed: u64, x: f32, y: f32) -> f32 {
@@ -156,18 +204,34 @@ impl WorldShape {
     }
 
     /// The tile on top of a column, which is the one you see and walk on.
-    fn surface(column: Column) -> &'static str {
+    ///
+    /// Every threshold here is frayed rather than sharp, and each is frayed
+    /// from its own salt so that two of them meeting do not fray in step and
+    /// draw the same ragged line twice.
+    fn surface(self, x: i32, y: i32, column: Column) -> &'static str {
         let Column {
             ground,
             moisture,
             warmth,
         } = column;
-        // Cold enough and high enough for the snow to lie.
-        let snow_here = ground >= SNOW_LINE || (warmth < 0.22 && ground > SEA);
-        if snow_here {
+        // The levels this compares against, as heights. One conversion for all
+        // of them, because a level is a small number and an f32 holds it.
+        #[allow(clippy::cast_precision_loss)]
+        let (level, sea, tree, snow) = (
+            ground as f32,
+            SEA as f32,
+            TREE_LINE as f32,
+            SNOW_LINE as f32,
+        );
+        // A snow line is the clearest case for fraying: real snow lies in
+        // tongues down the gullies and bares the ridges, and a line of it at
+        // exactly one height is the one thing it never does.
+        let high = past(self.seed ^ 0xD1, x, y, level, snow - 0.5, 1.5);
+        let cold = past(self.seed ^ 0xD2, x, y, 0.22, warmth, 0.05);
+        if high || (cold && ground > SEA) {
             return "snow";
         }
-        if ground >= TREE_LINE {
+        if past(self.seed ^ 0xD3, x, y, level, tree - 0.5, 1.5) {
             return "rock";
         }
         // The shore, and only the shore. A beach is the strip the sea reaches,
@@ -175,17 +239,21 @@ impl WorldShape {
         // the first try made it every column within two levels of the sea,
         // which on a world this flat was most of the world, and the whole map
         // read as desert.
-        if ground <= SEA + 1 {
-            if moisture > 0.58 {
+        if !past(self.seed ^ 0xD4, x, y, level, sea + 1.5, 1.0) {
+            if past(self.seed ^ 0xD5, x, y, moisture, 0.58, 0.05) {
                 // Low, flat and wet is a swamp rather than a beach.
                 return "mud";
             }
             return "sand";
         }
-        if moisture > 0.68 && ground <= SEA + 3 {
+        if past(self.seed ^ 0xD6, x, y, moisture, 0.68, 0.05)
+            && !past(self.seed ^ 0xD7, x, y, level, sea + 3.5, 1.0)
+        {
             return "moss";
         }
-        if moisture < 0.26 && ground > SEA + 4 {
+        if past(self.seed ^ 0xD8, x, y, 0.26, moisture, 0.05)
+            && past(self.seed ^ 0xD9, x, y, level, sea + 4.5, 1.0)
+        {
             return "gravel";
         }
         "ground"
@@ -204,12 +272,14 @@ impl WorldShape {
     }
 
     /// The bed under water, which is what a shallow shows.
-    fn bed(column: Column) -> &'static str {
-        if column.warmth < 0.2 {
+    fn bed(self, x: i32, y: i32, column: Column) -> &'static str {
+        #[allow(clippy::cast_precision_loss)]
+        let (level, sea) = (column.ground as f32, SEA as f32);
+        if past(self.seed ^ 0xE1, x, y, 0.2, column.warmth, 0.04) {
             "ice"
-        } else if column.moisture > 0.66 {
+        } else if past(self.seed ^ 0xE2, x, y, column.moisture, 0.66, 0.05) {
             "mud"
-        } else if column.ground <= SEA - 3 {
+        } else if !past(self.seed ^ 0xE3, x, y, level, sea - 2.5, 1.0) {
             "gravel"
         } else {
             "sand"
@@ -252,11 +322,11 @@ pub fn generate(shape: WorldShape, tileset: &str) -> TileVolumeComponent {
                 // is opaque, so a bed dug to its real depth would be a
                 // thousand cells nobody can see -- and the shelf is what a
                 // shallow at the shore shows.
-                push(SEA - 1, WorldShape::bed(described));
+                push(SEA - 1, shape.bed(column, row, described));
                 push(SEA, "water");
                 continue;
             }
-            let surface = WorldShape::surface(described);
+            let surface = shape.surface(column, row, described);
             push(described.ground, surface);
 
             let lowest = [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -300,7 +370,7 @@ impl WorldShape {
             return false;
         }
         let described = self.column(column, row);
-        described.ground >= SEA && !matches!(Self::surface(described), "snow" | "rock")
+        described.ground >= SEA && !matches!(self.surface(column, row, described), "snow" | "rock")
     }
 
     /// The nearest standable column to a point, searched outwards.
@@ -333,5 +403,62 @@ impl WorldShape {
         let away = [start[0] + self.columns / 5, start[1] - self.rows / 5];
         let goal = self.nearest_footing(away).unwrap_or(away);
         Landfall { start, goal }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::past;
+
+    const SEED: u64 = 0x5E11_A1D2_0C4F_1907;
+
+    #[test]
+    fn a_column_well_clear_of_a_threshold_is_not_in_doubt() {
+        // Fraying is a thing that happens at an edge. Away from one the answer
+        // has to be the plain comparison, or a snow line becomes snow weather.
+        for x in 0..40 {
+            for y in 0..40 {
+                assert!(past(SEED, x, y, 0.9, 0.5, 0.05), "well past is past");
+                assert!(!past(SEED, x, y, 0.1, 0.5, 0.05), "well short is short");
+            }
+        }
+    }
+
+    #[test]
+    fn a_column_inside_the_band_is_decided_either_way() {
+        // The whole point: on the threshold itself the answer is not one thing
+        // everywhere, because that is what draws a line.
+        let answers: Vec<bool> = (0..60).map(|x| past(SEED, x, 0, 0.5, 0.5, 0.05)).collect();
+        assert!(
+            answers.contains(&true) && answers.contains(&false),
+            "a run along the threshold goes both ways: {answers:?}"
+        );
+    }
+
+    #[test]
+    fn a_frayed_edge_is_tongues_rather_than_speckle() {
+        // Deciding each column on its own gives salt and pepper. The field is
+        // sampled at a few cells' scale so that a column mostly agrees with
+        // the one beside it, and the edge comes out as tongues and bays.
+        let answers: Vec<bool> = (0..200).map(|x| past(SEED, x, 0, 0.5, 0.5, 0.05)).collect();
+        let flips = answers.windows(2).filter(|pair| pair[0] != pair[1]).count();
+        // White noise on a coin flip would turn over about half the time.
+        // Sampling a field a couple of cells wide turns over far less often.
+        assert!(
+            flips < answers.len() / 4,
+            "neighbouring columns mostly agree: {flips} changes in {} columns, \
+             which is speckle rather than a boundary",
+            answers.len()
+        );
+    }
+
+    #[test]
+    fn the_same_column_is_always_decided_the_same_way() {
+        // A world that reshuffled its own coastline between two runs would
+        // make every render capture a coin toss.
+        for x in 0..50 {
+            let once = past(SEED, x, 7, 0.5, 0.5, 0.05);
+            assert_eq!(once, past(SEED, x, 7, 0.5, 0.5, 0.05));
+        }
     }
 }
