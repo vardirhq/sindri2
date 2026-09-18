@@ -237,7 +237,11 @@ fn register_tiles(components: &mut ComponentSchemaRegistry) -> Result<(), SceneE
             "cell_size": [1.0, 1.0],
             "level_step": [0.0, 0.5],
             "depth_step": 0.0,
-            "projection": "orthogonal"
+            "projection": "orthogonal",
+            // Flattened by default, so every grid written before blocks were
+            // solid still means what it meant.
+            "space": "projected",
+            "cell_height": 1.0
         }),
     )?;
     // A new volume has no blocks, so it does not need a tile set until the

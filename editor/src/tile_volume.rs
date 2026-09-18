@@ -298,6 +298,39 @@ fn point_in_convex_quad(point: [f32; 2], outline: [[f32; 2]; 4]) -> bool {
     true
 }
 
+/// The ray a pointer sends into a volume's own space.
+///
+/// The same unprojection `cell_at_viewport` does, stopping before it meets a
+/// plane: a solid grid has blocks to hit, so the ray is the answer rather than
+/// an intermediate step toward a level somebody had to name.
+#[must_use]
+pub fn ray_at_viewport(
+    transform: Transform3D,
+    view_projection: Mat4,
+    point: [f32; 2],
+) -> Option<(Vec3, Vec3)> {
+    if !(0.0..=1.0).contains(&point[0]) || !(0.0..=1.0).contains(&point[1]) {
+        return None;
+    }
+    let inverse_view = view_projection.inverse();
+    let inverse_model = transform_matrix(transform).inverse();
+    if !matrix_is_finite(inverse_view) || !matrix_is_finite(inverse_model) {
+        return None;
+    }
+    let x = point[0] * 2.0 - 1.0;
+    let y = 1.0 - point[1] * 2.0;
+    let near = inverse_model.transform_point3(inverse_view.project_point3(Vec3::new(x, y, 0.0)));
+    let far = inverse_model.transform_point3(inverse_view.project_point3(Vec3::new(x, y, 1.0)));
+    let direction = far - near;
+    (direction.length_squared() > f32::EPSILON).then_some((near, direction.normalize()))
+}
+
+/// The matrix placing a volume's own space in the world.
+#[must_use]
+pub fn model_of(transform: Transform3D) -> Mat4 {
+    transform_matrix(transform)
+}
+
 fn transform_matrix(transform: Transform3D) -> Mat4 {
     Mat4::from_scale_rotation_translation(
         Vec3::from_array(transform.scale),

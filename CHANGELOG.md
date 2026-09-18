@@ -29,6 +29,14 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Fixed
 
+- The editor no longer draws a tile volume as a comb of vertical stripes after
+  the first edit. A volume names a tile set rather than a texture, so nothing
+  about the world asked for the sheet that cuts its blocks: the tile set's
+  arrival requested it, and the next pass over what the scene references —
+  which runs on every edit — found nothing claiming it and released it. An
+  unbound sheet does not blank the texture, it unbinds the slicing, so every
+  face resolved the whole strip at once.
+
 - Gather's player no longer walks across its moat or into its outcrop. It
   compared positions against tagged props, which are entities; water and the
   hill are not, so neither stopped it while the Wisp routed around both.

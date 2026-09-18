@@ -16,6 +16,7 @@ pub(super) fn tile_volume_section(
     assets_root: Option<&Path>,
     tool: &mut TileVolumeTool,
     occlusion: &mut OcclusionOverlay,
+    solid_blocks: bool,
 ) {
     let Ok(volume) = tile_volume::component(payload) else {
         panel::problem(
@@ -24,35 +25,54 @@ pub(super) fn tile_volume_section(
         );
         return;
     };
-    section::group(ui, icons::TILEMAP, "Build");
-    property::toggle(ui, "Brush", &mut tool.enabled, "Building", "Off");
-    ui.horizontal(|ui| {
-        ui.label("Target");
-        ui.selectable_value(&mut tool.placement, TilePlacement::Surface, "Surface");
-        ui.selectable_value(&mut tool.placement, TilePlacement::Level, "Level");
-    });
-    ui.horizontal(|ui| {
-        ui.label("Level");
-        ui.add_enabled(
-            tool.placement == TilePlacement::Level,
-            egui::DragValue::new(&mut tool.level).speed(0.1),
-        );
-    });
-    ui.horizontal(|ui| {
-        if ui.selectable_label(!tool.erase, "Place").clicked() {
-            tool.erase = false;
-        }
-        if ui.selectable_label(tool.erase, "Remove").clicked() {
-            tool.erase = true;
-        }
-    });
-    let help = match tool.placement {
-        TilePlacement::Surface => "Click a top face to stack or remove one block.",
-        TilePlacement::Level => "Click or drag to paint the selected Z level.",
-    };
-    section::caption(ui, help);
+    if solid_blocks {
+        // Nothing to set. Choosing a block below is what turns building on,
+        // the face you click is what says where it goes, and the right button
+        // takes one away. The panel this replaces had a brush toggle, a target
+        // mode, a level to type and a place-or-remove pair, and every one of
+        // them was answering a question the pointer could not: it met a flat
+        // plane at a height somebody had to name, so it could not say which
+        // block, or which side of it, was under the cursor.
+        tool.enabled = true;
+        tool.erase = false;
+        tool.placement = TilePlacement::Surface;
+    } else {
+        section::group(ui, icons::TILEMAP, "Build");
+        property::toggle(ui, "Brush", &mut tool.enabled, "Building", "Off");
+        ui.horizontal(|ui| {
+            ui.label("Target");
+            ui.selectable_value(&mut tool.placement, TilePlacement::Surface, "Surface");
+            ui.selectable_value(&mut tool.placement, TilePlacement::Level, "Level");
+        });
+        ui.horizontal(|ui| {
+            ui.label("Level");
+            ui.add_enabled(
+                tool.placement == TilePlacement::Level,
+                egui::DragValue::new(&mut tool.level).speed(0.1),
+            );
+        });
+        ui.horizontal(|ui| {
+            if ui.selectable_label(!tool.erase, "Place").clicked() {
+                tool.erase = false;
+            }
+            if ui.selectable_label(tool.erase, "Remove").clicked() {
+                tool.erase = true;
+            }
+        });
+        let help = match tool.placement {
+            TilePlacement::Surface => "Click a top face to stack or remove one block.",
+            TilePlacement::Level => "Click or drag to paint the selected Z level.",
+        };
+        section::caption(ui, help);
+    }
 
     section::group(ui, icons::SPRITE, "Blocks");
+    if solid_blocks {
+        section::caption(
+            ui,
+            "Click a face to attach a block there. Right-click a block to take it away.",
+        );
+    }
     if volume.tileset.trim().is_empty() {
         panel::note(ui, "Choose a Tile Set below before building.");
         return;

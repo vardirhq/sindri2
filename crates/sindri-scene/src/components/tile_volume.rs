@@ -37,6 +37,33 @@ pub struct TileGridComponent {
     /// corner gets clipped away.
     #[serde(default)]
     pub depth_step: f32,
+    /// Whether a cell is a box in the world or a diamond a projection has
+    /// already flattened.
+    ///
+    /// Flattened is the default and what every grid written before this meant.
+    /// A solid grid is the one a camera can go round: its cells are drawn as
+    /// the boxes they are and the depth buffer decides what covers what, so
+    /// `depth_step`, `level_step` and the projection stop being consulted.
+    #[serde(default)]
+    pub space: TileSpace,
+    /// How tall one level stands, in world units, when the grid is solid.
+    ///
+    /// Defaults to the cell's own width, which makes a cell a cube. A grid of
+    /// flatter or taller cells says so here rather than by scaling the art.
+    #[serde(default)]
+    pub cell_height: Option<f32>,
+}
+
+/// What a cell is: a box, or a diamond a projection flattened.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum TileSpace {
+    /// Cells are arranged by a projection the scene carries, and drawn in an
+    /// order the extractor computes. One camera is correct.
+    #[default]
+    Projected,
+    /// Cells are boxes in the world. Every camera is correct.
+    Solid,
 }
 
 const fn unit_cell() -> [f32; 2] {
@@ -54,6 +81,20 @@ pub enum TileGridError {
 }
 
 impl TileGridComponent {
+    /// The box one cell occupies, when this grid's cells are boxes.
+    ///
+    /// `None` for a projected grid, which is the question every caller that
+    /// cares actually has: there is no box to give, and a default one would be
+    /// a made-up answer that draws.
+    #[must_use]
+    pub fn solid_cell(&self) -> Option<[f32; 3]> {
+        if self.space != TileSpace::Solid {
+            return None;
+        }
+        let height = self.cell_height.unwrap_or(self.cell_size[0]);
+        Some([self.cell_size[0], self.cell_size[1], height])
+    }
+
     pub fn validate(&self) -> Result<(), TileGridError> {
         self.bounds()?;
         self.volume_space()?;
@@ -393,6 +434,8 @@ mod tests {
             level_step: [0.0, 0.5],
             projection: TileProjection::Isometric,
             depth_step: 0.0,
+            space: TileSpace::Projected,
+            cell_height: None,
         }
     }
 

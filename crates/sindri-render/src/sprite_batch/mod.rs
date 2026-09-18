@@ -58,6 +58,8 @@ pub struct SpriteBatchRenderer {
     /// state: a batch cannot choose between them at draw time otherwise.
     over_the_world: wgpu::RenderPipeline,
     within_the_world: wgpu::RenderPipeline,
+    /// Opaque, depth-writing surfaces: the blocks a camera can go round.
+    solid_in_the_world: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
     mesh: MeshBuffers,
     /// Grown as a frame needs them and reused every frame after.
@@ -103,18 +105,38 @@ impl SpriteBatchRenderer {
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
-                    entry_point: Some("fs_main"),
+                    // A writing batch discards what it cannot show, so the
+                    // shape a cutout leaves is a hole in the geometry rather
+                    // than a hole in the world behind it.
+                    entry_point: Some(if depth.writes() {
+                        "fs_solid"
+                    } else {
+                        "fs_main"
+                    }),
                     compilation_options: wgpu::PipelineCompilationOptions::default(),
                     targets: &[Some(wgpu::ColorTargetState {
                         format: target_format,
-                        blend: Some(blend_mode.blend_state()),
+                        blend: Some(if depth.writes() {
+                            wgpu::BlendState::REPLACE
+                        } else {
+                            blend_mode.blend_state()
+                        }),
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
                 }),
-                primitive: wgpu::PrimitiveState::default(),
+                primitive: wgpu::PrimitiveState {
+                    // Solid geometry is closed, so a face pointing away from
+                    // the camera is a face on the far side of the thing it
+                    // belongs to: drawing it costs fill and, where the solid is
+                    // open at the edges, shows its inside. A blended sprite is
+                    // not closed and often faces away on purpose, so only the
+                    // writing pipeline culls.
+                    cull_mode: depth.writes().then_some(wgpu::Face::Back),
+                    ..wgpu::PrimitiveState::default()
+                },
                 depth_stencil: Some(wgpu::DepthStencilState {
                     format: DepthTarget::FORMAT,
-                    depth_write_enabled: Some(false),
+                    depth_write_enabled: Some(depth.writes()),
                     depth_compare: Some(depth.compare()),
                     stencil: wgpu::StencilState::default(),
                     bias: wgpu::DepthBiasState::default(),
@@ -128,6 +150,7 @@ impl SpriteBatchRenderer {
         Self {
             over_the_world: pipeline(SpriteDepth::Ignore),
             within_the_world: pipeline(SpriteDepth::Test),
+            solid_in_the_world: pipeline(SpriteDepth::Write),
             bind_group_layout,
             mesh: MeshBuffers::new(device, "Sindri sprite batch quad", &VERTICES, &INDICES),
             batches: Vec::new(),
@@ -225,10 +248,15 @@ impl SpriteBatchRenderer {
             })],
             depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                 view: depth_target.view(),
-                // No depth operations at all: sprites read the buffer and never
-                // write it, and saying so here is what makes that a rule rather
-                // than a pipeline setting someone could change alone.
-                depth_ops: None,
+                // A blended batch reads the buffer and never writes it, and
+                // saying so here makes that a rule rather than a pipeline
+                // setting someone could change alone. A solid batch keeps what
+                // it writes, and loads rather than clears, because the surfaces
+                // drawn before it in this frame are what it has to sort against.
+                depth_ops: depth.writes().then_some(wgpu::Operations {
+                    load: wgpu::LoadOp::Load,
+                    store: wgpu::StoreOp::Store,
+                }),
                 stencil_ops: None,
             }),
             timestamp_writes: None,
@@ -238,6 +266,7 @@ impl SpriteBatchRenderer {
         pass.set_pipeline(match depth {
             SpriteDepth::Ignore => &self.over_the_world,
             SpriteDepth::Test => &self.within_the_world,
+            SpriteDepth::Write => &self.solid_in_the_world,
         });
         pass.set_bind_group(
             0,

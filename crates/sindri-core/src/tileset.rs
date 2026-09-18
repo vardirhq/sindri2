@@ -22,6 +22,29 @@ pub enum TileFace {
 }
 
 impl TileFace {
+    /// Every face, in the order a cube's sides are reasoned about.
+    pub const ALL: [Self; 6] = [
+        Self::Top,
+        Self::Bottom,
+        Self::North,
+        Self::South,
+        Self::East,
+        Self::West,
+    ];
+
+    /// The face on the other side of the same block.
+    #[must_use]
+    pub const fn opposite(self) -> Self {
+        match self {
+            Self::Bottom => Self::Top,
+            Self::North => Self::South,
+            Self::West => Self::East,
+            Self::East => Self::West,
+            Self::South => Self::North,
+            Self::Top => Self::Bottom,
+        }
+    }
+
     /// The cell whose presence may hide this face.
     #[must_use]
     pub const fn neighbour_offset(self) -> [i32; 3] {
@@ -79,6 +102,48 @@ impl TileFaces {
         .filter_map(|(face, visual)| visual.map(|visual| (face, visual)))
     }
 
+    /// What to draw on a face, falling back to the face opposite it.
+    ///
+    /// A block drawn for one fixed viewpoint only ever needed three sides.
+    /// Gather's tiles define `top`, `south` and `east` for exactly that reason:
+    /// no camera could see the others, so no art was drawn for them. A cube a
+    /// camera can go round needs all six, and redrawing every tile to say
+    /// "the north face looks like the south face" would be ceremony -- it is
+    /// what a block without a distinguished front means.
+    ///
+    /// So a missing face borrows the one opposite it: north from south, west
+    /// from east, bottom from top, and each the other way about for art drawn
+    /// from the other side. The visual is used as it is rather than mirrored,
+    /// which is right for the patterned-but-not-handed textures blocks
+    /// usually carry; a tile that needs handedness names both faces itself.
+    ///
+    /// Returns which face's art was borrowed as well as the art, because a
+    /// caller that does want to mirror needs to know it is looking at a
+    /// stand-in.
+    /// This face, from the buried look where it names one.
+    ///
+    /// Falls through to the ordinary faces rather than replacing them, so a
+    /// tile that loses only its fringe names only its sides.
+    #[must_use]
+    pub fn resolved_in<'a>(
+        &'a self,
+        face: TileFace,
+        covered: Option<&'a TileFaces>,
+    ) -> Option<(TileFace, &'a TileFaceVisual)> {
+        covered
+            .and_then(|buried| buried.resolved(face))
+            .or_else(|| self.resolved(face))
+    }
+
+    #[must_use]
+    pub fn resolved(&self, face: TileFace) -> Option<(TileFace, &TileFaceVisual)> {
+        if let Some(visual) = self.get(face) {
+            return Some((face, visual));
+        }
+        let opposite = face.opposite();
+        self.get(opposite).map(|visual| (opposite, visual))
+    }
+
     #[must_use]
     pub fn get(&self, face: TileFace) -> Option<&TileFaceVisual> {
         match face {
@@ -109,6 +174,17 @@ pub struct TileVariant {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct TileDefinition {
     pub faces: TileFaces,
+    /// What this tile looks like with something standing on it.
+    ///
+    /// Grass is the case that asks for it: a grass block under another block
+    /// has no grass any more, and a cliff whose every course wears a green
+    /// fringe reads as a stack of lawns rather than as a cut through soil.
+    ///
+    /// Only the faces named here change; the rest fall back to the ordinary
+    /// ones, so a tile that only loses its fringe says so in one line. A tile
+    /// that looks the same buried names nothing and is unaffected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub covered: Option<TileFaces>,
     /// How much of its cell this tile fills, from its floor upward.
     ///
     /// One is the whole cell and the default, so every tile written before
@@ -393,87 +469,4 @@ const fn is_zero_vec(value: &[f32; 2]) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_valid_tile_set_keeps_semantics_separate_from_faces() {
-        let set = TileSetDocument::from_json(
-            r#"{
-              "format_version": 1,
-              "tiles": { "grass": {
-                "faces": {
-                  "top": { "sprite": "blocks.png#grass_top", "size": [1.0, 0.5] },
-                  "south": { "sprite": "blocks.png#earth_south", "size": [1.0, 0.5], "offset": [0.0, -0.25] }
-                }
-              } }
-            }"#,
-        )
-        .unwrap();
-        let grass = set.tile("grass").unwrap();
-        assert!(grass.supports);
-        assert!(grass.walkable);
-        assert!(grass.occludes);
-        assert!(grass.faces.get(TileFace::Top).is_some());
-    }
-
-    /// `solid` was the old name for `walkable`, and a document that used it
-    /// still means what it meant.
-    #[test]
-    fn the_old_solid_field_still_reads_as_walkable() {
-        let set = TileSetDocument::from_json(
-            r#"{
-              "format_version": 1,
-              "tiles": {
-                "water": {
-                  "solid": false,
-                  "faces": { "top": { "sprite": "b.png#0", "size": [1.0, 0.5] } }
-                }
-              }
-            }"#,
-        )
-        .unwrap();
-        let water = set.tile("water").unwrap();
-        assert!(!water.walkable, "solid: false meant you cannot stand there");
-        assert!(
-            water.supports,
-            "and said nothing about whether anything rests on it, so the \
-             pond holds a boat up rather than being a hole"
-        );
-    }
-
-    /// Standing on something rests on it, so the pair cannot disagree.
-    #[test]
-    fn a_walkable_tile_that_supports_nothing_is_rejected() {
-        let error = TileSetDocument::from_json(
-            r#"{
-              "format_version": 1,
-              "tiles": {
-                "ghost": {
-                  "supports": false,
-                  "faces": { "top": { "sprite": "b.png#0", "size": [1.0, 0.5] } }
-                }
-              }
-            }"#,
-        )
-        .unwrap_err();
-        assert!(
-            matches!(error, TileSetError::WalkableWithoutSupport(ref tile) if tile == "ghost"),
-            "{error:?}"
-        );
-    }
-
-    #[test]
-    fn invalid_visual_geometry_is_rejected_at_asset_decode() {
-        let error = TileSetDocument::from_json(
-            r#"{
-              "format_version": 1,
-              "tiles": { "grass": { "faces": {
-                "top": { "sprite": "blocks.png#grass", "size": [1.0, 0.0] }
-              } } }
-            }"#,
-        )
-        .unwrap_err();
-        assert!(matches!(error, TileSetError::InvalidSize { .. }));
-    }
-}
+mod tests;

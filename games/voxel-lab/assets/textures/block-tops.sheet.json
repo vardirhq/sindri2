@@ -1,0 +1,25 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 3,
+    "rows": 1,
+    "names": [
+      "grass",
+      "stone",
+      "earth"
+    ],
+    "size": [
+      108,
+      36
+    ],
+    "margin": [
+      2,
+      2
+    ],
+    "spacing": [
+      4,
+      4
+    ]
+  }
+}

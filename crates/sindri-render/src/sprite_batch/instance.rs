@@ -6,8 +6,8 @@ use crate::UvRect;
 
 /// What a batch of sprites does about the depth the opaque stage wrote.
 ///
-/// Sprites never write depth under either of these: blending is order
-/// dependent, so a depth write would make the result depend on draw order
+/// Blending is order dependent, so a blended batch never writes: a depth write
+/// from one would make the result depend on draw order
 /// twice. What differs is whether something in front can hide them.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum SpriteDepth {
@@ -18,14 +18,34 @@ pub enum SpriteDepth {
     /// Hidden by opaque geometry nearer the camera, which is what being in the
     /// world means.
     Test,
+    /// Opaque geometry: hidden by what is nearer, and hiding what is further.
+    ///
+    /// The one mode that writes. A quad that writes depth is not a sprite in
+    /// the painter's sense any more -- it is a surface, and what covers what
+    /// stops being a sort order the extractor has to get right and becomes an
+    /// answer the depth buffer already holds. Blocks are drawn this way, which
+    /// is what lets a camera go round them.
+    ///
+    /// Writing and blending do not mix: a blended pixel's result depends on
+    /// what was drawn before it, so writing depth from one would make the
+    /// picture depend on draw order in exactly the way depth is meant to stop.
+    /// This mode draws opaque and discards the fully transparent, which is how
+    /// a cutout texture keeps its shape without putting holes in the depth it
+    /// leaves behind.
+    Write,
 }
 
 impl SpriteDepth {
     pub(super) const fn compare(self) -> wgpu::CompareFunction {
         match self {
             Self::Ignore => wgpu::CompareFunction::Always,
-            Self::Test => wgpu::CompareFunction::Less,
+            Self::Test | Self::Write => wgpu::CompareFunction::Less,
         }
+    }
+
+    /// Whether this mode puts anything into the depth buffer.
+    pub(super) const fn writes(self) -> bool {
+        matches!(self, Self::Write)
     }
 }
 
@@ -37,10 +57,11 @@ pub struct SpriteInstance {
     uv_rect: [f32; 4],
     color_multiply: [f32; 4],
     color_offset: [f32; 4],
+    corner_shade: [f32; 4],
 }
 
 impl SpriteInstance {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 8] = wgpu::vertex_attr_array![
+    const ATTRIBUTES: [wgpu::VertexAttribute; 9] = wgpu::vertex_attr_array![
         2 => Float32x4,
         3 => Float32x4,
         4 => Float32x4,
@@ -48,7 +69,8 @@ impl SpriteInstance {
         6 => Float32x4,
         7 => Float32x4,
         8 => Float32x4,
-        9 => Float32x4
+        9 => Float32x4,
+        10 => Float32x4
     ];
 
     /// A sprite drawn from the whole of its texture with identity colour math.
@@ -59,6 +81,7 @@ impl SpriteInstance {
             uv_rect: UvRect::FULL.to_array(),
             color_multiply: [1.0; 4],
             color_offset: [0.0; 4],
+            corner_shade: [1.0; 4],
         }
     }
 
@@ -71,6 +94,20 @@ impl SpriteInstance {
     #[must_use]
     pub fn with_uv_rect(mut self, uv_rect: UvRect) -> Self {
         self.uv_rect = uv_rect.to_array();
+        self
+    }
+
+    /// How much light reaches each corner of the quad, from its own corner
+    /// outward: `[0, 0]`, `[1, 0]`, `[1, 1]`, `[0, 1]` in the quad's own space.
+    ///
+    /// One value a corner rather than one a quad, because the thing being
+    /// described happens at corners: where two blocks meet, the crease between
+    /// them is darker than either face's middle. A flat tint per face cannot
+    /// say that, and without it a stack of cubes reads as a flat arrangement of
+    /// lit shapes rather than as solid things touching.
+    #[must_use]
+    pub const fn with_corner_shade(mut self, corners: [f32; 4]) -> Self {
+        self.corner_shade = corners;
         self
     }
 

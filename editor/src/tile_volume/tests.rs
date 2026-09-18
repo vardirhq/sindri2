@@ -26,6 +26,8 @@ fn grid() -> TileGridComponent {
         projection: TileProjection::Isometric,
         // Picking is plane arithmetic; depth only decides draw order.
         depth_step: 0.0,
+        space: sindri_scene::TileSpace::Projected,
+        cell_height: None,
     }
 }
 
@@ -158,5 +160,85 @@ fn empty_surface_space_can_start_a_foundation_but_cannot_erase_it() {
     assert_eq!(
         surface_target_at_viewport(&grid, Transform3D::default(), view, point, &volume, true, 0,),
         None
+    );
+}
+
+/// A grid whose cells are boxes, which is what makes a face clickable.
+fn solid_grid() -> TileGridComponent {
+    TileGridComponent {
+        columns: 4,
+        rows: 4,
+        cell_size: [1.0, 1.0],
+        level_step: [0.0, 0.5],
+        projection: TileProjection::Isometric,
+        depth_step: 0.0,
+        space: sindri_scene::TileSpace::Solid,
+        cell_height: Some(1.0),
+    }
+}
+
+/// Looking down at the blocks from straight above, so the top of one is what
+/// is under the middle of the viewport.
+fn overhead() -> glam::Mat4 {
+    glam::camera::rh::proj::directx::orthographic(-4.0, 4.0, -4.0, 4.0, 0.1, 20.0)
+        * glam::camera::rh::view::look_at_mat4(
+            glam::Vec3::new(0.0, 10.0, 0.0),
+            glam::Vec3::ZERO,
+            // Looking straight down, so "up" on screen has to be something
+            // other than the axis being looked along.
+            glam::Vec3::NEG_Z,
+        )
+}
+
+/// What the editor's hover does on a solid grid, without the editor.
+///
+/// The controls this replaces existed because the old picker met a horizontal
+/// plane at a level somebody had to name: it could not say which block was
+/// under the pointer, nor which of its sides. This says both.
+#[test]
+fn a_pointer_over_a_block_finds_that_block_and_the_side_it_is_looking_at() {
+    let grid = solid_grid();
+    let cell_size = grid.solid_cell().expect("a solid grid gives a cell box");
+    let volume: sindri_scene::TileVolumeComponent = serde_json::from_value(json!({
+        "tileset": "world.tileset.json",
+        "cells": [{ "position": [0, 0, 0], "tile": "earth" }]
+    }))
+    .expect("the volume parses");
+
+    let (origin, direction) =
+        super::ray_at_viewport(Transform3D::default(), overhead(), [0.5, 0.5])
+            .expect("the middle of the viewport casts a ray");
+    let hit = sindri_scene::voxel::pick(&volume, cell_size, origin, direction, 512.0)
+        .expect("the ray reaches the block under it");
+
+    assert_eq!(hit.cell, GridCoord3::new(0, 0, 0));
+    assert_eq!(
+        hit.face,
+        sindri_core::TileFace::Top,
+        "looking down at a block is looking at its top"
+    );
+    // A click places against that face, which is the cell above it. Removing
+    // takes the block itself. Two different cells from one pointer, which is
+    // the whole of what a Place/Remove toggle used to have to be told.
+    assert_eq!(hit.against(), GridCoord3::new(0, 0, 1));
+}
+
+/// A pointer over nothing is over nothing.
+#[test]
+fn a_pointer_off_the_blocks_finds_none_of_them() {
+    let grid = solid_grid();
+    let cell_size = grid.solid_cell().expect("a solid grid gives a cell box");
+    let volume: sindri_scene::TileVolumeComponent = serde_json::from_value(json!({
+        "tileset": "world.tileset.json",
+        "cells": [{ "position": [0, 0, 0], "tile": "earth" }]
+    }))
+    .expect("the volume parses");
+
+    let (origin, direction) =
+        super::ray_at_viewport(Transform3D::default(), overhead(), [0.05, 0.5])
+            .expect("a ray casts from anywhere in the viewport");
+    assert!(
+        sindri_scene::voxel::pick(&volume, cell_size, origin, direction, 512.0).is_none(),
+        "a click into empty space placed something"
     );
 }

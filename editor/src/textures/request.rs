@@ -14,7 +14,7 @@ use sindri_core::{AssetId, World, sheet_id_for};
 use sindri_render::{TextRenderer, Texture2D, TextureRegistry};
 use sindri_scene::{
     PROCEDURAL_TEXTURES, TextureBindings, TileSetBindings, referenced_fonts, referenced_sheets,
-    referenced_textures, referenced_tile_sets, tile_set_textures,
+    referenced_textures, referenced_tile_sets, tile_set_sheets, tile_set_textures,
 };
 
 use super::{QUEUE, SceneTextures, TextureNote, WATCH_INTERVAL, manifest_beside, root_of};
@@ -195,11 +195,8 @@ impl SceneTextures {
                 Some((sheet_id_for(&id)?, reference.clone()))
             })
             .collect();
+        let slices = wanted_sheets(world, &self.tile_set_bindings, &wanted_tile_sets);
         if let Some(sheets) = &mut self.sheets {
-            let slices: BTreeSet<AssetId> = referenced_sheets(world)
-                .iter()
-                .filter_map(|reference| AssetId::new(reference.clone()).ok())
-                .collect();
             let released = sheets.retain(&slices);
             for id in &slices {
                 if let Err(error) = sheets.request(id.clone()) {
@@ -297,4 +294,36 @@ impl SceneTextures {
         }
         notes
     }
+}
+
+/// Every sheet this world needs cut, including the ones only a tile set names.
+///
+/// `referenced_sheets` answers for components that carry a texture of their
+/// own. A tile volume carries none: it names a tile *set*, and the set's faces
+/// name the sprites — so nothing about the world says the block sheet is
+/// wanted, and a pass retaining only what the world named released it.
+///
+/// Releasing a sheet does not blank what it cut; it unbinds the slicing, so
+/// every face resolves its whole texture instead of its own sprite. Gather's
+/// blocks are a 48-wide strip, so the island drew as forty-eight tiles crammed
+/// into every cell — a comb of vertical stripes, appearing on the first edit,
+/// because that is when this pass runs again. The tile set's arrival had
+/// requested the sheet; nothing afterwards said it was still wanted.
+pub(super) fn wanted_sheets(
+    world: &World,
+    tile_sets: &TileSetBindings,
+    wanted_tile_sets: &BTreeSet<AssetId>,
+) -> BTreeSet<AssetId> {
+    let mut slices: BTreeSet<AssetId> = referenced_sheets(world)
+        .iter()
+        .filter_map(|reference| AssetId::new(reference.clone()).ok())
+        .collect();
+    // The same union the textures above get, and for the same reason: only the
+    // bindings can turn a tile set's ID into the faces that name sprites.
+    for id in wanted_tile_sets {
+        if let Some(tile_set) = tile_sets.get(id.as_str()) {
+            slices.extend(tile_set_sheets(tile_set).into_keys());
+        }
+    }
+    slices
 }

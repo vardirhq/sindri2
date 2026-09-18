@@ -30,8 +30,8 @@ pub use components::{
     CameraComponent, CameraFit, GridNavigationComponent, GridOccupantComponent,
     GridPlacementComponent, GridWallDocument, MeshComponent, MeshPrimitive, ShapeComponent,
     ShapeGeometry, SpriteColorTransform, SpriteComponent, TileCellDocument, TileDraw,
-    TileGridComponent, TileGridError, TileProjection, TileVolumeComponent, TileVolumeError,
-    TileVolumeIndex, TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge,
+    TileGridComponent, TileGridError, TileProjection, TileSpace, TileVolumeComponent,
+    TileVolumeError, TileVolumeIndex, TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge,
     UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase,
     UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap, cell_to_local_in,
     ui_text_template,
@@ -60,4 +60,7 @@ pub use textures::{
     referenced_textures, unresolved_sprites, unresolved_textures,
 };
 pub use tile_surface::{TileSurfaceError, TileSurfaces};
+pub mod voxel;
+pub use voxel::{VoxelError, VoxelFace, VoxelHit, cube_faces, face_quad, pick};
+
 pub use tilesets::{TileSetBindings, referenced_tile_sets, tile_set_sheets, tile_set_textures};

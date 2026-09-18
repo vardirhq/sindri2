@@ -283,6 +283,12 @@ pub fn referenced_fonts(world: &World) -> BTreeSet<String> {
 /// needs no sheet, so an unsliced texture is never asked for a sidecar that does
 /// not exist. That is what keeps a missing sheet an error worth reporting
 /// rather than the ordinary case.
+/// A tile set's sheets are not in here, and cannot be: a tile volume names a
+/// tile *set*, and only the bindings can turn that ID into the faces that name
+/// sprites. A host unions [`crate::tile_set_sheets`] in, the way it already
+/// unions [`crate::tile_set_textures`] into the textures. Missing that released
+/// the sheet cutting Gather's blocks on the first edit, and every face then
+/// resolved its whole texture: forty-eight blocks in every cell.
 pub fn referenced_sheets(world: &World) -> BTreeSet<String> {
     let mut sheets: BTreeSet<String> = sprite_references(world)
         .into_iter()
