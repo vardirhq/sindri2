@@ -1,0 +1,263 @@
+{
+  "format_version": 1,
+  "id": "beacon",
+  "texture": "textures/beacon.png",
+  "tile": {
+    "width": 88,
+    "height": 44
+  },
+  "tile_world": {
+    "width": 1.1,
+    "height": 0.55
+  },
+  "facing": "south",
+  "directions": 1,
+  "footprint": {
+    "width": 1,
+    "height": 1
+  },
+  "render": {
+    "supersample": 4,
+    "padding": 2,
+    "outline": {
+      "enabled": true,
+      "colour": "#241d2b"
+    },
+    "shading": {
+      "light": [
+        -0.3,
+        0.89,
+        0.35
+      ],
+      "thresholds": [
+        0.25,
+        0.5,
+        0.8
+      ]
+    }
+  },
+  "model": {
+    "kind": "primitives",
+    "materials": {
+      "stone": {
+        "colour": "#89939b"
+      },
+      "stone-lit": {
+        "colour": "#aab4b8"
+      },
+      "dark-stone": {
+        "colour": "#515b63"
+      },
+      "moss": {
+        "colour": "#58794c"
+      },
+      "rune": {
+        "colour": "#c7fbef",
+        "unlit": true
+      }
+    },
+    "parts": [
+      {
+        "type": "sphere",
+        "material": "moss",
+        "position": [
+          0,
+          0.015,
+          0
+        ],
+        "radius": 0.34,
+        "segments": 10,
+        "scale": [
+          1.0,
+          0.1,
+          0.78
+        ]
+      },
+      {
+        "type": "box",
+        "material": "dark-stone",
+        "position": [
+          0,
+          0.07,
+          0
+        ],
+        "size": [
+          0.58,
+          0.14,
+          0.54
+        ],
+        "rotation": [
+          0,
+          5,
+          0
+        ]
+      },
+      {
+        "type": "box",
+        "material": "stone",
+        "position": [
+          0.01,
+          0.2,
+          0
+        ],
+        "size": [
+          0.43,
+          0.13,
+          0.39
+        ],
+        "rotation": [
+          0,
+          -4,
+          0
+        ]
+      },
+      {
+        "type": "box",
+        "material": "dark-stone",
+        "position": [
+          0.005,
+          0.64,
+          0
+        ],
+        "size": [
+          0.31,
+          0.78,
+          0.27
+        ],
+        "rotation": [
+          0,
+          0,
+          -2
+        ]
+      },
+      {
+        "type": "box",
+        "material": "stone",
+        "position": [
+          -0.025,
+          0.72,
+          0.008
+        ],
+        "size": [
+          0.25,
+          0.54,
+          0.23
+        ],
+        "rotation": [
+          0,
+          0,
+          -2
+        ]
+      },
+      {
+        "type": "cone",
+        "material": "stone-lit",
+        "position": [
+          -0.015,
+          1.12,
+          0
+        ],
+        "radius": 0.235,
+        "height": 0.3,
+        "segments": 4,
+        "rotation": [
+          0,
+          45,
+          0
+        ]
+      },
+      {
+        "type": "box",
+        "material": "moss",
+        "position": [
+          -0.12,
+          0.43,
+          0.142
+        ],
+        "size": [
+          0.1,
+          0.22,
+          0.018
+        ],
+        "rotation": [
+          0,
+          0,
+          -2
+        ]
+      },
+      {
+        "type": "box",
+        "material": "rune",
+        "position": [
+          -0.005,
+          0.79,
+          0.146
+        ],
+        "size": [
+          0.055,
+          0.32,
+          0.018
+        ],
+        "rotation": [
+          0,
+          0,
+          -2
+        ]
+      },
+      {
+        "type": "box",
+        "material": "rune",
+        "position": [
+          -0.075,
+          0.88,
+          0.146
+        ],
+        "size": [
+          0.16,
+          0.052,
+          0.018
+        ],
+        "rotation": [
+          0,
+          0,
+          20
+        ]
+      },
+      {
+        "type": "box",
+        "material": "rune",
+        "position": [
+          0.065,
+          0.68,
+          0.146
+        ],
+        "size": [
+          0.16,
+          0.052,
+          0.018
+        ],
+        "rotation": [
+          0,
+          0,
+          20
+        ]
+      },
+      {
+        "type": "sphere",
+        "material": "stone",
+        "position": [
+          0.27,
+          0.1,
+          0.13
+        ],
+        "radius": 0.09,
+        "segments": 7,
+        "scale": [
+          1.0,
+          0.65,
+          0.78
+        ]
+      }
+    ]
+  }
+}

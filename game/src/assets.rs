@@ -1,4 +1,4 @@
-//! What Gather is made of, by logical asset ID.
+//! What Causeway is made of, by logical asset ID.
 //!
 //! Native builds embed the project so the standalone binary has no
 //! working-directory requirement. Browser builds deliberately do not:
@@ -27,20 +27,19 @@ use sindri_scene::SceneExtractor;
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_scene::{TextureBindings, TileSetBindings};
 
-use crate::error::GatherError;
+use crate::error::CausewayError;
 
 /// The composed presentation sources embedded by the native game.
 #[cfg(not(target_arch = "wasm32"))]
 pub const WEAVE_SOURCES: &[(&str, &str)] = &[
-    ("ui/gather.weave", include_str!("../assets/ui/gather.weave")),
-    ("ui/hud.weave", include_str!("../assets/ui/hud.weave")),
     (
-        "ui/completion.weave",
-        include_str!("../assets/ui/completion.weave"),
+        "ui/causeway.weave",
+        include_str!("../assets/ui/causeway.weave"),
     ),
+    ("ui/hud.weave", include_str!("../assets/ui/hud.weave")),
 ];
 
-/// Every texture Gather draws, by ID.
+/// Every texture Causeway draws, by ID.
 ///
 /// The native build embeds the bytes in `TEXTURES`; this is the same set as
 /// IDs, and `the_browser_fetches_every_texture_the_native_build_embeds` asserts
@@ -52,20 +51,14 @@ pub const WEAVE_SOURCES: &[(&str, &str)] = &[
 /// serve any project; it does not read this list and must not, because a list
 /// of one game's textures compiled into a generic host is a list that is wrong
 /// for every other game. It did read this list once, to decide which textures
-/// got their sprite sheets, and every project that was not Gather silently got
+/// got their sprite sheets, and every project that was not the companion game got
 /// none.
 #[cfg(not(target_arch = "wasm32"))]
 pub const TEXTURE_IDS: &[&str] = &[
-    "textures/gather-blocks.png",
-    "textures/orb.png",
-    "textures/player.png",
-    "textures/pip.png",
-    "textures/banner.png",
-    "textures/shrine.png",
-    "textures/standing-stones.png",
-    "textures/waystone.png",
-    "textures/stone-wall.png",
-    "textures/tree.png",
+    "textures/blocks-top.png",
+    "textures/blocks-side.png",
+    "textures/wanderer.png",
+    "textures/beacon.png",
 ];
 
 /// The scenes and scripts are embedded only in native builds.
@@ -75,95 +68,52 @@ pub const TEXTURE_IDS: &[&str] = &[
 /// A game with interiors reaches them by name, so all of them have to be here
 /// — a browser build fetches the same IDs through the real asset pipeline.
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) const SCENES: &[(&str, &str)] = &[
-    (
-        "gather.scene.json",
-        include_str!("../assets/gather.scene.json"),
-    ),
-    ("shed.scene.json", include_str!("../assets/shed.scene.json")),
-];
+pub(crate) const SCENES: &[(&str, &str)] = &[(
+    "causeway.scene.json",
+    include_str!("../assets/causeway.scene.json"),
+)];
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) const SCRIPTS: &[(&str, &str)] = &[
     (
-        "scripts/camera-follow.decay",
-        include_str!("../assets/scripts/camera-follow.decay"),
+        "scripts/builder.decay",
+        include_str!("../assets/scripts/builder.decay"),
     ),
     (
-        "scripts/player.decay",
-        include_str!("../assets/scripts/player.decay"),
+        "scripts/wanderer.decay",
+        include_str!("../assets/scripts/wanderer.decay"),
     ),
     (
-        "scripts/door.decay",
-        include_str!("../assets/scripts/door.decay"),
+        "scripts/beacon.decay",
+        include_str!("../assets/scripts/beacon.decay"),
     ),
     (
-        "scripts/wisp.decay",
-        include_str!("../assets/scripts/wisp.decay"),
-    ),
-    (
-        "scripts/ambient.decay",
-        include_str!("../assets/scripts/ambient.decay"),
-    ),
-    (
-        "scripts/orb.decay",
-        include_str!("../assets/scripts/orb.decay"),
-    ),
-    (
-        "scripts/pip.decay",
-        include_str!("../assets/scripts/pip.decay"),
-    ),
-    (
-        "scripts/banner.decay",
-        include_str!("../assets/scripts/banner.decay"),
+        "scripts/hud.decay",
+        include_str!("../assets/scripts/hud.decay"),
     ),
 ];
 
 /// Native art bytes used by the standalone game and capture tests.
 #[cfg(not(target_arch = "wasm32"))]
 pub const TEXTURES: &[(&str, &[u8])] = &[
-    (
-        "textures/gather-blocks.png",
-        include_bytes!("../assets/textures/gather-blocks.png"),
-    ),
-    (
-        "textures/orb.png",
-        include_bytes!("../assets/textures/orb.png"),
-    ),
-    (
-        "textures/player.png",
-        include_bytes!("../assets/textures/player.png"),
-    ),
-    (
-        "textures/pip.png",
-        include_bytes!("../assets/textures/pip.png"),
-    ),
-    (
-        "textures/banner.png",
-        include_bytes!("../assets/textures/banner.png"),
-    ),
-    // Baked by `tools/isometric-baker` from the recipes beside them. The
+    // Baked by `tools/isometric-baker` from the recipes in `recipes/`. The
     // recipe is the source; the PNG and its sheet are derived, and re-baking
     // rewrites them in place.
     (
-        "textures/shrine.png",
-        include_bytes!("../assets/textures/shrine.png"),
+        "textures/blocks-top.png",
+        include_bytes!("../assets/textures/blocks-top.png"),
     ),
     (
-        "textures/standing-stones.png",
-        include_bytes!("../assets/textures/standing-stones.png"),
+        "textures/blocks-side.png",
+        include_bytes!("../assets/textures/blocks-side.png"),
     ),
     (
-        "textures/waystone.png",
-        include_bytes!("../assets/textures/waystone.png"),
+        "textures/wanderer.png",
+        include_bytes!("../assets/textures/wanderer.png"),
     ),
     (
-        "textures/stone-wall.png",
-        include_bytes!("../assets/textures/stone-wall.png"),
-    ),
-    (
-        "textures/tree.png",
-        include_bytes!("../assets/textures/tree.png"),
+        "textures/beacon.png",
+        include_bytes!("../assets/textures/beacon.png"),
     ),
 ];
 
@@ -182,17 +132,13 @@ pub const AUDIO: &[(&str, &[u8])] = &[
         include_bytes!("../assets/audio/background.wav"),
     ),
     (
-        "audio/pickup.wav",
-        include_bytes!("../assets/audio/pickup.wav"),
-    ),
-    (
         "audio/victory.wav",
         include_bytes!("../assets/audio/victory.wav"),
     ),
 ];
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn bind_fonts(renderer: &mut TextRenderer) -> Result<(), GatherError> {
+pub fn bind_fonts(renderer: &mut TextRenderer) -> Result<(), CausewayError> {
     for (id, bytes) in FONTS {
         let asset = FontAssetDecoder.decode(AssetBytes::new(
             (*id).parse::<AssetId>()?,
@@ -204,7 +150,7 @@ pub fn bind_fonts(renderer: &mut TextRenderer) -> Result<(), GatherError> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn bind_audio(audio: &mut dyn AudioBackend) -> Result<(), GatherError> {
+pub fn bind_audio(audio: &mut dyn AudioBackend) -> Result<(), CausewayError> {
     for (id, bytes) in AUDIO {
         let asset = AudioAssetDecoder.decode(AssetBytes::new(
             (*id).parse::<AssetId>()?,
@@ -220,52 +166,32 @@ pub fn bind_audio(audio: &mut dyn AudioBackend) -> Result<(), GatherError> {
 #[cfg(not(target_arch = "wasm32"))]
 pub const SHEETS: &[(&str, &str)] = &[
     (
-        "textures/gather-blocks.sheet.json",
-        include_str!("../assets/textures/gather-blocks.sheet.json"),
+        "textures/blocks-top.sheet.json",
+        include_str!("../assets/textures/blocks-top.sheet.json"),
     ),
     (
-        "textures/orb.sheet.json",
-        include_str!("../assets/textures/orb.sheet.json"),
+        "textures/blocks-side.sheet.json",
+        include_str!("../assets/textures/blocks-side.sheet.json"),
     ),
     (
-        "textures/pip.sheet.json",
-        include_str!("../assets/textures/pip.sheet.json"),
+        "textures/wanderer.sheet.json",
+        include_str!("../assets/textures/wanderer.sheet.json"),
     ),
     (
-        "textures/player.sheet.json",
-        include_str!("../assets/textures/player.sheet.json"),
-    ),
-    (
-        "textures/shrine.sheet.json",
-        include_str!("../assets/textures/shrine.sheet.json"),
-    ),
-    (
-        "textures/standing-stones.sheet.json",
-        include_str!("../assets/textures/standing-stones.sheet.json"),
-    ),
-    (
-        "textures/waystone.sheet.json",
-        include_str!("../assets/textures/waystone.sheet.json"),
-    ),
-    (
-        "textures/stone-wall.sheet.json",
-        include_str!("../assets/textures/stone-wall.sheet.json"),
-    ),
-    (
-        "textures/tree.sheet.json",
-        include_str!("../assets/textures/tree.sheet.json"),
+        "textures/beacon.sheet.json",
+        include_str!("../assets/textures/beacon.sheet.json"),
     ),
 ];
 
 /// Semantic block sets embedded by the native game.
 #[cfg(not(target_arch = "wasm32"))]
 pub const TILE_SETS: &[(&str, &str)] = &[(
-    "gather.tileset.json",
-    include_str!("../assets/gather.tileset.json"),
+    "causeway.tileset.json",
+    include_str!("../assets/causeway.tileset.json"),
 )];
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn bind_tile_sets() -> Result<TileSetBindings, GatherError> {
+pub fn bind_tile_sets() -> Result<TileSetBindings, CausewayError> {
     let mut bindings = TileSetBindings::new();
     for (id, json) in TILE_SETS {
         bindings.bind(*id, TileSetDocument::from_json(json)?)?;
@@ -278,7 +204,7 @@ pub fn bind_tile_sets() -> Result<TileSetBindings, GatherError> {
 pub fn bind_textures(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
-) -> Result<(TextureRegistry, TextureBindings), GatherError> {
+) -> Result<(TextureRegistry, TextureBindings), CausewayError> {
     let mut textures = TextureRegistry::new(device, queue);
     let mut bindings = TextureBindings::new();
     for (id, bytes) in TEXTURES {
@@ -312,7 +238,7 @@ pub fn bind_textures(
 }
 
 /// The scene's component schemas, including the one the engine does not know.
-pub fn extractor() -> Result<SceneExtractor, GatherError> {
+pub fn extractor() -> Result<SceneExtractor, CausewayError> {
     let mut extractor = SceneExtractor::new()?;
     extractor.register::<ScriptComponent>("Script")?;
     Ok(extractor)
@@ -320,7 +246,7 @@ pub fn extractor() -> Result<SceneExtractor, GatherError> {
 
 /// Every embedded scene, parsed, in the order a session should enter them.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn scenes() -> Result<Vec<(String, SceneDocument)>, GatherError> {
+pub fn scenes() -> Result<Vec<(String, SceneDocument)>, CausewayError> {
     SCENES
         .iter()
         .map(|(id, json)| Ok(((*id).to_owned(), SceneDocument::from_json(json)?)))
@@ -335,11 +261,11 @@ pub fn scenes() -> Result<Vec<(String, SceneDocument)>, GatherError> {
 /// first scene had been poured in flat would be the one place a game could
 /// never leave.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn world() -> Result<(World, sindri_core::LoadedScenes), GatherError> {
+pub fn world() -> Result<(World, sindri_core::LoadedScenes), CausewayError> {
     let mut world = World::default();
     let mut loaded = sindri_core::LoadedScenes::new();
     let scenes = scenes()?;
-    let (name, document) = scenes.first().ok_or(GatherError::MissingScene)?;
+    let (name, document) = scenes.first().ok_or(CausewayError::MissingScene)?;
     // The opening scene keeps the identities its file spells: everything that
     // names an entity by stable ID -- a test, an editor showing a running
     // world, an authoring proposal -- was written against those.
@@ -349,13 +275,13 @@ pub fn world() -> Result<(World, sindri_core::LoadedScenes), GatherError> {
 
 /// The native equivalent of the stylesheet graph the browser fetches.
 #[cfg(not(target_arch = "wasm32"))]
-pub fn stylesheets() -> Result<Vec<weave::Stylesheet>, GatherError> {
+pub fn stylesheets() -> Result<Vec<weave::Stylesheet>, CausewayError> {
     let sources = WEAVE_SOURCES
         .iter()
         .map(|(id, source)| ((*id).to_owned(), (*source).to_owned()))
         .collect();
-    let sheet = weave::compose("ui/gather.weave", &sources)
-        .map_err(|error| GatherError::Weave(error.to_string()))?;
+    let sheet = weave::compose("ui/causeway.weave", &sources)
+        .map_err(|error| CausewayError::Weave(error.to_string()))?;
     Ok(vec![sheet])
 }
 
@@ -364,11 +290,11 @@ pub fn presented_world(
     authored: &World,
     stylesheets: &[weave::Stylesheet],
     viewport: weave::Viewport,
-) -> Result<World, GatherError> {
+) -> Result<World, CausewayError> {
     let mut world = authored.clone();
     for stylesheet in stylesheets {
         world = sindri_weave::PresentationWorld::resolve(&world, stylesheet, viewport)
-            .map_err(|error| GatherError::Weave(error.to_string()))?
+            .map_err(|error| CausewayError::Weave(error.to_string()))?
             .world()
             .clone();
     }

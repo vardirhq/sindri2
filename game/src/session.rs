@@ -20,13 +20,13 @@ use sindri_scene::{
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::assets::sources;
-use crate::error::GatherError;
+use crate::error::CausewayError;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) type GatherAudio = NativeAudioBackend;
+pub(crate) type CausewayAudio = NativeAudioBackend;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn gather_audio_backend() -> Result<GatherAudio, GatherError> {
+pub(crate) fn causeway_audio_backend() -> Result<CausewayAudio, CausewayError> {
     Ok(NativeAudioBackend::new()?)
 }
 
@@ -190,7 +190,7 @@ impl Session {
     /// the scene being left, from a world this rearranges underneath it. The
     /// scene it came from is switched off rather than unloaded, so walking back
     /// in finds it as it was.
-    fn follow_scene_request(&mut self, world: &mut World) -> Result<(), GatherError> {
+    fn follow_scene_request(&mut self, world: &mut World) -> Result<(), CausewayError> {
         let Some(channel) = self.channel.as_mut() else {
             return Ok(());
         };
@@ -206,10 +206,37 @@ impl Session {
         let document = self
             .scenes
             .get(&wanted)
-            .ok_or_else(|| GatherError::UnknownScene(wanted.clone()))?;
+            .ok_or_else(|| CausewayError::UnknownScene(wanted.clone()))?;
         self.loaded.enter(world, &wanted, document)?;
         channel.now_playing(wanted);
         Ok(())
+    }
+
+    /// Which block the pointer is on, if it is on one.
+    ///
+    /// `None` covers every way there is nothing to answer -- the pointer
+    /// outside the window, no camera, no solid grid, a ray that meets no
+    /// block. They are one situation to a script: the person is not pointing
+    /// at a block.
+    fn aim(
+        world: &World,
+        components: &ComponentSchemaRegistry,
+        input: &InputState,
+        viewport: (f32, f32),
+    ) -> Option<sindri_scene::voxel::VolumeAim> {
+        let position = input.pointer_position()?;
+        if viewport.0 <= 0.0 || viewport.1 <= 0.0 {
+            return None;
+        }
+        let camera = sindri_scene::world_camera_of(world, components, viewport.0 / viewport.1)
+            .ok()
+            .flatten()?;
+        sindri_scene::voxel::aim_at(
+            world,
+            components,
+            camera.view_projection,
+            [position[0] / viewport.0, position[1] / viewport.1],
+        )
     }
 
     /// One fixed step: the scripts run, then the animations move.
@@ -219,7 +246,7 @@ impl Session {
         input: &InputState,
         viewport: (f32, f32),
         delta_seconds: f32,
-    ) -> Result<(), GatherError> {
+    ) -> Result<(), CausewayError> {
         // Physics first, so a script observes the events of the step that just
         // happened and its writes take effect on the next one, which is the
         // order `docs/physics.md` fixes.
@@ -240,6 +267,11 @@ impl Session {
         // was thrown rather than one frame along.
         self.effects
             .advance(std::time::Duration::from_secs_f32(delta_seconds));
+        // Worked out here rather than by the scripts, because this is the
+        // layer holding a camera and a viewport. A script asking which block
+        // the pointer is on would otherwise have to invert the projection
+        // itself, which is the renderer's business leaking into gameplay.
+        let aim = Self::aim(world, &self.components, input, viewport);
         let (physics, events) = self.physics.for_scripts();
         let mut frame = ScriptFrame::new(&self.sources, input, delta_seconds)
             .with_prefabs(&self.prefabs)
@@ -253,6 +285,9 @@ impl Session {
                 events,
             })
             .with_animations(&mut self.animations);
+        if let Some(aim) = aim {
+            frame = frame.with_aim(aim);
+        }
         // Handed over only when this host actually binds any, the same way the
         // scene channel is. An empty set is not "no tile sets" to the host that
         // receives it — it is a host that binds tile sets and is missing the
@@ -298,7 +333,7 @@ impl Session {
         &mut self,
         world: &World,
         audio: &mut dyn AudioBackend,
-    ) -> Result<(), GatherError> {
+    ) -> Result<(), CausewayError> {
         if self.autoplay_started {
             return Ok(());
         }
@@ -321,7 +356,7 @@ impl Session {
         Ok(())
     }
 
-    fn flush_audio(&mut self, audio: &mut dyn AudioBackend) -> Result<(), GatherError> {
+    fn flush_audio(&mut self, audio: &mut dyn AudioBackend) -> Result<(), CausewayError> {
         fn survivable(error: &AudioError) -> bool {
             matches!(error, AudioError::MissingClip(_) | AudioError::Locked)
         }
@@ -400,7 +435,7 @@ impl Session {
 const SAVE_INTERVAL_SECONDS: f32 = 2.0;
 
 impl Game for Session {
-    type Error = GatherError;
+    type Error = CausewayError;
 
     fn fixed_update(&mut self, context: &mut FrameContext<'_>) -> Result<(), Self::Error> {
         self.start_autoplay(context.world, context.audio)?;

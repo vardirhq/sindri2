@@ -88,25 +88,40 @@ pub(super) enum GridFloor {
 ///
 /// The flat map is tried first, so a scene carrying both — a migration in
 /// progress — navigates exactly as it did before the second component existed.
+/// A grid's shape, and which plane its cells stand on.
+///
+/// `solid` is the cell's footprint when the grid holds boxes rather than a
+/// picture of them, and `None` when it holds the picture. It decides which
+/// world axes a walker's position is read from, which is the one thing about a
+/// grid that a flat map and a volume genuinely disagree on.
+pub(super) struct GridGeometry {
+    pub(super) bounds: GridBounds,
+    pub(super) space: GridSpace,
+    pub(super) floor: GridFloor,
+    pub(super) solid: Option<[f32; 2]>,
+}
+
 pub(super) fn grid_geometry(
     grid: EntityId,
     data: &EntityData,
-) -> Result<(GridBounds, GridSpace, GridFloor), GridNavigationError> {
+) -> Result<GridGeometry, GridNavigationError> {
     if let Some(payload) = data.components.get(TilemapComponent::TYPE_NAME) {
         let tilemap: TilemapComponent = serde_json::from_value(payload.clone())
             .map_err(|source| GridNavigationError::InvalidTilemapPayload { grid, source })?;
         tilemap
             .validate()
             .map_err(|source| GridNavigationError::InvalidTilemap { grid, source })?;
-        return Ok((
-            tilemap
+        return Ok(GridGeometry {
+            bounds: tilemap
                 .grid_bounds()
                 .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
-            tilemap
+            space: tilemap
                 .grid_space()
                 .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
-            GridFloor::FlatMap,
-        ));
+            floor: GridFloor::FlatMap,
+            // A flat map is a picture of ground, never boxes standing on it.
+            solid: None,
+        });
     }
     if let Some(payload) = data.components.get(TileGridComponent::TYPE_NAME) {
         let tile_grid: TileGridComponent = serde_json::from_value(payload.clone())
@@ -114,15 +129,18 @@ pub(super) fn grid_geometry(
         tile_grid
             .validate()
             .map_err(|source| GridNavigationError::InvalidTileGrid { grid, source })?;
-        return Ok((
-            tile_grid
+        return Ok(GridGeometry {
+            bounds: tile_grid
                 .bounds()
                 .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
-            tile_grid
+            space: tile_grid
                 .grid_space()
                 .map_err(|source| GridNavigationError::InvalidGridGeometry { grid, source })?,
-            GridFloor::Volume,
-        ));
+            floor: GridFloor::Volume,
+            solid: tile_grid
+                .solid_cell()
+                .map(|[across, into, _up]| [across, into]),
+        });
     }
     Err(GridNavigationError::MissingGrid(grid))
 }

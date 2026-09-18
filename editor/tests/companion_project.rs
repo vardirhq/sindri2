@@ -1,6 +1,6 @@
 //! What the editor offers against the project the companion game actually is.
 //!
-//! Gather is the one project in the repository laid out the way a real one is:
+//! the companion game is the one project in the repository laid out the way a real one is:
 //! its scene, art, scripts, fonts, and audio live under `assets/`, and its
 //! Cargo manifest, `src/`, `tests/`, and web page live beside that directory
 //! rather than in it. Every unit test around `ProjectTree` builds a project for
@@ -20,7 +20,7 @@ use sindri_editor::project::{Project, ProjectTree};
 use sindri_editor::tilemap::SpritePalette;
 
 /// The companion game's directory, from this crate's own.
-fn gather() -> PathBuf {
+fn companion() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("the editor crate sits in the workspace")
@@ -30,7 +30,7 @@ fn gather() -> PathBuf {
 /// The browser as the editor builds it for an open scene: rooted at the
 /// project, resolving at the scene's own directory.
 fn browsing(scene: &Path) -> ProjectTree {
-    let project = Project::open(&gather()).expect("Gather is a project");
+    let project = Project::open(&companion()).expect("the companion game is a project");
     ProjectTree::rooted_as(project.root(), project.name()).resolving_at(scene.parent())
 }
 
@@ -54,8 +54,8 @@ fn named_in_scene(scene: &str, key: &str) -> Vec<String> {
 }
 
 #[test]
-fn the_browser_offers_gather_the_references_gather_uses() {
-    let scene = gather().join("assets/gather.scene.json");
+fn the_browser_offers_the_game_the_references_it_uses() {
+    let scene = companion().join("assets/causeway.scene.json");
     let text = std::fs::read_to_string(&scene).expect("the game's scene is there");
     let tree = browsing(&scene);
 
@@ -84,7 +84,7 @@ fn the_browser_offers_gather_the_references_gather_uses() {
 /// sprite disappear.
 #[test]
 fn nothing_offered_is_spelled_from_the_project_root() {
-    let scene = gather().join("assets/gather.scene.json");
+    let scene = companion().join("assets/causeway.scene.json");
     let tree = browsing(&scene);
 
     let offered: Vec<String> =
@@ -103,13 +103,16 @@ fn nothing_offered_is_spelled_from_the_project_root() {
 /// control away rather than two thirds of the rows.
 #[test]
 fn the_listing_starts_at_the_assets_and_the_rest_is_still_there() {
-    let scene = gather().join("assets/gather.scene.json");
+    let scene = companion().join("assets/causeway.scene.json");
     let tree = browsing(&scene);
 
-    assert_eq!(tree.assets_root(), Some(gather().join("assets").as_path()));
+    assert_eq!(
+        tree.assets_root(),
+        Some(companion().join("assets").as_path())
+    );
     assert!(
         tree.keeps_more_than_assets(),
-        "Gather keeps a Cargo manifest, a src/, and a web page outside its assets"
+        "the companion game keeps a Cargo manifest, a src/, and a web page outside its assets"
     );
 
     let in_assets: Vec<&str> = tree
@@ -132,16 +135,16 @@ fn the_listing_starts_at_the_assets_and_the_rest_is_still_there() {
 
 /// The tile and sprite palettes read the file behind a reference by joining it
 /// onto a directory, and it has to be the same directory the loader uses.
-/// Joined onto the project root, Gather's `textures/gather-blocks.png` names
-/// `game/textures/gather-blocks.png`, which is nothing: the tile inspector
+/// Joined onto the project root, the game's `textures/blocks-top.png` names
+/// `game/textures/blocks-top.png`, which is nothing: the tile inspector
 /// showed a missing-file message instead of the tiles, and the animation
 /// preview showed one instead of the sheet.
 #[test]
 fn the_palette_reads_a_reference_from_where_the_scene_resolves_it() {
-    let assets = gather().join("assets");
+    let assets = companion().join("assets");
     let mut palette = SpritePalette::default();
 
-    palette.ensure(Some(&assets), "textures/gather-blocks.png");
+    palette.ensure(Some(&assets), "textures/blocks-top.png");
     assert_eq!(palette.problem(), None);
     assert!(
         !palette.sprites().is_empty(),
@@ -149,7 +152,7 @@ fn the_palette_reads_a_reference_from_where_the_scene_resolves_it() {
     );
 
     let mut from_the_root = SpritePalette::default();
-    from_the_root.ensure(Some(&gather()), "textures/gather-blocks.png");
+    from_the_root.ensure(Some(&companion()), "textures/blocks-top.png");
     assert!(
         from_the_root.problem().is_some(),
         "and the project root is not that directory, which is the whole point"

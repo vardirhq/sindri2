@@ -39,7 +39,7 @@ pub use components::{
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{
     CameraView, OverlayPlacement, OverlayView, SceneExtractError, SceneExtractor, SceneRuntime,
-    UiCanvas, ViewCamera, WorldProjection, overlay_for_viewport, overlay_in_scene,
+    UiCanvas, ViewCamera, WorldProjection, overlay_for_viewport, overlay_in_scene, world_camera_of,
 };
 pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
 pub use occlusion::{

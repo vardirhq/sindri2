@@ -37,7 +37,7 @@ const WIDTH: u32 = 1000;
 const HEIGHT: u32 = 720;
 
 #[cfg(not(target_arch = "wasm32"))]
-const SHEETS: &[&str] = &["blocks-top", "blocks-side"];
+const SHEETS: &[&str] = &["blocks-top", "blocks-side", "player", "waystone"];
 
 #[cfg(not(target_arch = "wasm32"))]
 fn bind_textures(

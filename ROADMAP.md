@@ -464,7 +464,7 @@ sprites even though its title now uses real project-font text: a row of lamps
 for the score and a banner that fades in when the game is won. That remains
 useful evidence about how much text a 2D engine really owes its users.
 
-It is `game/`, crate `sindri-gather`: five orbs on a diamond floor, a thing you
+It is `game/`, crate `sindri-causeway`: five orbs on a diamond floor, a thing you
 drive with the arrow keys, and a lamp per orb. Its tilemap-based scene is 20
 entities and all
 four of its rules — moving, gathering, counting, winning — are Decay scripts.

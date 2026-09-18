@@ -65,6 +65,8 @@ def camera():
     ]
     return eye, look_at(eye, centre)
 
+WANDERER = (2, 7)
+
 def entities():
     eye, rotation = camera()
     return [
@@ -86,6 +88,123 @@ def entities():
                 # One block up and no more, which is what makes the pillar a
                 # thing to build a way up rather than a thing to walk up.
                 "sindri.grid.navigation": {"max_step": 1.0},
+            },
+        },
+        {
+            "id": "wanderer",
+            "name": "Wanderer",
+            "transform_3d": transform(
+                (WANDERER[0] * CELL, 0.0, WANDERER[1] * CELL), scale=(0.62, 0.62, 1.0)),
+            "components": {
+                "sindri.sprite": {"texture": "textures/wanderer.png#bob-0",
+                                  "tint": [1.0, 1.0, 1.0, 1.0]},
+                "sindri.animation.sprite": {
+                    "clips": {"bob": {"frames": ["bob-0", "bob-1", "bob-2", "bob-3"],
+                                      "looping": True, "seconds_per_frame": 0.16}},
+                    "speed": 1.0,
+                },
+                # No cell: a walker's place is wherever walking left it, and
+                # only its height is the ground's to answer.
+                "sindri.grid.placement": {"grid": "floor"},
+                # What makes it a thing the pathfinder knows about. Without it
+                # the walker is scenery standing on the grid rather than
+                # somebody moving across it.
+                "sindri.grid.occupant": {"grid": "floor", "footprint": [[0, 0]]},
+                "sindri.script": {"source": "scripts/wanderer.decay", "script": "Wanderer",
+                                  "properties": {"step_seconds": 0.34}},
+            },
+        },
+        {
+            "id": "beacon",
+            "name": "Beacon",
+            "transform_3d": transform((0.0, 0.0, 0.0), scale=(0.5, 0.5, 1.0)),
+            "components": {
+                "sindri.sprite": {"texture": "textures/beacon.png#south",
+                                  "tint": [1.0, 1.0, 1.0, 1.0]},
+                # Deliberately not an occupant. A goal that fills its own cell
+                # is a goal nothing can reach: the pathfinder will not route
+                # into an occupied square, so marking the beacon would make the
+                # whole game unwinnable in a way nothing else would report.
+                "sindri.grid.placement": {"grid": "floor", "cell": list(PILLAR)},
+                "sindri.script": {"source": "scripts/beacon.decay", "script": "Beacon",
+                                  "properties": {"lit_scale": 1.25}},
+            },
+        },
+        {
+            "id": "builder",
+            "name": "Builder",
+            "transform_3d": transform((0.0, 0.0, 0.0)),
+            "components": {
+                "sindri.script": {"source": "scripts/builder.decay", "script": "Builder",
+                                  "properties": {"stock": 12.0}},
+            },
+        },
+        {
+            "id": "music",
+            "name": "Music",
+            "transform_3d": transform((0.0, 0.0, 0.0)),
+            "components": {
+                "sindri.audio.source": {
+                    "autoplay": True, "clip": "audio/background.wav",
+                    "looping": True, "volume": 0.2,
+                },
+            },
+        },
+        {
+            "id": "title",
+            "name": "Title",
+            "transform_3d": transform((0.0, 0.0, 2.0)),
+            "components": {
+                "sindri.ui.text": {
+                    "anchor": "top_left", "color": [0.949, 0.722, 0.294, 1.0],
+                    "font": "fonts/Inter.ttf", "font_size": 0.0611,
+                    "layer": 101, "line_height": 0.0778, "text": "CAUSEWAY",
+                },
+            },
+        },
+        {
+            "id": "kind",
+            "name": "Kind",
+            "transform_3d": transform((0.0, 0.0, 2.0)),
+            "components": {
+                "sindri.ui.text": {
+                    "anchor": "top_left", "color": [0.875, 0.902, 0.949, 1.0],
+                    "font": "fonts/Inter.ttf", "font_size": 0.0407,
+                    "layer": 101, "line_height": 0.0519, "text": "planks",
+                },
+            },
+        },
+        {
+            "id": "stock",
+            "name": "Stock",
+            "transform_3d": transform((0.0, 0.0, 2.0)),
+            "components": {
+                "sindri.ui.text": {
+                    "anchor": "top_left", "color": [0.949, 0.722, 0.294, 1.0],
+                    "font": "fonts/Inter.ttf", "font_size": 0.0407,
+                    "layer": 101, "line_height": 0.0519, "text": "12",
+                },
+            },
+        },
+        {
+            "id": "hint",
+            "name": "Hint",
+            "transform_3d": transform((0.0, 0.0, 2.0)),
+            "components": {
+                "sindri.ui.text": {
+                    "anchor": "bottom_left", "color": [0.604, 0.651, 0.733, 1.0],
+                    "font": "fonts/Inter.ttf", "font_size": 0.0346,
+                    "layer": 101, "line_height": 0.0481,
+                    "text": "Click a block's side to build from it. Right-click to take one back. 1-2-3 to choose.",
+                },
+            },
+        },
+        {
+            "id": "hud",
+            "name": "Hud",
+            "transform_3d": transform((0.0, 0.0, 0.0)),
+            "components": {
+                "sindri.script": {"source": "scripts/hud.decay", "script": "Hud"},
             },
         },
         {

@@ -7,7 +7,7 @@
 pub(super) mod view;
 
 use glam::{Mat4, Vec2, Vec3, Vec4};
-use sindri_core::{Transform3D, World};
+use sindri_core::{ComponentSchemaRegistry, Transform3D, World};
 use sindri_render::{PerspectiveCamera, orthographic_projection, perspective_projection};
 
 use self::view::{
@@ -310,8 +310,39 @@ impl SceneExtractor {
         world: &World,
         aspect: f32,
     ) -> Result<ResolvedCameras, SceneExtractError> {
+        authored_cameras(world, self.components(), aspect)
+    }
+}
+
+/// Where the scene's own camera looks, for a viewport of this shape.
+///
+/// The same resolution extraction does, reachable without an extractor. A host
+/// that has to turn a pointer back into the world -- which is what picking a
+/// block is -- needs this matrix and nothing else extraction offers, and
+/// rebuilding one beside it would be a second camera that only has to disagree
+/// once for every click to land on the wrong block.
+pub fn world_camera_of(
+    world: &World,
+    components: &ComponentSchemaRegistry,
+    aspect: f32,
+) -> Result<Option<ViewCamera>, SceneExtractError> {
+    Ok(authored_cameras(world, components, aspect)?
+        .world
+        .map(|camera| ViewCamera {
+            view: camera.view,
+            view_projection: camera.view_projection,
+            framed_half_height: camera.framed_half_height,
+        }))
+}
+
+fn authored_cameras(
+    world: &World,
+    components: &ComponentSchemaRegistry,
+    aspect: f32,
+) -> Result<ResolvedCameras, SceneExtractError> {
+    {
         let mut resolved = resolved_screen_overlay(aspect);
-        for (entity, camera) in self.components.query::<CameraComponent>(world)? {
+        for (entity, camera) in components.query::<CameraComponent>(world)? {
             if resolved.world.is_some() {
                 return Err(SceneExtractError::MultipleWorldCameras);
             }

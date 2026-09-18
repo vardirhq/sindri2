@@ -1,0 +1,87 @@
+// The verb of the whole game: put a block where you are pointing, take away
+// the one you are pointing at.
+//
+// Everything hard about that is the host's. `Aim` says which block the pointer
+// is on and which empty cell sits against the side being looked at, so the two
+// gestures are one line each. What is left here is a game's business: which
+// block is in hand, how many are left, and refusing to spend one on a cell
+// that already holds what you were going to put there.
+script Builder {
+    // How many blocks there are to lay. The crossing needs four at its
+    // narrowest and the way up the pillar needs three, so this is enough to
+    // be wrong with and not enough to be careless with.
+    @export
+    let stock: f32 = 12.0;
+
+    // Which block the next click lays down, as an index rather than a name:
+    // the HUD wants to show which of three is chosen, and counting is the
+    // thing Decay has.
+    var chosen: f32 = 0.0;
+    var left: f32 = 0.0;
+    var ready: bool = false;
+
+    fn named(which: f32) -> String {
+        if which < 0.5 {
+            return "plank";
+        }
+        if which < 1.5 {
+            return "earth";
+        }
+        return "stone";
+    }
+
+    fn update(dt: f32) {
+        let floor = World.find("Floor");
+        if floor == null {
+            return;
+        }
+        if !ready {
+            left = stock;
+            ready = true;
+        }
+
+        if Input.just_pressed("Digit1") {
+            chosen = 0.0;
+        }
+        if Input.just_pressed("Digit2") {
+            chosen = 1.0;
+        }
+        if Input.just_pressed("Digit3") {
+            chosen = 2.0;
+        }
+
+        // Read by the HUD, and by the test that plays the game without one.
+        Game.set("chosen", chosen);
+        Game.set("left", left);
+
+        // Pointing at nothing is an ordinary thing to do, and every cell
+        // reads zero when it happens -- so this is asked before anything is
+        // built, not after.
+        if !Aim.hit || Pointer.over_ui {
+            return;
+        }
+
+        if Pointer.just_pressed("Left") && left > 0.0 {
+            // A cell already holding this block is not a placement, and
+            // spending a plank to replace a plank is the kind of quiet loss
+            // that makes a puzzle feel broken rather than hard.
+            let here = Grid.block(floor, Aim.place_x, Aim.place_y, Aim.place_z);
+            if here != named(chosen) {
+                Grid.set_block(floor, Aim.place_x, Aim.place_y, Aim.place_z, named(chosen));
+                left -= 1.0;
+            }
+        }
+
+        if Pointer.just_pressed("Right") {
+            // Taking back what you laid returns it; the island itself is not
+            // yours to carry away. Which is also what stops the pillar being
+            // dismantled instead of climbed.
+            let taken = Grid.block(floor, Aim.x, Aim.y, Aim.z);
+            if taken == "plank" || taken == "earth" {
+                // The empty string clears a cell.
+                Grid.set_block(floor, Aim.x, Aim.y, Aim.z, "");
+                left += 1.0;
+            }
+        }
+    }
+}

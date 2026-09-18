@@ -1,6 +1,6 @@
 [package]
-name = "sindri-gather"
-description = "The companion game: a small thing you can actually play"
+name = "sindri-causeway"
+description = "The companion game: you build the way, and somebody walks it"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -30,6 +30,7 @@ wgpu.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
+glam.workspace = true
 pollster.workspace = true
 sindri-gpu = { path = "../crates/sindri-gpu" }
 png = "0.18"

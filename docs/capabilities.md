@@ -1449,7 +1449,7 @@ the README.
 
 ## The companion game
 
-`game/`, crate `sindri-gather` — "Gather". Five orbs on a diamond floor, a
+`game/`, crate `sindri-causeway` — "Gather". Five orbs on a diamond floor, a
 thing you drive with a keyboard or touch stick, a row of lamps that fills as you
 collect them, and a banner that fades in when you have them all. `ROADMAP.md` says why
 it exists and why it is not an example; this says what of it is real.
@@ -1461,7 +1461,7 @@ cells indexing a two-name palette, where the original floor was 49 sprite
 entities. Regional tile patterns now divide the expanded island into readable
 areas without returning to one entity per cell.
 
-**It is a game you can play.** `cargo run -p sindri-gather` opens a window.
+**It is a game you can play.** `cargo run -p sindri-causeway` opens a window.
 Arrow keys or WASD move the player on desktop, and the browser build adds a
 touch stick without giving Decay a second movement path. Walking into an orb
 takes it, taking all five wins, and Escape quits. Gameplay runs on the fixed
@@ -1490,7 +1490,7 @@ holds no component the game cannot run — and it plays the game through the sam
 scripts and the same `InputState` the window feeds, steering to each orb in turn
 and checking the banner comes up.
 
-**It is a CI artifact.** `gather-capture` plays a fixed run — a fixed key held
+**It is a CI artifact.** `causeway-capture` plays a fixed run — a fixed key held
 for a fixed number of fixed steps — and photographs where that leaves the game,
 so the picture proves the scripts ran rather than that the scene loads.
 

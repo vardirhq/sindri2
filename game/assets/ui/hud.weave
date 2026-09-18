@@ -1,5 +1,5 @@
 #title {
-    width: 240px;
+    width: 300px;
     height: 42px;
     x: 28px;
     y: -24px;
@@ -12,16 +12,41 @@
     text-align: start;
 }
 
-#pip-0 { width: 28px; height: 28px; x: -188px; y: -28px; anchor: top_right; }
-#pip-empty-0 { width: 28px; height: 28px; x: -188px; y: -28px; anchor: top_right; }
-#pip-1 { width: 28px; height: 28px; x: -150px; y: -28px; anchor: top_right; }
-#pip-empty-1 { width: 28px; height: 28px; x: -150px; y: -28px; anchor: top_right; }
-#pip-2 { width: 28px; height: 28px; x: -112px; y: -28px; anchor: top_right; }
-#pip-empty-2 { width: 28px; height: 28px; x: -112px; y: -28px; anchor: top_right; }
-#pip-3 { width: 28px; height: 28px; x: -74px; y: -28px; anchor: top_right; }
-#pip-empty-3 { width: 28px; height: 28px; x: -74px; y: -28px; anchor: top_right; }
-#pip-4 { width: 28px; height: 28px; x: -36px; y: -28px; anchor: top_right; }
-#pip-empty-4 { width: 28px; height: 28px; x: -36px; y: -28px; anchor: top_right; }
+#kind {
+    width: 300px;
+    height: 30px;
+    x: 28px;
+    y: -70px;
+    anchor: top_left;
+    color: #dfe6f2;
+    font-size: 20px;
+    line-height: 26px;
+    text-align: start;
+}
+
+#stock {
+    width: 90px;
+    height: 30px;
+    x: 200px;
+    y: -70px;
+    anchor: top_left;
+    color: #f2b84b;
+    font-size: 20px;
+    line-height: 26px;
+    text-align: start;
+}
+
+#hint {
+    width: 520px;
+    height: 30px;
+    x: 28px;
+    y: 28px;
+    anchor: bottom_left;
+    color: #9aa6bb;
+    font-size: 17px;
+    line-height: 24px;
+    text-align: start;
+}
 
 @media (max-width: 700px) {
     #title {
@@ -36,14 +61,10 @@
         text-align: center;
     }
 
-    #pip-0 { width: 7vw; height: 7vw; x: -18vw; y: -18vw; anchor: top; }
-    #pip-empty-0 { width: 7vw; height: 7vw; x: -18vw; y: -18vw; anchor: top; }
-    #pip-1 { width: 7vw; height: 7vw; x: -9vw; y: -18vw; anchor: top; }
-    #pip-empty-1 { width: 7vw; height: 7vw; x: -9vw; y: -18vw; anchor: top; }
-    #pip-2 { width: 7vw; height: 7vw; x: 0px; y: -18vw; anchor: top; }
-    #pip-empty-2 { width: 7vw; height: 7vw; x: 0px; y: -18vw; anchor: top; }
-    #pip-3 { width: 7vw; height: 7vw; x: 9vw; y: -18vw; anchor: top; }
-    #pip-empty-3 { width: 7vw; height: 7vw; x: 9vw; y: -18vw; anchor: top; }
-    #pip-4 { width: 7vw; height: 7vw; x: 18vw; y: -18vw; anchor: top; }
-    #pip-empty-4 { width: 7vw; height: 7vw; x: 18vw; y: -18vw; anchor: top; }
+    #kind { width: 90vw; x: 0px; y: -17vw; anchor: top; font-size: 4.5vw;
+             line-height: 6vw; text-align: center; }
+    #stock { width: 90vw; x: 0px; y: -24vw; anchor: top; font-size: 4.5vw;
+             line-height: 6vw; text-align: center; }
+    #hint { width: 92vw; x: 0px; y: 4vw; anchor: bottom; font-size: 3.6vw;
+            line-height: 5vw; text-align: center; }
 }
