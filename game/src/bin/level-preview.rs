@@ -14,9 +14,11 @@
 use std::{error::Error, fs, io::BufWriter, path::Path};
 
 #[cfg(not(target_arch = "wasm32"))]
+use glam::Vec3;
+#[cfg(not(target_arch = "wasm32"))]
 use sindri_assets::{AssetBytes, AssetDecoder, TextureAssetDecoder};
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_core::{AssetId, SceneDocument, SpriteSheetDocument, TileSetDocument, World};
+use sindri_core::{AssetId, SpriteSheetDocument, TileSetDocument};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 #[cfg(not(target_arch = "wasm32"))]
@@ -75,12 +77,56 @@ fn bind_textures(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-async fn preview(path: &Path) -> Result<(), Box<dyn Error>> {
+/// Pulls the authored camera back until the whole world is in the picture.
+///
+/// The game's camera is framed on the walker, which is right for playing and
+/// useless for judging a generated world: a hundred and sixty cells of coast
+/// and mountain cannot be reviewed through a window twenty cells wide.
+#[cfg(not(target_arch = "wasm32"))]
+fn frame_the_whole_world(world: &mut sindri_core::World) {
+    let span = sindri_causeway::worldgen::WorldShape::default();
+    #[allow(clippy::cast_precision_loss)]
+    let (columns, rows) = (span.columns as f32, span.rows as f32);
+    let centre = Vec3::new(columns * 0.5, 0.0, rows * 0.5);
+    let pitch = 33.0_f32.to_radians();
+    let yaw = 45.0_f32.to_radians();
+    let eye = centre
+        + Vec3::new(
+            pitch.cos() * yaw.sin(),
+            pitch.sin(),
+            pitch.cos() * yaw.cos(),
+        ) * (columns + rows);
+    let cameras: Vec<_> = world
+        .entities()
+        .filter(|(_, data)| data.components.contains_key("sindri.camera"))
+        .map(|(entity, _)| entity)
+        .collect();
+    for entity in cameras {
+        let Some(data) = world.get_mut(entity) else {
+            continue;
+        };
+        let mut transform = data.transform_3d.unwrap_or_default();
+        transform.position = eye.to_array();
+        transform.rotation =
+            sindri_scene::camera_rotation_from_look_at(eye, centre, Vec3::Y).to_array();
+        data.transform_3d = Some(transform);
+        if let Some(camera) = data.components.get_mut("sindri.camera") {
+            camera["vertical_size"] = serde_json::json!((columns + rows) * 0.62);
+            camera["far"] = serde_json::json!(2000.0);
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn preview(path: &Path, overview: bool) -> Result<(), Box<dyn Error>> {
     let root = Path::new("game/assets");
-    let document =
-        SceneDocument::from_json(&fs::read_to_string(root.join("causeway.scene.json"))?)?;
     let extractor = SceneExtractor::new()?;
-    let mut world = World::from_scene(&document)?.world;
+    // Through the game's own loader, because the ground is generated: reading
+    // the scene file alone gives a grid with nothing in it.
+    let (mut world, _loaded) = sindri_causeway::world()?;
+    if overview {
+        frame_the_whole_world(&mut world);
+    }
 
     let mut tile_sets = TileSetBindings::new();
     tile_sets.bind(
@@ -144,10 +190,14 @@ async fn preview(path: &Path) -> Result<(), Box<dyn Error>> {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> Result<(), Box<dyn Error>> {
-    let out = std::env::args()
-        .nth(1)
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    let overview = args.iter().any(|arg| arg == "--overview");
+    let out = args
+        .iter()
+        .find(|arg| !arg.starts_with("--"))
+        .cloned()
         .unwrap_or_else(|| "target/level-preview.png".to_owned());
-    pollster::block_on(preview(Path::new(&out)))
+    pollster::block_on(preview(Path::new(&out), overview))
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -8,45 +8,12 @@ import json, math, pathlib, sys
 sys.path.insert(0, '/tmp')
 from look import look_at
 
-COLUMNS, ROWS, CELL = 18, 16, 1.0
-NEAR = (3.6, 7.5, 3.1, 5.2)   # centre column, centre row, half width, half depth
-FAR = (13.6, 7.5, 3.1, 5.2)
-PILLAR = (14, 7)
-STONES = ((8, 5), (9, 11))
+COLUMNS, ROWS, CELL = 160, 160, 1.0
+# Where the game starts, in cells. Near the middle, because the world around
+# it is generated and every direction is somewhere.
+WANDERER = (78, 84)
+BEACON = (82, 76)
 
-def island(column, row):
-    """A shore, as an ellipse rather than a table.
-
-    The rounded corners are the whole of it: a rectangle of grass in a square
-    sea reads as a board somebody laid out, and nothing about a straight edge
-    invites you to build off it.
-    """
-    for cx, cy, rx, ry in (NEAR, FAR):
-        if ((column - cx) / rx) ** 2 + ((row - cy) / ry) ** 2 <= 1.0:
-            return True
-    return False
-
-def cells():
-    out = []
-    for row in range(ROWS):
-        for column in range(COLUMNS):
-            if (column, row) in STONES:
-                out.append({"position": [column, row, -1], "tile": "stone"})
-                out.append({"position": [column, row, 0], "tile": "stone"})
-            elif island(column, row):
-                # Earth under grass, so a shore seen from the side is a cut
-                # through soil rather than a green slab floating on the sea.
-                out.append({"position": [column, row, -1], "tile": "earth"})
-                out.append({"position": [column, row, 0], "tile": "ground"})
-            else:
-                out.append({"position": [column, row, -1], "tile": "water"})
-    # The beacon stands three courses above the far shore, so crossing the
-    # water is only half of it: a walker may step up one block at a time, and
-    # the way up is something the player builds.
-    for level in (1, 2, 3):
-        out.append({"position": [PILLAR[0], PILLAR[1], level], "tile": "stone"})
-    out.sort(key=lambda cell: (cell["position"][2], cell["position"][1], cell["position"][0]))
-    return out
 
 def transform(position, rotation=None, scale=(1.0, 1.0, 1.0)):
     return {
@@ -56,8 +23,14 @@ def transform(position, rotation=None, scale=(1.0, 1.0, 1.0)):
     }
 
 def camera():
-    centre = [COLUMNS * CELL / 2.0, 0.0, ROWS * CELL / 2.0]
-    distance, pitch, yaw = 24.0, math.radians(33.0), math.radians(45.0)
+    """Framed on the walker rather than on the whole world.
+
+    A board small enough to see at once can be framed once; a world this size
+    cannot, so the camera sits a fixed distance from where the game starts and
+    a script keeps that offset as the walker moves.
+    """
+    centre = [WANDERER[0] * CELL, 2.0, WANDERER[1] * CELL]
+    distance, pitch, yaw = 30.0, math.radians(33.0), math.radians(45.0)
     eye = [
         round(centre[0] + distance * math.cos(pitch) * math.sin(yaw), 4),
         round(centre[1] + distance * math.sin(pitch), 4),
@@ -80,11 +53,11 @@ def entities():
                     "cell_size": [CELL, CELL], "cell_height": CELL,
                     "projection": "isometric", "space": "solid",
                 },
-                "sindri.tile_volume": {
-                    "tileset": "causeway.tileset.json",
-                    "variant_seed": 1207,
-                    "cells": cells(),
-                },
+                # Left empty on purpose. The cells are generated from a seed
+                # before the first frame -- a hundred and sixty on a side is
+                # more world than a scene file should carry, and one that is
+                # written down is one island for ever.
+                "sindri.tile_volume": {"tileset": "causeway.tileset.json", "cells": []},
                 # One block up and no more, which is what makes the pillar a
                 # thing to build a way up rather than a thing to walk up.
                 "sindri.grid.navigation": {"max_step": 1.0},
@@ -131,7 +104,7 @@ def entities():
                 # is a goal nothing can reach: the pathfinder will not route
                 # into an occupied square, so marking the beacon would make the
                 # whole game unwinnable in a way nothing else would report.
-                "sindri.grid.placement": {"grid": "floor", "cell": list(PILLAR)},
+                "sindri.grid.placement": {"grid": "floor", "cell": list(BEACON)},
                 "sindri.script": {"source": "scripts/beacon.decay", "script": "Beacon",
                                   "properties": {"lit_scale": 1.25}},
             },
@@ -220,9 +193,12 @@ def entities():
             "transform_3d": transform(eye, rotation),
             "components": {
                 "sindri.camera": {
-                    "projection": "orthographic", "vertical_size": 14.0,
-                    "near": 0.1, "far": 200.0,
+                    "projection": "orthographic", "vertical_size": 22.0,
+                    "near": 0.1, "far": 400.0,
                 },
+                "sindri.script": {"source": "scripts/camera-follow.decay",
+                                  "script": "CameraFollow",
+                                  "properties": {"ease": 4.0}},
             },
         },
     ]

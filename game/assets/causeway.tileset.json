@@ -299,6 +299,383 @@
         }
       ]
     },
+    "rock": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#rock-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#rock-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#rock-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "variants": [
+        {
+          "faces": {
+            "top": {
+              "sprite": "textures/blocks-top.png#rock-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "south": {
+              "sprite": "textures/blocks-side.png#rock-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "east": {
+              "sprite": "textures/blocks-side.png#rock-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "sand": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#sand-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#sand-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#sand-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "variants": [
+        {
+          "faces": {
+            "top": {
+              "sprite": "textures/blocks-top.png#sand-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "south": {
+              "sprite": "textures/blocks-side.png#sand-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "east": {
+              "sprite": "textures/blocks-side.png#sand-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "snow": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#snow-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#snow-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#snow-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "covered": {
+        "top": {
+          "sprite": "textures/blocks-top.png#rock-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#rock-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#rock-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "variants": [
+        {
+          "faces": {
+            "top": {
+              "sprite": "textures/blocks-top.png#snow-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "south": {
+              "sprite": "textures/blocks-side.png#snow-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "east": {
+              "sprite": "textures/blocks-side.png#snow-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            }
+          },
+          "covered": {
+            "top": {
+              "sprite": "textures/blocks-top.png#rock-0",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "south": {
+              "sprite": "textures/blocks-side.png#rock-0",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "east": {
+              "sprite": "textures/blocks-side.png#rock-0",
+              "size": [
+                1.0,
+                1.0
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "ice": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#ice-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#ice-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#ice-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "mud": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#mud-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#mud-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#mud-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "variants": [
+        {
+          "faces": {
+            "top": {
+              "sprite": "textures/blocks-top.png#mud-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "south": {
+              "sprite": "textures/blocks-side.png#mud-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "east": {
+              "sprite": "textures/blocks-side.png#mud-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "moss": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#moss-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#moss-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#moss-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "covered": {
+        "top": {
+          "sprite": "textures/blocks-top.png#mud-1",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#mud-1",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#mud-1",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "gravel": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#gravel-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#gravel-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#gravel-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "clay": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#clay-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#clay-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#clay-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
     "plank": {
       "faces": {
         "top": {

@@ -15,7 +15,6 @@
 use std::{error::Error, fs, io::BufWriter, path::Path};
 
 #[cfg(not(target_arch = "wasm32"))]
-use glam::{Mat4, Vec3};
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_causeway::{
     Session, bind_fonts, bind_tile_sets, extractor, presented_world, stylesheets, world,
@@ -48,25 +47,13 @@ const STEP_SECONDS: f32 = 1.0 / 60.0;
 /// last two name a cell the one before it created, which is the point: a
 /// click lands on what is there now, not on what the level authored.
 #[cfg(not(target_arch = "wasm32"))]
-/// Each is a cell and whether to click its east side rather than its top.
+/// How many blocks the run lays, and where it aims them.
 ///
-/// Sides for the causeway, because a water tile's top sits a course below the
-/// shore beside it and the shore stands in front of the last one. Tops for the
-/// stair, on the side of the pillar that faces the camera -- a cell the pillar
-/// hides cannot be clicked at all.
-const RUN: &[((i32, i32, i32), bool)] = &[
-    ((6, 7, 0), true),
-    ((7, 7, 0), true),
-    ((8, 7, 0), true),
-    ((9, 7, 0), true),
-];
-
-/// The stair, once the run has switched to a block that fills its cell.
-///
-/// Slabs are the wrong tool here and the level says so: two of them stack to a
-/// step of one and a half, which is more than a walker can climb. A walkway
-/// across water and a way up a pillar are different jobs.
-const STAIR: &[(i32, i32, i32)] = &[(15, 7, 0), (15, 7, 1), (16, 7, 0)];
+/// Nothing here names a cell. The world is generated, so a coordinate written
+/// down is a coordinate that means something different under the next seed --
+/// the run points at the middle of the picture and lets the picker say what is
+/// there, which is what a player does.
+const PLACEMENTS: usize = 6;
 
 /// One click, pressed and released as a host would deliver it.
 #[cfg(not(target_arch = "wasm32"))]
@@ -90,29 +77,6 @@ fn click(
     Ok(())
 }
 
-/// Where the top of a cell lands on the picture, as a fraction across and down.
-#[cfg(not(target_arch = "wasm32"))]
-fn top_of(cell: (i32, i32, i32), view_projection: Mat4) -> [f32; 2] {
-    #[allow(clippy::cast_precision_loss)]
-    let centre = Vec3::new(cell.0 as f32, (cell.2 + 1) as f32, cell.1 as f32);
-    project(centre, view_projection)
-}
-
-/// The same, for the east side -- one of the two sides this camera can see.
-#[cfg(not(target_arch = "wasm32"))]
-fn east_of(cell: (i32, i32, i32), view_projection: Mat4) -> [f32; 2] {
-    #[allow(clippy::cast_precision_loss)]
-    let centre = Vec3::new(cell.0 as f32 + 0.5, cell.2 as f32 + 0.5, cell.1 as f32);
-    project(centre, view_projection)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn project(point: Vec3, view_projection: Mat4) -> [f32; 2] {
-    let clip = view_projection * point.extend(1.0);
-    let ndc = clip.truncate() / clip.w;
-    [(ndc.x + 1.0) * 0.5, (1.0 - ndc.y) * 0.5]
-}
-
 /// The run: build the way, then let somebody walk it.
 #[cfg(not(target_arch = "wasm32"))]
 fn play(
@@ -126,21 +90,15 @@ fn play(
     let camera = sindri_scene::world_camera_of(world, scene.components(), VIEWPORT.0 / VIEWPORT.1)?
         .ok_or("the scene has no world camera")?;
 
-    for (cell, side) in RUN {
-        let point = if *side {
-            east_of(*cell, camera.view_projection)
-        } else {
-            top_of(*cell, camera.view_projection)
-        };
-        click(world, session, point)?;
-    }
-
+    let _ = camera;
     // Second block in the palette: earth, which fills its cell.
     let mut choose = InputState::default();
     choose.apply(InputEvent::KeyPressed(Key::Digit2));
     session.step(world, &choose, VIEWPORT, STEP_SECONDS)?;
-    for cell in STAIR {
-        click(world, session, top_of(*cell, camera.view_projection))?;
+    // A little tower in front of the walker, so the picture shows the game
+    // having been played rather than the world as it was generated.
+    for _ in 0..PLACEMENTS {
+        click(world, session, [0.5, 0.56])?;
     }
 
     // Long enough for the walk itself: the way is open, and the picture should

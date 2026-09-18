@@ -92,6 +92,10 @@ pub(crate) const SCRIPTS: &[(&str, &str)] = &[
         "scripts/hud.decay",
         include_str!("../assets/scripts/hud.decay"),
     ),
+    (
+        "scripts/camera-follow.decay",
+        include_str!("../assets/scripts/camera-follow.decay"),
+    ),
 ];
 
 /// Native art bytes used by the standalone game and capture tests.
@@ -279,8 +283,50 @@ pub fn world() -> Result<(World, sindri_core::LoadedScenes), CausewayError> {
     // names an entity by stable ID -- a test, an editor showing a running
     // world, an authoring proposal -- was written against those.
     loaded.enter_keeping_identities(&mut world, name, document)?;
+    fill_the_world(&mut world)?;
     Ok((world, loaded))
 }
+
+/// Builds the ground the scene left empty.
+///
+/// The scene authors the *grid* -- how big a cell is, how many of them, where
+/// the floor stands -- and leaves the cells to this. A world worth walking
+/// across is a hundred and sixty cells on a side, which written out is tens of
+/// megabytes of JSON compiled into the binary and still only ever one island.
+///
+/// Done here rather than in a script because it has to be true before anything
+/// else looks: placement asks how high the ground is on the first pass, and a
+/// script filling the volume afterwards would have put every prop at the
+/// height of a world that did not exist yet.
+fn fill_the_world(world: &mut World) -> Result<(), CausewayError> {
+    let Some((entity, grid)) = world
+        .entities()
+        .find(|(_, data)| data.components.contains_key(TILE_GRID))
+        .map(|(entity, data)| (entity, data.components[TILE_GRID].clone()))
+    else {
+        return Ok(());
+    };
+    let shape = crate::worldgen::WorldShape {
+        columns: grid["columns"]
+            .as_i64()
+            .unwrap_or(0)
+            .try_into()
+            .unwrap_or(0),
+        rows: grid["rows"].as_i64().unwrap_or(0).try_into().unwrap_or(0),
+        ..crate::worldgen::WorldShape::default()
+    };
+    let volume = crate::worldgen::generate(shape, TILE_SET_ID);
+    let payload = serde_json::to_value(&volume)
+        .map_err(|error| CausewayError::Generated(error.to_string()))?;
+    if let Some(data) = world.get_mut(entity) {
+        data.components.insert(TILE_VOLUME.to_owned(), payload);
+    }
+    Ok(())
+}
+
+const TILE_GRID: &str = "sindri.tile_grid";
+const TILE_VOLUME: &str = "sindri.tile_volume";
+const TILE_SET_ID: &str = "causeway.tileset.json";
 
 /// The native equivalent of the stylesheet graph the browser fetches.
 #[cfg(not(target_arch = "wasm32"))]

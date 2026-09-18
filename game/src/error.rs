@@ -7,6 +7,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum CausewayError {
+    /// The world is built rather than authored, so it can fail on its own.
+    #[error("the world could not be generated: {0}")]
+    Generated(String),
     #[error(transparent)]
     Scene(#[from] sindri_scene::SceneExtractError),
     #[error(transparent)]

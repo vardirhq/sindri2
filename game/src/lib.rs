@@ -27,6 +27,7 @@ mod app;
 mod assets;
 mod error;
 mod session;
+pub mod worldgen;
 
 // The crate's public surface: what `bin/`, `tests/`, and the browser host
 // reach for. Where an item lives inside the crate is not their business.
