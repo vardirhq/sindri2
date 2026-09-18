@@ -232,6 +232,25 @@ pub(crate) enum GridCall {
     /// sentinel number standing in for it.
     Block,
     SetBlock,
+    /// Whether a walker can stand in the column at a continuous grid point.
+    ///
+    /// The question a script could not ask. Occupancy and walkability were the
+    /// engine's own answer and the pathfinder read them directly, but a script
+    /// could only ask about a *route between entities* -- so a game that moved
+    /// its player itself had to tag every solid thing and compare positions,
+    /// which knows nothing about the ground: water was walked over and a hill
+    /// walked through, because neither is an entity.
+    ///
+    /// Continuous rather than whole, because a script asks where it is about to
+    /// step and that is a fraction of the way into a cell. Which cell a point
+    /// falls in is the grid's arithmetic, not the caller's, for the reason the
+    /// cell reads give: a script doing it itself would be a second, disagreeing
+    /// answer.
+    ///
+    /// Read from the same walkable surface the pathfinder walks, so a script
+    /// and a wisp cannot disagree about where the ground is. Off the grid is
+    /// not walkable, which is also what bounds a walker.
+    Walkable,
 }
 
 impl GridCall {
@@ -242,7 +261,13 @@ impl GridCall {
     pub(crate) const fn is_about_a_cell(self) -> bool {
         matches!(
             self,
-            Self::Tile | Self::SetTile | Self::Columns | Self::Rows | Self::Block | Self::SetBlock
+            Self::Tile
+                | Self::SetTile
+                | Self::Columns
+                | Self::Rows
+                | Self::Block
+                | Self::SetBlock
+                | Self::Walkable
         )
     }
 }
@@ -271,6 +296,7 @@ pub(crate) const GRID_CALLS: &[(&str, GridCall)] = &[
     ("rows", GridCall::Rows),
     ("block", GridCall::Block),
     ("set_block", GridCall::SetBlock),
+    ("walkable", GridCall::Walkable),
 ];
 
 /// What a script can do to a body, connect bodies with, and ask about what it touched.

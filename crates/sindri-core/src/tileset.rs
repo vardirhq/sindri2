@@ -92,6 +92,19 @@ impl TileFaces {
     }
 }
 
+/// One more look a tile may have, and how often it should appear.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TileVariant {
+    pub faces: TileFaces,
+    /// How often relative to the tile's own faces and its other variants.
+    ///
+    /// Four plain patches to one with a flower is a tile of weight four and a
+    /// variant of weight one. Zero is a look that is defined and never chosen,
+    /// which is a useful thing to be able to say while working.
+    #[serde(default = "one_weight", skip_serializing_if = "is_one")]
+    pub weight: u32,
+}
+
 /// What one stable tile ID means.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct TileDefinition {
@@ -125,6 +138,21 @@ pub struct TileDefinition {
     /// False is decoration: something drawn in a cell that nothing rests on.
     #[serde(default = "yes", skip_serializing_if = "is_true")]
     pub supports: bool,
+    /// Other looks this tile may have, chosen by where the cell is.
+    ///
+    /// One tile ID with several looks, rather than several IDs that mean the
+    /// same thing. A scene then stores what a cell *is* and the renderer
+    /// decides what it looks like, which is the difference between a map that
+    /// says "grass" five hundred times and one where an author hand-scattered
+    /// five kinds of grass and has to keep doing it.
+    ///
+    /// Chosen per cell rather than per face, because a block whose top came
+    /// from one look and whose side came from another is not a block.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub variants: Vec<TileVariant>,
+    /// How often this tile's own faces are chosen against its variants.
+    #[serde(default = "one_weight", skip_serializing_if = "is_one")]
+    pub weight: u32,
     /// Whether a walker can stand on that top.
     ///
     /// The narrower question, and the one navigation asks. Implies `supports`,
@@ -138,6 +166,49 @@ pub struct TileDefinition {
 }
 
 impl TileDefinition {
+    /// The faces to draw for a cell at this coordinate.
+    ///
+    /// The tile's own faces when it has no variants, which is every tile
+    /// written before variants existed. Otherwise a deterministic choice from
+    /// where the cell is, the tile's name and the volume's seed -- so the same
+    /// cell looks the same on every machine and after every reload, and two
+    /// different tiles in one cell do not vary in lockstep.
+    ///
+    /// Falls back to its own faces when every weight is zero. Something has to
+    /// be drawn, and refusing here would leave a hole in the map over a
+    /// tile-set mistake.
+    #[must_use]
+    pub fn faces_at(&self, seed: u64, coord: [i32; 3], tile: &str) -> &TileFaces {
+        if self.variants.is_empty() {
+            return &self.faces;
+        }
+        let mut weights = Vec::with_capacity(self.variants.len() + 1);
+        weights.push(self.weight);
+        weights.extend(self.variants.iter().map(|variant| variant.weight));
+        #[allow(clippy::cast_possible_wrap)]
+        let hash = crate::stable_hash_with(
+            &[
+                i64::from(coord[0]),
+                i64::from(coord[1]),
+                i64::from(coord[2]),
+                seed as i64,
+            ],
+            tile,
+        );
+        match crate::weighted_index(hash, &weights) {
+            Some(0) | None => &self.faces,
+            Some(index) => &self.variants[index - 1].faces,
+        }
+    }
+
+    /// Every face set this tile may draw, its own first.
+    ///
+    /// What a texture or sheet scan wants: a variant's sprites have to be
+    /// loaded whether or not this particular scene happens to choose them.
+    pub fn all_faces(&self) -> impl Iterator<Item = &TileFaces> {
+        std::iter::once(&self.faces).chain(self.variants.iter().map(|variant| &variant.faces))
+    }
+
     /// Whether this tile fills its cell all the way to the top.
     ///
     /// The question occlusion asks most often, and asking it here keeps the
@@ -189,9 +260,7 @@ impl TileSetDocument {
             if tile.trim().is_empty() {
                 return Err(TileSetError::EmptyTileId);
             }
-            if definition.faces.iter().next().is_none() {
-                return Err(TileSetError::TileWithoutFaces(tile.clone()));
-            }
+
             if !definition.height.is_finite() || definition.height <= 0.0 || definition.height > 1.0
             {
                 return Err(TileSetError::InvalidHeight {
@@ -202,8 +271,16 @@ impl TileSetDocument {
             if definition.walkable && !definition.supports {
                 return Err(TileSetError::WalkableWithoutSupport(tile.clone()));
             }
-            for (face, visual) in definition.faces.iter() {
-                validate_visual(tile, face, visual)?;
+            // Every look, not just the first: a variant with a broken sprite
+            // is a hole that appears in whichever cells happen to choose it,
+            // which is the worst kind of thing to find later.
+            for faces in definition.all_faces() {
+                if faces.iter().next().is_none() {
+                    return Err(TileSetError::TileWithoutFaces(tile.clone()));
+                }
+                for (face, visual) in faces.iter() {
+                    validate_visual(tile, face, visual)?;
+                }
             }
         }
         Ok(())
@@ -278,6 +355,17 @@ fn validate_visual(
 
 const fn yes() -> bool {
     true
+}
+
+const fn one_weight() -> u32 {
+    1
+}
+
+// By reference because `skip_serializing_if` hands one over, the same reason
+// `is_true` beside it takes one.
+#[allow(clippy::trivially_copy_pass_by_ref)]
+const fn is_one(weight: &u32) -> bool {
+    *weight == 1
 }
 
 const fn full_height() -> f32 {

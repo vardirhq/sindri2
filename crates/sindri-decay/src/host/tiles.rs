@@ -54,6 +54,11 @@ impl WorldHost<'_> {
         if matches!(call, GridCall::Block | GridCall::SetBlock) {
             return self.block_call(call, path, args);
         }
+        // Answered from the volume's walkable surface, so it needs no flat
+        // map's shape and a volume-only grid can be asked.
+        if matches!(call, GridCall::Walkable) {
+            return self.walkable_call(path, args);
+        }
         let map = self.entity_argument(path, args, 0, "the tilemap")?;
         let shape = self.map_shape(path, map)?;
 
@@ -95,10 +100,111 @@ impl WorldHost<'_> {
             | GridCall::StepToward => {
                 unreachable!("dispatched to the entity-and-grid calls instead")
             }
-            GridCall::Block | GridCall::SetBlock => {
+            GridCall::Block | GridCall::SetBlock | GridCall::Walkable => {
                 unreachable!("answered above, before a flat map was looked for")
             }
         }
+    }
+
+    /// `Grid.walkable`: whether a walker can stand at a point on this grid.
+    ///
+    /// Which cell the point falls in is `sindri_scene::nearest_cell`, the same
+    /// rule that decides which column a walker's own placement reads, because
+    /// a script that rounded differently would be standing in one cell and
+    /// asking about another.
+    fn walkable_call(&mut self, path: &Path, args: &[Value]) -> Result<Value, RuntimeError> {
+        let map = self.entity_argument(path, args, 0, "the grid")?;
+        let mut point = [0.0_f64; 2];
+        for (index, which) in [(1, "a column"), (2, "a row")] {
+            point[index - 1] = number(
+                path,
+                args.get(index).ok_or_else(|| {
+                    RuntimeError::Host(format!("{} needs {which}", path.dotted()))
+                })?,
+            )?;
+        }
+        // It has to be a grid. Everything below answers "nothing known about
+        // the ground stops you", and a mistyped entity reading as open ground
+        // is not a fallback, it is a bug dressed as scenery.
+        {
+            let data = self.world.get(map).ok_or_else(|| {
+                RuntimeError::Host(format!("{}'s grid no longer exists", path.dotted()))
+            })?;
+            geometry::read(path, data)?;
+        }
+        let coord = sindri_scene::nearest_cell(point[0], point[1]);
+        // Without a volume, or without the tile sets that say what its cells
+        // mean, the shape of the ground is not knowable -- and the reasoning
+        // `Grid.can_reach` uses applies: a host binding no tile sets is one
+        // where nothing could draw the volume either. So nothing about the
+        // ground blocks, which is how a flat map behaved before any of this.
+        let Some(surfaces) = self.walkable_surface(path, map)? else {
+            return Ok(Value::Bool(true));
+        };
+        // Nothing walkable in the column is the answer for water, for a hole,
+        // for decoration, and for anywhere off the grid: none of them is ground
+        // a walker stands on, and a caller asking about the edge should not
+        // have to bound the question itself.
+        Ok(Value::Bool(surfaces.walkable_height(coord).is_some()))
+    }
+
+    /// The walkable tops of this grid's volume, derived at most once an update.
+    fn walkable_surface(
+        &mut self,
+        path: &Path,
+        map: EntityId,
+    ) -> Result<Option<&sindri_scene::TileSurfaces>, RuntimeError> {
+        let revision = self.world.revision(map).unwrap_or_default();
+        let fresh = self
+            .walkable
+            .as_ref()
+            .is_some_and(|(grid, seen, _)| *grid == map && *seen == revision);
+        if !fresh {
+            let Some(surfaces) = self.derive_walkable(path, map)? else {
+                self.walkable = None;
+                return Ok(None);
+            };
+            self.walkable = Some((map, revision, surfaces));
+        }
+        Ok(self.walkable.as_ref().map(|(_, _, surfaces)| surfaces))
+    }
+
+    /// The walkable tops of this grid's volume, where both it and the tile set
+    /// naming its cells can be read.
+    fn derive_walkable(
+        &self,
+        path: &Path,
+        map: EntityId,
+    ) -> Result<Option<sindri_scene::TileSurfaces>, RuntimeError> {
+        let Some(payload) = self.world.get(map).and_then(|data| {
+            data.components
+                .get(sindri_scene::TileVolumeComponent::TYPE_NAME)
+        }) else {
+            return Ok(None);
+        };
+        let Some(tile_sets) = self.tile_sets else {
+            return Ok(None);
+        };
+        let volume: sindri_scene::TileVolumeComponent = serde_json::from_value(payload.clone())
+            .map_err(|error| {
+                RuntimeError::Host(format!(
+                    "{} could not read the volume: {error}",
+                    path.dotted()
+                ))
+            })?;
+        // A bound tile set that does not name the volume's own set is a scene
+        // mistake rather than a host without art, so it is not quietly treated
+        // as open ground.
+        let tile_set = tile_sets.get(&volume.tileset).ok_or_else(|| {
+            RuntimeError::Host(format!(
+                "{}: tile set `{}` is not bound",
+                path.dotted(),
+                volume.tileset
+            ))
+        })?;
+        sindri_scene::TileSurfaces::derive(&volume, tile_set)
+            .map(Some)
+            .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))
     }
 
     /// The map's size, and its palette when a flat map is what carries it.

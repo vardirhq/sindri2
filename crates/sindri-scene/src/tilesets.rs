@@ -3,13 +3,18 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use sindri_core::{
-    AssetId, SceneComponent, SpriteRef, TileSetDocument, TileSetError, World, sheet_id_for,
+    AssetId, SceneComponent, SpriteRef, TileFaces, TileSetDocument, TileSetError, World,
+    sheet_id_for,
 };
 
 use crate::TileVolumeComponent;
 
 #[derive(Clone, Debug, Default)]
 pub struct TileSetBindings {
+    /// How many times these bindings have changed; see
+    /// [`crate::TextureBindings::generation`], which it serves the same purpose
+    /// as. A rebound tile set re-cuts what every cell of a volume draws.
+    generation: u64,
     bound: BTreeMap<String, TileSetDocument>,
 }
 
@@ -18,7 +23,7 @@ pub fn tile_set_textures(tile_set: &TileSetDocument) -> BTreeSet<String> {
     tile_set
         .tiles
         .values()
-        .flat_map(|tile| tile.faces.iter())
+        .flat_map(|tile| tile.all_faces().flat_map(TileFaces::iter))
         .filter_map(|(_, visual)| SpriteRef::parse(&visual.sprite).ok())
         .map(|reference| reference.texture().to_owned())
         .collect()
@@ -29,7 +34,7 @@ pub fn tile_set_sheets(tile_set: &TileSetDocument) -> BTreeMap<AssetId, String> 
     tile_set
         .tiles
         .values()
-        .flat_map(|tile| tile.faces.iter())
+        .flat_map(|tile| tile.all_faces().flat_map(TileFaces::iter))
         .filter_map(|(_, visual)| SpriteRef::parse(&visual.sprite).ok())
         .filter(|reference| reference.sprite().is_some())
         .filter_map(|reference| {
@@ -51,10 +56,18 @@ impl TileSetBindings {
         tile_set: TileSetDocument,
     ) -> Result<Option<TileSetDocument>, TileSetError> {
         tile_set.validate()?;
+        self.generation = crate::generation::next();
         Ok(self.bound.insert(reference.into(), tile_set))
     }
 
+    /// How many times these bindings have changed; equality-comparable only.
+    #[must_use]
+    pub const fn generation(&self) -> u64 {
+        self.generation
+    }
+
     pub fn unbind(&mut self, reference: &str) -> Option<TileSetDocument> {
+        self.generation = crate::generation::next();
         self.bound.remove(reference)
     }
 

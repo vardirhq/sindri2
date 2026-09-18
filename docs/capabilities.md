@@ -596,6 +596,73 @@ That last part is what a companion game is for. "Every occupant has ground under
 it" was not expressible against a flat map, where every cell was ground by
 definition; it became a thing that could be false, and was, in three places.
 
+**A script can ask what the ground is.** `Grid.walkable(floor, x, y)` answers
+whether a walker can stand where a point falls, from the walkable surface the
+pathfinder walks. Continuous coordinates, because a script asks where it is
+about to step and that is a fraction of the way into a cell; which cell that is
+comes from `sindri_scene::nearest_cell`, the same rule that decides which column
+a walker's own placement reads from, so a walker cannot stand in one cell and
+ask about another. Off the grid, water, decoration and empty columns all answer
+the same way, because none of them is ground.
+
+This closes a gap the companion game had been living with. Occupancy was the
+engine's own answer and `WorldGridNavigation` read it directly, but the only
+question a script could ask was about a route between two *entities* — so
+Gather's player tagged every solid prop and compared positions, which knows
+nothing about terrain. Its pond and its outcrop are not entities, so the player
+walked over water and into the hill while the Wisp, reading the same surface
+from Rust, went round them. `game/tests/the_island_has_a_shape.rs` walks the
+player at each edge of the island in turn and fails if it ever stands on a
+column that is not walkable; with the check taken back out of `player.decay` it
+reproduces the original bug at column (3, 2).
+
+A walker's placement follows the same distinction. An authored occupant rests on
+whatever *supports* it, which is what a pier or a lily on water is; a walker
+stands only on what is *walkable*, so over water it sits on the grid's plane
+rather than being lifted onto the surface. Making water support things is what
+made that difference visible: before it, water had no surface at all and a
+walker over it was already at plane height by accident.
+
+What a script still cannot ask is whether a step is *legal from where it is*.
+`Grid.walkable` is about a cell, not about an edge, so a script-driven walker
+does not honour the `max_step` that decides for navigation whether a rise is a
+step or a wall. Gather does not hit this — its outcrop is a stepped pyramid, so
+every route up it is one level at a time — but a scene with a cliff beside low
+ground would let a scripted walker climb it.
+
+**A volume is resolved once, not every frame.** An island's faces do not move
+while the player walks around it, and rebuilding them per frame was most of what
+extracting Gather's scene cost: 6.7 ms a frame, of which the volume was 5.7 ms,
+spread evenly across decoding six hundred cells of JSON, indexing them, parsing
+every face's sprite reference, and building a matrix per face. None of that
+depends on where the camera is. It is now resolved into faces once and replayed,
+with only the depth each cell sorts at measured again — the one part a moving
+camera does change — which takes the frame to 1.2 ms and the volume's share to
+about 0.2 ms.
+
+What makes that safe is knowing when the answer stops holding. `World` gives
+each entity a revision, bumped whenever anything takes a mutable borrow of it,
+and `TextureBindings` and `TileSetBindings` each carry a generation. A volume
+keeps the ones it was built from, so editing its cells, moving it, changing its
+grid, rebinding its tile set and re-cutting its atlas each show up on the next
+frame. The revision is deliberately pessimistic: a borrow that writes nothing
+still bumps it, because re-deriving something that did not need it costs time
+while missing a change that did shows the player the wrong world. The
+revisions and the generations are both handed out process-wide rather than
+counted per world or per binding, because both are compared across one: a world
+counting its own changes starts at zero, so a freshly opened scene's entity
+carries the same revision as the different entity that held its handle in the
+scene before -- which is a second scene drawn as the first, and was, until a
+test opened two. A host that reloads its art by *replacing* its bindings hits
+the same thing from the other side, handing over a fresh object whose count
+happens to match the old one's. Whether an entity takes part in the scene is
+asked every frame instead, because it is not a property of the entity: switching
+off an ancestor is not a change to anything under it.
+
+`crates/sindri-scene/tests/extraction/baked_volume.rs` is one test per input:
+each edits exactly one of them and fails if the volume goes on drawing what it
+drew before.
+
 **A volume spreads across render layers.** `layer_step` says how many layers one
 step of projected depth costs. Zero, the default, puts the whole volume on one
 layer, which is right for a backdrop and wrong the moment anything walks between

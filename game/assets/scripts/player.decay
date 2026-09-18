@@ -7,14 +7,25 @@ script Player {
     @export
     let speed: f32 = 3.2;
 
-    // Whether a cell is claimed by something solid.
+    // Where a new game begins, in the floor's own coordinates.
     //
-    // Occupancy is the engine's own answer to this and the Wisp's pathfinding
-    // reads it directly, but a script cannot ask it about a cell — only about a
-    // route between entities. So the solid things carry a tag as well, and this
-    // asks them where they are. Half a cell each way, because a prop fills the
-    // cell it stands on and the player is a point walking through them.
+    // Whether a cell cannot be walked into.
+    //
+    // Two different questions, and for a long time only one of them could be
+    // asked. The props are entities, so they are found by their tag and asked
+    // where they are — half a cell each way, because a prop fills the cell it
+    // stands on and the player is a point walking through them.
+    //
+    // The ground is not an entity, and `Grid.walkable` is how it is asked.
+    // Without it the pond and the outcrop were not obstacles at all: the moat
+    // was walked across and the hill walked into, because nothing in this loop
+    // knew the island had a shape. The pathfinder knew — it reads the same
+    // walkable surface this call does — so the Wisp went round water the
+    // player strolled over.
     fn blocked(floor: Entity, x: f32, y: f32) -> bool {
+        if !Grid.walkable(floor, x, y) {
+            return true;
+        }
         for solid in World.with_tag("solid") {
             let dx = abs(Grid.position_x(solid, floor) - x);
             let dy = abs(Grid.position_y(solid, floor) - y);

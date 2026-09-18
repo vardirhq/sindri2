@@ -4290,7 +4290,7 @@
       "id": "player",
       "name": "Player",
       "transform_3d": {
-        "position": [0.0, 0.0, 0.0],
+        "position": [1.65, 0.825, -0.6],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [0.62, 0.62, 1.0]
       },

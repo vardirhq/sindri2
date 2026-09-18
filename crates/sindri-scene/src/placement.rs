@@ -169,8 +169,16 @@ fn place(
             // A walker's cell is wherever its script has put it, so the ground
             // under it is read from the column it is standing in rather than
             // from an authored cell it does not have.
+            //
+            // The *walkable* surface, not the supporting one, and the
+            // difference is a player standing on a pond. An authored occupant
+            // rests on whatever holds it up -- that is what a pier or a lily on
+            // water is -- but a walker stands only on what it can stand on, so
+            // over water it is on the grid's own plane rather than lifted onto
+            // the surface. Whether it should be over water at all is a question
+            // for whatever moves it; `Grid.walkable` is how a script asks.
             let height = surfaces
-                .and_then(|surfaces| surfaces.height(nearest_cell(point.x, point.y)))
+                .and_then(|surfaces| surfaces.walkable_height(nearest_cell(point.x, point.y)))
                 .unwrap_or(0.0);
             ((point.x, point.y), height)
         }
@@ -189,7 +197,12 @@ fn place(
 ///
 /// `GridSpace` puts the integer coordinate at the centre of its cell, so the
 /// nearest whole column and row are the cell something is standing in.
-fn nearest_cell(column: f64, row: f64) -> GridCoord {
+///
+/// Public because a script asking about the ground under it asks in the same
+/// continuous coordinates a walker moves in, and two answers to "which cell is
+/// that" is two disagreeing maps.
+#[must_use]
+pub fn nearest_cell(column: f64, row: f64) -> GridCoord {
     #[allow(clippy::cast_possible_truncation)]
     GridCoord::new(column.round() as i32, row.round() as i32)
 }

@@ -18,6 +18,13 @@ use crate::{
 /// texture happened to be bound last.
 #[derive(Clone, Debug, Default)]
 pub struct TextureBindings {
+    /// How many times these bindings have changed.
+    ///
+    /// Anything holding a resolved handle or rect across frames compares this
+    /// to know whether its answer still stands. A reloaded atlas re-cuts every
+    /// sheet, and a cached rect from before that is a sprite drawn from the
+    /// wrong pixels.
+    generation: u64,
     bound: BTreeMap<String, TextureId>,
     /// How each texture is sliced, by the same reference key. Held here for
     /// the reason the handles are: a scene says `tiles.png#floor`, the renderer
@@ -39,7 +46,17 @@ impl TextureBindings {
 
     /// Binds `reference` to `texture`, returning the handle it replaced.
     pub fn bind(&mut self, reference: impl Into<String>, texture: TextureId) -> Option<TextureId> {
+        self.generation = crate::generation::next();
         self.bound.insert(reference.into(), texture)
+    }
+
+    /// How many times these bindings have changed.
+    ///
+    /// Only comparable for equality: a different value means a cached handle or
+    /// rect has to be resolved again.
+    #[must_use]
+    pub const fn generation(&self) -> u64 {
+        self.generation
     }
 
     /// Unbinds `reference`, returning the handle it held.
@@ -48,6 +65,7 @@ impl TextureBindings {
     /// resolving as missing, which is visibly wrong, rather than continuing to
     /// resolve to a handle whose texture is gone.
     pub fn unbind(&mut self, reference: &str) -> Option<TextureId> {
+        self.generation = crate::generation::next();
         self.bound.remove(reference)
     }
 
@@ -96,11 +114,13 @@ impl TextureBindings {
             self.tile_overhang_ratios.remove(&texture);
         }
         self.sheets.insert(texture, rects);
+        self.generation = crate::generation::next();
         Ok(())
     }
 
     /// Forgets how `texture` is cut, leaving its sprites unresolved.
     pub fn unbind_sheet(&mut self, texture: &str) {
+        self.generation = crate::generation::next();
         self.sheets.remove(texture);
         self.anchors.remove(texture);
         self.tile_overhang_ratios.remove(texture);

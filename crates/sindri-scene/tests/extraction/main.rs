@@ -6,6 +6,7 @@
 
 mod animation;
 mod assets;
+mod baked_volume;
 mod cameras;
 mod canvas;
 mod passes;
@@ -17,4 +18,5 @@ mod textures;
 mod tile_volume;
 mod tilemap;
 mod ui;
+mod variants;
 mod view;

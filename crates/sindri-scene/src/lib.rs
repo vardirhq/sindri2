@@ -12,6 +12,7 @@ mod camera_math;
 mod components;
 pub(crate) mod effects;
 mod extract;
+mod generation;
 mod navigation;
 mod occlusion;
 mod physics;
@@ -32,7 +33,8 @@ pub use components::{
     TileGridComponent, TileGridError, TileProjection, TileVolumeComponent, TileVolumeError,
     TileVolumeIndex, TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge,
     UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase,
-    UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap, ui_text_template,
+    UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap, cell_to_local_in,
+    ui_text_template,
 };
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{
@@ -46,7 +48,7 @@ pub use occlusion::{
 pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
 pub use physics_sync::{PhysicsSyncError, ScenePhysics2d};
 pub use placement::{
-    GridPlacementError, blocking_step_ahead, resolve_grid_placements, standing_depth,
+    GridPlacementError, blocking_step_ahead, nearest_cell, resolve_grid_placements, standing_depth,
 };
 pub use screen_ui::{
     SafeArea, ScreenExtent, ScreenRect, ScreenUi, UiButtonComponent, UiDirection, UiHierarchy,

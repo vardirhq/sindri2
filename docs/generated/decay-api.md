@@ -107,6 +107,7 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `set_tile(Entity, f32, f32, f32)` → `unit`
 - `step_toward(Entity, Entity, Entity)` → `bool`
 - `tile(Entity, f32, f32)` → `f32`
+- `walkable(Entity, f32, f32)` → `bool`
 
 ### `Input`
 

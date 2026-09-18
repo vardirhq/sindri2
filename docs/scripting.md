@@ -994,6 +994,41 @@ Column, row and level must be whole. A cell between two levels is not a cell,
 and a script computing one from a float it got wrong should hear about it where
 the mistake is rather than land somewhere plausible.
 
+### Standing on the ground
+
+| Call | Returns |
+| --- | --- |
+| `Grid.walkable(grid, x, y)` | `bool` |
+
+Whether a walker can stand where a point falls. This is the question a script
+could not previously ask: occupancy is the engine's own answer and the
+pathfinder reads it directly, but the only question a script had was
+`Grid.can_reach`, which is about a route between two *entities*. A game that
+moves its own player therefore had to tag every solid thing and compare
+positions — which knows nothing about terrain, so water was walked over and a
+hill walked into, because neither is an entity.
+
+Continuous rather than whole, unlike the cell calls above: a script asks where
+it is about to step, and that is a fraction of the way into a cell. Which cell
+the point falls in is the grid's arithmetic rather than the caller's, for the
+same reason the cell calls give — a script rounding differently would be
+standing in one cell and asking about another.
+
+The answer comes from the same walkable surface navigation walks, so a script
+and a pathfinding entity cannot disagree about where the ground is. Water,
+decoration, an empty column and anywhere off the grid all answer `false`: none
+of them is ground a walker stands on, and a caller asking about the edge should
+not have to bound the question itself.
+
+It is about a cell, not about an edge. Whether a *step* is legal — the rise
+`max_step` allows navigation to climb — is not yet askable, so a script-driven
+walker can climb a cliff that a pathfinding one treats as a wall.
+
+Asked of a grid with no volume, or in a host that has bound no tile sets,
+nothing about the ground blocks. A host binding no tile sets is one where
+nothing could draw the volume either, which is the same reasoning
+`Grid.can_reach` uses when it falls back to what the scene authored.
+
 `set_block` refuses a tile the volume's own tile set does not define. Writing an
 unknown name would otherwise fail the next extraction, a frame later and nowhere
 near the call that caused it; the host holds the tile set precisely so the

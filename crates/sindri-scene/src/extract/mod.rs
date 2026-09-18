@@ -20,12 +20,15 @@ mod ui;
 
 pub use camera::view::UiCanvas;
 
+use std::cell::RefCell;
+use std::collections::BTreeMap;
+
 use camera::ResolvedCamera;
 use camera::view::{place_overlay_in_scene, resolved_screen_overlay, safe_rotation};
 use glam::{Mat4, Vec3};
 use sindri_core::{
-    ComponentRegistryError, ComponentSchemaRegistry, FieldMeaning, SceneComponent, SceneDocument,
-    SpriteRefError, Transform3D, UnknownComponentPolicy, World,
+    ComponentRegistryError, ComponentSchemaRegistry, EntityId, FieldMeaning, SceneComponent,
+    SceneDocument, SpriteRefError, Transform3D, UnknownComponentPolicy, World,
 };
 use sindri_render::{
     ClearOperations, ExtractedFrame, FramePlanError, PreparedFrame, TextError,
@@ -34,6 +37,7 @@ use sindri_render::{
 use thiserror::Error;
 
 use self::sprite::Shared;
+use self::tile_volume::BakedVolume;
 use crate::Effects2d;
 use crate::screen_ui::UiHierarchy;
 use crate::{
@@ -55,6 +59,18 @@ pub use camera::{
 #[derive(Clone, Debug)]
 pub struct SceneExtractor {
     components: ComponentSchemaRegistry,
+    /// Tile volumes already resolved into the faces they draw.
+    ///
+    /// An island is thousands of faces that do not change while the player
+    /// walks around it, and rebuilding them every frame was most of what extracting
+    /// a scene cost. Held here rather than handed in by the caller because
+    /// every caller would otherwise have to thread it through, and forgetting
+    /// to would silently cost the frame time this exists to save.
+    ///
+    /// Keyed by entity and checked against that entity's revision, so an edit
+    /// to a volume -- or to its grid, its transform, or the tile set and
+    /// textures it draws from -- is picked up on the next frame.
+    baked_volumes: RefCell<BTreeMap<EntityId, BakedVolume>>,
 }
 
 fn transform_matrix(transform: Transform3D) -> Mat4 {
@@ -116,6 +132,7 @@ impl SceneExtractor {
     pub fn new() -> Result<Self, SceneExtractError> {
         Ok(Self {
             components: builtin_components()?,
+            baked_volumes: RefCell::default(),
         })
     }
 
