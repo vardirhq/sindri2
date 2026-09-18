@@ -1,0 +1,767 @@
+{
+  "format_version": 1,
+  "id": "wanderer",
+  "texture": "textures/wanderer.png",
+  "view": "side",
+  "pixels_per_unit": 40,
+  "directions": 1,
+  "footprint": {
+    "width": 1,
+    "height": 1
+  },
+  "render": {
+    "supersample": 1,
+    "padding": 0,
+    "palette_snap": true,
+    "alpha_cutoff": 128,
+    "outline": {
+      "enabled": false
+    }
+  },
+  "variants": [
+    {
+      "name": "bob-0",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "cloak": {
+            "colour": "#4a5e8c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.09,
+              "seed": 61
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.09
+              ]
+            }
+          },
+          "cloak-d": {
+            "colour": "#36456a",
+            "grain": {
+              "strength": 0.26,
+              "size": 0.1,
+              "seed": 67
+            }
+          },
+          "skin": {
+            "colour": "#d7a07a",
+            "grain": {
+              "strength": 0.16,
+              "size": 0.07,
+              "seed": 71
+            }
+          },
+          "hat": {
+            "colour": "#8c5a3c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.08,
+              "seed": 73
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "boot": {
+            "colour": "#43362b",
+            "grain": {
+              "strength": 0.24,
+              "size": 0.09,
+              "seed": 79
+            }
+          },
+          "pack": {
+            "colour": "#7a6a4a",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.09,
+              "seed": 83
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "boot",
+            "position": [
+              -0.13,
+              0.12,
+              0.0
+            ],
+            "size": [
+              0.19,
+              0.24,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "boot",
+            "position": [
+              0.13,
+              0.12,
+              0.0
+            ],
+            "size": [
+              0.19,
+              0.24,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "cloak-d",
+            "position": [
+              0.0,
+              0.4,
+              0.0
+            ],
+            "size": [
+              0.46,
+              0.34,
+              0.3
+            ]
+          },
+          {
+            "type": "box",
+            "material": "cloak",
+            "position": [
+              0.0,
+              0.78,
+              0.0
+            ],
+            "size": [
+              0.52,
+              0.52,
+              0.32
+            ]
+          },
+          {
+            "type": "box",
+            "material": "pack",
+            "position": [
+              -0.02,
+              0.82,
+              -0.18
+            ],
+            "size": [
+              0.34,
+              0.36,
+              0.14
+            ]
+          },
+          {
+            "type": "box",
+            "material": "skin",
+            "position": [
+              0.0,
+              1.14,
+              0.0
+            ],
+            "size": [
+              0.3,
+              0.22,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "hat",
+            "position": [
+              0.0,
+              1.28,
+              0.0
+            ],
+            "size": [
+              0.52,
+              0.12,
+              0.44
+            ]
+          },
+          {
+            "type": "box",
+            "material": "hat",
+            "position": [
+              0.0,
+              1.36,
+              0.0
+            ],
+            "size": [
+              0.3,
+              0.1,
+              0.28
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bob-1",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "cloak": {
+            "colour": "#4a5e8c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.09,
+              "seed": 61
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.09
+              ]
+            }
+          },
+          "cloak-d": {
+            "colour": "#36456a",
+            "grain": {
+              "strength": 0.26,
+              "size": 0.1,
+              "seed": 67
+            }
+          },
+          "skin": {
+            "colour": "#d7a07a",
+            "grain": {
+              "strength": 0.16,
+              "size": 0.07,
+              "seed": 71
+            }
+          },
+          "hat": {
+            "colour": "#8c5a3c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.08,
+              "seed": 73
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "boot": {
+            "colour": "#43362b",
+            "grain": {
+              "strength": 0.24,
+              "size": 0.09,
+              "seed": 79
+            }
+          },
+          "pack": {
+            "colour": "#7a6a4a",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.09,
+              "seed": 83
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "boot",
+            "position": [
+              -0.13,
+              0.29,
+              0.0
+            ],
+            "size": [
+              0.19,
+              0.24,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "boot",
+            "position": [
+              0.13,
+              0.16999999999999998,
+              0.0
+            ],
+            "size": [
+              0.19,
+              0.24,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "cloak-d",
+            "position": [
+              0.0,
+              0.45,
+              0.0
+            ],
+            "size": [
+              0.46,
+              0.34,
+              0.3
+            ]
+          },
+          {
+            "type": "box",
+            "material": "cloak",
+            "position": [
+              0.02,
+              0.8300000000000001,
+              0.0
+            ],
+            "size": [
+              0.52,
+              0.52,
+              0.32
+            ]
+          },
+          {
+            "type": "box",
+            "material": "pack",
+            "position": [
+              0.0,
+              0.87,
+              -0.18
+            ],
+            "size": [
+              0.34,
+              0.36,
+              0.14
+            ]
+          },
+          {
+            "type": "box",
+            "material": "skin",
+            "position": [
+              0.027999999999999997,
+              1.19,
+              0.0
+            ],
+            "size": [
+              0.3,
+              0.22,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "hat",
+            "position": [
+              0.032,
+              1.33,
+              0.0
+            ],
+            "size": [
+              0.52,
+              0.12,
+              0.44
+            ]
+          },
+          {
+            "type": "box",
+            "material": "hat",
+            "position": [
+              0.032,
+              1.4100000000000001,
+              0.0
+            ],
+            "size": [
+              0.3,
+              0.1,
+              0.28
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bob-2",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "cloak": {
+            "colour": "#4a5e8c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.09,
+              "seed": 61
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.09
+              ]
+            }
+          },
+          "cloak-d": {
+            "colour": "#36456a",
+            "grain": {
+              "strength": 0.26,
+              "size": 0.1,
+              "seed": 67
+            }
+          },
+          "skin": {
+            "colour": "#d7a07a",
+            "grain": {
+              "strength": 0.16,
+              "size": 0.07,
+              "seed": 71
+            }
+          },
+          "hat": {
+            "colour": "#8c5a3c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.08,
+              "seed": 73
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "boot": {
+            "colour": "#43362b",
+            "grain": {
+              "strength": 0.24,
+              "size": 0.09,
+              "seed": 79
+            }
+          },
+          "pack": {
+            "colour": "#7a6a4a",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.09,
+              "seed": 83
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "boot",
+            "position": [
+              -0.13,
+              0.12,
+              0.0
+            ],
+            "size": [
+              0.19,
+              0.24,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "boot",
+            "position": [
+              0.13,
+              0.12,
+              0.0
+            ],
+            "size": [
+              0.19,
+              0.24,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "cloak-d",
+            "position": [
+              0.0,
+              0.4,
+              0.0
+            ],
+            "size": [
+              0.46,
+              0.34,
+              0.3
+            ]
+          },
+          {
+            "type": "box",
+            "material": "cloak",
+            "position": [
+              0.0,
+              0.78,
+              0.0
+            ],
+            "size": [
+              0.52,
+              0.52,
+              0.32
+            ]
+          },
+          {
+            "type": "box",
+            "material": "pack",
+            "position": [
+              -0.02,
+              0.82,
+              -0.18
+            ],
+            "size": [
+              0.34,
+              0.36,
+              0.14
+            ]
+          },
+          {
+            "type": "box",
+            "material": "skin",
+            "position": [
+              0.0,
+              1.14,
+              0.0
+            ],
+            "size": [
+              0.3,
+              0.22,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "hat",
+            "position": [
+              0.0,
+              1.28,
+              0.0
+            ],
+            "size": [
+              0.52,
+              0.12,
+              0.44
+            ]
+          },
+          {
+            "type": "box",
+            "material": "hat",
+            "position": [
+              0.0,
+              1.36,
+              0.0
+            ],
+            "size": [
+              0.3,
+              0.1,
+              0.28
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "bob-3",
+      "model": {
+        "kind": "primitives",
+        "materials": {
+          "cloak": {
+            "colour": "#4a5e8c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.09,
+              "seed": 61
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.09
+              ]
+            }
+          },
+          "cloak-d": {
+            "colour": "#36456a",
+            "grain": {
+              "strength": 0.26,
+              "size": 0.1,
+              "seed": 67
+            }
+          },
+          "skin": {
+            "colour": "#d7a07a",
+            "grain": {
+              "strength": 0.16,
+              "size": 0.07,
+              "seed": 71
+            }
+          },
+          "hat": {
+            "colour": "#8c5a3c",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.08,
+              "seed": 73
+            },
+            "ramp": {
+              "lightness": [
+                -0.2,
+                -0.1,
+                0.0,
+                0.08
+              ]
+            }
+          },
+          "boot": {
+            "colour": "#43362b",
+            "grain": {
+              "strength": 0.24,
+              "size": 0.09,
+              "seed": 79
+            }
+          },
+          "pack": {
+            "colour": "#7a6a4a",
+            "grain": {
+              "strength": 0.3,
+              "size": 0.09,
+              "seed": 83
+            }
+          }
+        },
+        "parts": [
+          {
+            "type": "box",
+            "material": "boot",
+            "position": [
+              -0.13,
+              0.16999999999999998,
+              0.0
+            ],
+            "size": [
+              0.19,
+              0.24,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "boot",
+            "position": [
+              0.13,
+              0.29,
+              0.0
+            ],
+            "size": [
+              0.19,
+              0.24,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "cloak-d",
+            "position": [
+              0.0,
+              0.45,
+              0.0
+            ],
+            "size": [
+              0.46,
+              0.34,
+              0.3
+            ]
+          },
+          {
+            "type": "box",
+            "material": "cloak",
+            "position": [
+              -0.02,
+              0.8300000000000001,
+              0.0
+            ],
+            "size": [
+              0.52,
+              0.52,
+              0.32
+            ]
+          },
+          {
+            "type": "box",
+            "material": "pack",
+            "position": [
+              -0.04,
+              0.87,
+              -0.18
+            ],
+            "size": [
+              0.34,
+              0.36,
+              0.14
+            ]
+          },
+          {
+            "type": "box",
+            "material": "skin",
+            "position": [
+              -0.027999999999999997,
+              1.19,
+              0.0
+            ],
+            "size": [
+              0.3,
+              0.22,
+              0.26
+            ]
+          },
+          {
+            "type": "box",
+            "material": "hat",
+            "position": [
+              -0.032,
+              1.33,
+              0.0
+            ],
+            "size": [
+              0.52,
+              0.12,
+              0.44
+            ]
+          },
+          {
+            "type": "box",
+            "material": "hat",
+            "position": [
+              -0.032,
+              1.4100000000000001,
+              0.0
+            ],
+            "size": [
+              0.3,
+              0.1,
+              0.28
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

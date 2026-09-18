@@ -93,11 +93,16 @@ def entities():
         {
             "id": "wanderer",
             "name": "Wanderer",
+            # The scale the bake reports, which is the frame's own size in
+            # world units. The frame is twice the figure's height because the
+            # canvas is symmetric about the model's origin -- the walker stands
+            # on that origin, so the quad's centre is at its feet and it stands
+            # on the ground rather than sinking to the waist.
             "transform_3d": transform(
-                (WANDERER[0] * CELL, 0.0, WANDERER[1] * CELL), scale=(0.62, 0.62, 1.0)),
+                (WANDERER[0] * CELL, 0.0, WANDERER[1] * CELL), scale=(0.6, 2.95, 1.0)),
             "components": {
                 "sindri.sprite": {"texture": "textures/wanderer.png#bob-0",
-                                  "tint": [1.0, 1.0, 1.0, 1.0]},
+                                  "tint": [1.0, 1.0, 1.0, 1.0], "billboard": True},
                 "sindri.animation.sprite": {
                     "clips": {"bob": {"frames": ["bob-0", "bob-1", "bob-2", "bob-3"],
                                       "looping": True, "seconds_per_frame": 0.16}},
@@ -117,10 +122,11 @@ def entities():
         {
             "id": "beacon",
             "name": "Beacon",
-            "transform_3d": transform((0.0, 0.0, 0.0), scale=(0.5, 0.5, 1.0)),
+            # 66 by 174, so a square scale would squash it to a smudge.
+            "transform_3d": transform((0.0, 0.0, 0.0), scale=(0.68, 1.79, 1.0)),
             "components": {
                 "sindri.sprite": {"texture": "textures/beacon.png#south",
-                                  "tint": [1.0, 1.0, 1.0, 1.0]},
+                                  "tint": [1.0, 1.0, 1.0, 1.0], "billboard": True},
                 # Deliberately not an occupant. A goal that fills its own cell
                 # is a goal nothing can reach: the pathfinder will not route
                 # into an occupied square, so marking the beacon would make the

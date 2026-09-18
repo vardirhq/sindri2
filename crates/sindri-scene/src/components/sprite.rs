@@ -80,6 +80,20 @@ pub struct SpriteComponent {
     /// higher one draws in front of something nearer the camera.
     #[serde(default)]
     pub layer: i32,
+    /// Whether this sprite turns to face the viewer.
+    ///
+    /// A sprite is a flat picture, and which way it was turned stopped
+    /// mattering while every camera looked down the same axis. It matters
+    /// again in a world of boxes: a picture standing in the XY plane, seen by
+    /// a camera that has been pitched and yawed onto the world, is met at an
+    /// angle -- foreshortened, and facing whichever way the old fixed camera
+    /// used to be rather than facing you.
+    ///
+    /// Off unless a scene asks, because a sprite is not always a character. A
+    /// picture lying flat on the ground is a decal, and turning it to face the
+    /// viewer would stand it upright.
+    #[serde(default)]
+    pub billboard: bool,
 }
 
 impl SpriteComponent {

@@ -1,5 +1,6 @@
 {
   "format_version": 1,
+  "anchor": "center",
   "grid": {
     "columns": 4,
     "rows": 1,
@@ -8,10 +9,18 @@
       "bob-1",
       "bob-2",
       "bob-3"
+    ],
+    "size": [
+      112,
+      122
+    ],
+    "margin": [
+      2,
+      2
+    ],
+    "spacing": [
+      4,
+      4
     ]
-  },
-  "anchor": [
-    0.5,
-    0.8438
-  ]
+  }
 }

@@ -10,7 +10,7 @@
       "transform_3d": {
         "position": [0.0, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.5, 0.5, 1.0]
+        "scale": [0.68, 1.79, 1.0]
       },
       "components": {
         "sindri.grid.placement": {
@@ -25,6 +25,7 @@
           "source": "scripts/beacon.decay"
         },
         "sindri.sprite": {
+          "billboard": true,
           "texture": "textures/beacon.png#south",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }
@@ -1766,7 +1767,7 @@
       "transform_3d": {
         "position": [2.0, 0.0, 7.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.62, 0.62, 1.0]
+        "scale": [0.6, 2.95, 1.0]
       },
       "components": {
         "sindri.animation.sprite": {
@@ -1796,6 +1797,7 @@
           "source": "scripts/wanderer.decay"
         },
         "sindri.sprite": {
+          "billboard": true,
           "texture": "textures/wanderer.png#bob-0",
           "tint": [1.0, 1.0, 1.0, 1.0]
         }

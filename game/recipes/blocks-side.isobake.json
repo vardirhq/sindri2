@@ -641,7 +641,7 @@
             "material": "grass-deep",
             "position": [
               -0.22,
-              0.47,
+              0.455,
               0.31
             ],
             "size": [
@@ -655,7 +655,7 @@
             "material": "grass-deep",
             "position": [
               0.28,
-              0.47,
+              0.455,
               -0.14
             ],
             "size": [
@@ -1035,7 +1035,7 @@
             "material": "grass-deep",
             "position": [
               0.16,
-              0.47,
+              0.455,
               0.22
             ],
             "size": [
@@ -1049,7 +1049,7 @@
             "material": "grass-deep",
             "position": [
               -0.3,
-              0.47,
+              0.455,
               -0.26
             ],
             "size": [
@@ -1359,7 +1359,7 @@
             "material": "grass-deep",
             "position": [
               0.02,
-              0.47,
+              0.455,
               -0.33
             ],
             "size": [
@@ -1373,7 +1373,7 @@
             "material": "grass-deep",
             "position": [
               -0.29,
-              0.47,
+              0.455,
               0.18
             ],
             "size": [

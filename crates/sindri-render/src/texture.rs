@@ -89,7 +89,16 @@ impl Texture2D {
             pixels,
         );
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let (address_mode, mag_filter) = match filter {
+        // Both directions, from the one choice. Minifying with a linear filter
+        // while magnifying with a nearest one is not a compromise, it is two
+        // different textures depending on how far away you stand -- and on an
+        // atlas it is worse than soft, because the texels a frame's edge blends
+        // with are the transparent gap around the next frame. Every block in a
+        // voxel world is minified along one axis or another by the projection,
+        // so every shared edge picked up that gap, failed the alpha test, and
+        // let the world behind show through as a bright hairline between
+        // blocks that are touching.
+        let (address_mode, filter_mode) = match filter {
             TextureFilter::Nearest => (wgpu::AddressMode::Repeat, wgpu::FilterMode::Nearest),
             TextureFilter::Smooth => (wgpu::AddressMode::ClampToEdge, wgpu::FilterMode::Linear),
         };
@@ -98,8 +107,8 @@ impl Texture2D {
             address_mode_u: address_mode,
             address_mode_v: address_mode,
             address_mode_w: address_mode,
-            mag_filter,
-            min_filter: wgpu::FilterMode::Linear,
+            mag_filter: filter_mode,
+            min_filter: filter_mode,
             mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..Default::default()
         });
