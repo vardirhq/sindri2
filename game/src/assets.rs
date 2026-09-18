@@ -298,7 +298,13 @@ pub fn world() -> Result<(World, sindri_core::LoadedScenes), CausewayError> {
 /// else looks: placement asks how high the ground is on the first pass, and a
 /// script filling the volume afterwards would have put every prop at the
 /// height of a world that did not exist yet.
-fn fill_the_world(world: &mut World) -> Result<(), CausewayError> {
+///
+/// Both hosts call it, and they have to. The browser does not load the scene
+/// through `world` -- it fetches the project through the real asset pipeline,
+/// which is the point of that path -- so a generator reachable only from the
+/// native loader is a browser build that opens onto an empty grid, with
+/// nothing anywhere reporting it.
+pub(crate) fn fill_the_world(world: &mut World) -> Result<(), CausewayError> {
     let Some((entity, grid)) = world
         .entities()
         .find(|(_, data)| data.components.contains_key(TILE_GRID))
