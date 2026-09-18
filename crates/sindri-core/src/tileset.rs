@@ -120,6 +120,21 @@ impl TileFaces {
     /// Returns which face's art was borrowed as well as the art, because a
     /// caller that does want to mirror needs to know it is looking at a
     /// stand-in.
+    /// This face, from the buried look where it names one.
+    ///
+    /// Falls through to the ordinary faces rather than replacing them, so a
+    /// tile that loses only its fringe names only its sides.
+    #[must_use]
+    pub fn resolved_in<'a>(
+        &'a self,
+        face: TileFace,
+        covered: Option<&'a TileFaces>,
+    ) -> Option<(TileFace, &'a TileFaceVisual)> {
+        covered
+            .and_then(|buried| buried.resolved(face))
+            .or_else(|| self.resolved(face))
+    }
+
     #[must_use]
     pub fn resolved(&self, face: TileFace) -> Option<(TileFace, &TileFaceVisual)> {
         if let Some(visual) = self.get(face) {
@@ -159,6 +174,17 @@ pub struct TileVariant {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct TileDefinition {
     pub faces: TileFaces,
+    /// What this tile looks like with something standing on it.
+    ///
+    /// Grass is the case that asks for it: a grass block under another block
+    /// has no grass any more, and a cliff whose every course wears a green
+    /// fringe reads as a stack of lawns rather than as a cut through soil.
+    ///
+    /// Only the faces named here change; the rest fall back to the ordinary
+    /// ones, so a tile that only loses its fringe says so in one line. A tile
+    /// that looks the same buried names nothing and is unaffected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub covered: Option<TileFaces>,
     /// How much of its cell this tile fills, from its floor upward.
     ///
     /// One is the whole cell and the default, so every tile written before

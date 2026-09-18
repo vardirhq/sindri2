@@ -295,3 +295,59 @@ fn two_blocks_closing_a_corner_hide_whatever_is_behind_them() {
     assert!((corner_light(true, false, false) - AO_LEVELS[2]).abs() < 1e-6);
     assert!((corner_light(true, false, true) - AO_LEVELS[1]).abs() < 1e-6);
 }
+
+/// Grass under a block is not grass any more.
+#[test]
+fn a_block_with_something_on_it_wears_its_buried_look() {
+    let set = TileSetDocument::from_json(
+        r#"{ "format_version": 1, "tiles": { "turf": {
+             "faces": {
+               "top":   { "sprite": "b.png#turf-top",  "size": [1.0, 1.0] },
+               "south": { "sprite": "b.png#turf-side", "size": [1.0, 1.0] },
+               "east":  { "sprite": "b.png#turf-side", "size": [1.0, 1.0] }
+             },
+             "covered": {
+               "south": { "sprite": "b.png#soil", "size": [1.0, 1.0] },
+               "east":  { "sprite": "b.png#soil", "size": [1.0, 1.0] }
+             }
+           } } }"#,
+    )
+    .expect("the tile set parses");
+
+    let stack = volume(
+        r#"{ "position": [0, 0, 0], "tile": "turf" },
+           { "position": [0, 0, 1], "tile": "turf" }"#,
+    );
+    let faces = cube_faces(&stack, &set, [1.0, 1.0, 1.0]).expect("the cells resolve");
+    let side_of = |level: i32| {
+        faces
+            .iter()
+            .find(|face| face.cell.z == level && face.face == TileFace::South)
+            .map(|face| face.sprite.as_str())
+            .expect("both blocks have a south side")
+    };
+    assert_eq!(side_of(0), "b.png#soil", "the buried block kept its fringe");
+    assert_eq!(
+        side_of(1),
+        "b.png#turf-side",
+        "the top block lost its fringe"
+    );
+
+    // A tile naming no buried look is unaffected by being buried: the lower
+    // block's sides are the same art as the upper one's.
+    let plain = faces_of(
+        r#"{ "position": [0, 0, 0], "tile": "stone" },
+           { "position": [0, 0, 1], "tile": "stone" }"#,
+        "",
+    );
+    let sides: Vec<&str> = plain
+        .iter()
+        .filter(|face| face.face == TileFace::South)
+        .map(|face| face.sprite.as_str())
+        .collect();
+    assert_eq!(sides.len(), 2);
+    assert_eq!(
+        sides[0], sides[1],
+        "a tile with no buried look changed anyway"
+    );
+}

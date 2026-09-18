@@ -1153,7 +1153,23 @@
             }
           }
         }
-      ]
+      ],
+      "covered": {
+        "south": {
+          "sprite": "textures/user-dirt.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/user-dirt.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
     }
   }
 }

@@ -170,6 +170,11 @@ pub fn cube_faces(
         // The cell's box: centred on its column and row, standing on its level.
         let base = floor_of(cell, cell_size);
         let tall = fill * sz;
+        // Asked once a cell rather than once a face: whether this block is
+        // under another is a fact about the block.
+        let [up_x, up_y, up_z] = TileFace::Top.neighbour_offset();
+        let covered_above = height_at(GridCoord3::new(cell.x + up_x, cell.y + up_y, cell.z + up_z))
+            .is_some_and(|fill| fill > 0.0);
 
         for face in TileFace::ALL {
             let [dx, dy, dz] = face.neighbour_offset();
@@ -181,9 +186,13 @@ pub fn cube_faces(
             // block of one kind is the same block, and whatever pattern its
             // faces carry repeats on the grid -- a field of grass reads as
             // tiling rather than as grass.
+            // A block with something standing on it wears its buried look,
+            // where it has one. Grass is why: a course of it halfway up a
+            // cliff still carrying a green fringe reads as a stack of lawns.
+            let buried = definition.covered.as_ref().filter(|_| covered_above);
             let Some((_, visual)) = definition
                 .faces_at(volume.variant_seed, [cell.x, cell.y, cell.z], tile)
-                .resolved(face)
+                .resolved_in(face, buried)
             else {
                 continue;
             };
