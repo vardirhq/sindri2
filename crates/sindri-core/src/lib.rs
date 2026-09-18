@@ -57,8 +57,8 @@ pub use sheet::{
 };
 pub use tags::TagsComponent;
 pub use tileset::{
-    TILESET_FORMAT_VERSION, TILESET_SUFFIX, TileDefinition, TileFace, TileFaceVisual, TileFaces,
-    TileSetDocument, TileSetError,
+    TILESET_FORMAT_VERSION, TILESET_SUFFIX, TileBox, TileDefinition, TileFace, TileFaceVisual,
+    TileFaces, TileSetDocument, TileSetError,
 };
 pub use time::{FixedStepClock, FixedStepConfig, FrameSteps, TimeError, TimeScale};
 pub use transform::Transform3D;

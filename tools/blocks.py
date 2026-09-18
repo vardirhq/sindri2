@@ -198,12 +198,19 @@ def recipe(view, suffix, variants, ppu=48):
     }
 
 
-if __name__ == "__main__":
+def main():
     variants = palette()
     for view, suffix in (("top-down", "top"), ("side", "side")):
         path = pathlib.Path(f"game/recipes/blocks-{suffix}.isobake.json")
         path.write_text(json.dumps(recipe(view, suffix, variants), indent=2) + "\n")
-    print(f"wrote {len(variants)} blocks")
+    # The tile set as well as the art. It was written here and then left
+    # uncalled, so the file this generates was in fact maintained by hand and
+    # the comment below claiming otherwise was aspirational. A block that
+    # exists in the palette and is unnameable in the tile set is exactly what
+    # that was meant to prevent.
+    document = pathlib.Path("game/assets/causeway.tileset.json")
+    document.write_text(json.dumps(tileset(), indent=2) + "\n")
+    print(f"wrote {len(variants)} blocks and {len(tileset()['tiles'])} tiles")
 
 
 # What the world is made of, as the game names it: a tile ID, the frames its
@@ -272,4 +279,35 @@ def tileset():
         },
         "height": 0.5,
     }
+    # Shapes a height cannot describe. A height fills its cell's whole
+    # footprint from the floor up, so everything authored with one is a slab of
+    # some thickness -- there is no post, no rail, no kerb. A box says which
+    # part of the cell the tile is, in fractions of it, as [across, up, into].
+    #
+    # None of these occlude or support: you see past a railing, and nothing
+    # stands on top of one. Saying so is what keeps them from culling the faces
+    # of whatever they are set against and from darkening its corners.
+    for name, extent in {
+        # A railing post: a fifth of the cell across and into, full height.
+        "plank-post": {"min": [0.4, 0.0, 0.4], "max": [0.6, 1.0, 0.6]},
+        # The rail between two posts: a slice held partway up, touching
+        # neither the floor nor the ceiling of its cell. This is the shape a
+        # height cannot express at all, because a height always starts at the
+        # floor.
+        "plank-rail": {"min": [0.0, 0.55, 0.42], "max": [1.0, 0.7, 0.58]},
+        # A kerb along one edge of the cell: low, and only part of the way in.
+        "stone-kerb": {"min": [0.0, 0.0, 0.0], "max": [1.0, 0.3, 0.3]},
+    }.items():
+        look = "plank" if name.startswith("plank") else "stone-0"
+        tiles[name] = {
+            "faces": faces(look),
+            "extent": extent,
+            "occludes": False,
+            "supports": False,
+            "walkable": False,
+        }
     return {"format_version": 1, "tiles": tiles}
+
+
+if __name__ == "__main__":
+    main()

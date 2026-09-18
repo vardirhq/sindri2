@@ -170,6 +170,80 @@ pub struct TileVariant {
     pub weight: u32,
 }
 
+/// The part of its cell a tile actually fills.
+///
+/// `height` says how far up a tile reaches and nothing about the other two
+/// axes, so every tile written with one is a full-footprint slab: there is no
+/// way to say post, fence, kerb, rail or step. This says it as a box instead,
+/// in fractions of the cell, `[across, up, into]` -- the world's own axes, so
+/// `max[1]` is the height a `height` would have given.
+///
+/// The whole cell is `min [0, 0, 0]`, `max [1, 1, 1]`. A fence post is thin
+/// across and into and tall up; a kerb is low and full; a rail is a slice
+/// partway up, which is the case `height` cannot express at all because a
+/// height always starts at the floor.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+pub struct TileBox {
+    /// The low corner, in fractions of the cell.
+    pub min: [f32; 3],
+    /// The high corner, in fractions of the cell.
+    pub max: [f32; 3],
+}
+
+impl TileBox {
+    /// The whole cell.
+    pub const FULL: Self = Self {
+        min: [0.0, 0.0, 0.0],
+        max: [1.0, 1.0, 1.0],
+    };
+
+    /// The box a bare `height` means: the full footprint, from the floor up.
+    #[must_use]
+    pub const fn from_height(height: f32) -> Self {
+        Self {
+            min: [0.0, 0.0, 0.0],
+            max: [1.0, height, 1.0],
+        }
+    }
+
+    /// How far up this tile reaches, which is what something stands on.
+    #[must_use]
+    pub const fn top(self) -> f32 {
+        self.max[1]
+    }
+
+    /// How far across each axis this box reaches.
+    #[must_use]
+    pub fn size(self) -> [f32; 3] {
+        [0, 1, 2].map(|axis| self.max[axis] - self.min[axis])
+    }
+
+    /// Whether this box is the whole cell.
+    #[must_use]
+    pub fn is_full(self) -> bool {
+        self == Self::FULL
+    }
+
+    /// Whether this box covers all of `other` in the plane across `axis`.
+    ///
+    /// The two axes that are not `axis` are the plane a shared face lies in. A
+    /// neighbour hides a face only if it covers the whole of it: a post
+    /// against a block's side hides a sliver, which is to say it hides nothing
+    /// the renderer can drop a face for.
+    #[must_use]
+    pub fn spans(self, other: Self, axis: usize) -> bool {
+        (0..3)
+            .filter(|plane| *plane != axis)
+            .all(|plane| self.min[plane] <= other.min[plane] && self.max[plane] >= other.max[plane])
+    }
+}
+
+impl Default for TileBox {
+    fn default() -> Self {
+        Self::FULL
+    }
+}
+
 /// What one stable tile ID means.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct TileDefinition {
@@ -200,6 +274,19 @@ pub struct TileDefinition {
     /// stay inside it. Something two blocks tall is two cells.
     #[serde(default = "full_height", skip_serializing_if = "is_full_height")]
     pub height: f32,
+    /// The part of its cell this tile fills, when a height cannot say it.
+    ///
+    /// Left out, the tile is the full footprint of its cell up to `height`,
+    /// which is what every tile written before boxes existed means. Set, it
+    /// replaces `height` entirely rather than combining with it -- a document
+    /// naming both is refused rather than having one of them quietly win.
+    ///
+    /// This is the shape the tile *is*, not the shape of its art. Its faces
+    /// are still six quads on the box's own sides, so a fence post is a thin
+    /// box wearing a fence texture rather than a full block whose picture
+    /// happens to be mostly transparent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extent: Option<TileBox>,
     /// Whether this tile hides a neighbouring tile's shared face.
     #[serde(default = "yes", skip_serializing_if = "is_true")]
     pub occludes: bool,
@@ -242,6 +329,16 @@ pub struct TileDefinition {
 }
 
 impl TileDefinition {
+    /// The part of its cell this tile fills.
+    ///
+    /// The one place `height` and `extent` are reconciled, so nothing else has
+    /// to know there were ever two ways to say it.
+    #[must_use]
+    pub fn bounds(&self) -> TileBox {
+        self.extent
+            .unwrap_or_else(|| TileBox::from_height(self.height))
+    }
+
     /// The faces to draw for a cell at this coordinate.
     ///
     /// The tile's own faces when it has no variants, which is every tile
@@ -291,7 +388,7 @@ impl TileDefinition {
     /// float comparison in one place rather than in every caller.
     #[must_use]
     pub fn fills_cell(&self) -> bool {
-        self.height >= 1.0
+        self.bounds().is_full()
     }
 
     /// Whether this tile hides a face of something `height` tall beside it.
@@ -302,7 +399,16 @@ impl TileDefinition {
     /// is the whole reason a slab reads as a slab.
     #[must_use]
     pub fn hides_side_of(&self, height: f32) -> bool {
-        self.occludes && self.height >= height
+        let shape = self.bounds();
+        // The projected path draws a cell as a flat picture, so it can only
+        // ask about heights. A tile that is a box rather than a slab is not a
+        // shape this path can reason about at all, and a box that does not
+        // fill its footprint must never be taken for a wall that hides one.
+        self.occludes
+            && shape.min == [0.0, 0.0, 0.0]
+            && shape.max[0] >= 1.0
+            && shape.max[2] >= 1.0
+            && shape.top() >= height
     }
 }
 
@@ -344,6 +450,28 @@ impl TileSetDocument {
                     height: definition.height,
                 });
             }
+            // A height and a box are two answers to one question. Taking
+            // either silently would make a document mean something its author
+            // can only discover by looking at the picture.
+            if definition.extent.is_some() && !is_full_height(&definition.height) {
+                return Err(TileSetError::HeightAndExtent(tile.clone()));
+            }
+            if let Some(extent) = definition.extent {
+                let sane = |axis: usize| {
+                    let (low, high) = (extent.min[axis], extent.max[axis]);
+                    low.is_finite()
+                        && high.is_finite()
+                        && (0.0..=1.0).contains(&low)
+                        && (0.0..=1.0).contains(&high)
+                        && high > low
+                };
+                if !(0..3).all(sane) {
+                    return Err(TileSetError::InvalidExtent {
+                        tile: tile.clone(),
+                        extent,
+                    });
+                }
+            }
             if definition.walkable && !definition.supports {
                 return Err(TileSetError::WalkableWithoutSupport(tile.clone()));
             }
@@ -382,6 +510,12 @@ pub enum TileSetError {
     EmptyTileId,
     #[error("tile `{0}` is walkable but supports nothing; standing on a tile rests on it")]
     WalkableWithoutSupport(String),
+    #[error("tile `{0}` sets both `height` and `extent`; a box already says how tall it is")]
+    HeightAndExtent(String),
+    #[error(
+        "tile `{tile}` has an extent {extent:?} that is not inside its cell with a positive size"
+    )]
+    InvalidExtent { tile: String, extent: TileBox },
     #[error("tile `{0}` does not define any face visuals")]
     TileWithoutFaces(String),
     #[error("tile `{tile}` has an invalid {face:?} sprite reference `{sprite}`")]

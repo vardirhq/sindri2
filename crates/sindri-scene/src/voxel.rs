@@ -20,7 +20,7 @@
 use std::collections::BTreeMap;
 
 use glam::{Mat4, Vec3};
-use sindri_core::{TileFace, TileSetDocument};
+use sindri_core::{TileBox, TileFace, TileSetDocument};
 use sindri_grid::GridCoord3;
 use thiserror::Error;
 
@@ -152,9 +152,12 @@ pub fn cube_faces(
     // a grid describes the diamond a cell projects to, and nothing here
     // projects anything.
     let cells: BTreeMap<GridCoord3, &str> = volume.occupied().collect();
-    let height_at = |cell: GridCoord3| -> Option<f32> {
+    // Only a tile that occludes is here at all: a fence says it does not hide
+    // what is behind it, and that one flag keeps it from culling its
+    // neighbours' faces and from darkening their corners.
+    let box_at = |cell: GridCoord3| -> Option<TileBox> {
         let definition = tile_set.tile(cells.get(&cell).copied()?)?;
-        definition.occludes.then_some(definition.height)
+        definition.occludes.then(|| definition.bounds())
     };
 
     let mut faces = Vec::new();
@@ -163,23 +166,33 @@ pub fn cube_faces(
             cell,
             tile: tile.to_owned(),
         })?;
-        let fill = definition.height.clamp(0.0, 1.0);
-        if fill <= 0.0 {
-            continue;
-        }
-        // The cell's box: centred on its column and row, standing on its level.
+        let shape = definition.bounds();
+        // The cell's own corner, and the box's corner within it. A cell is
+        // `[across, into, up]` and a box is `[across, up, into]`, because one
+        // counts a grid and the other describes a shape in the world.
         let base = floor_of(cell, cell_size);
-        let tall = fill * sz;
+        // A cell is centred on its column and row and stands on its level, so
+        // a fraction across or into the cell is measured from the middle and a
+        // fraction up is measured from the floor.
+        let low = Vec3::new(
+            (shape.min[0] - 0.5) * sx,
+            shape.min[1] * sz,
+            (shape.min[2] - 0.5) * sy,
+        );
+        let [wide, tall, deep] = shape.size();
+        let span = Vec3::new(wide * sx, tall * sz, deep * sy);
+        // The middle of the box, which is what the faces are placed around.
+        let middle = base + low + span * 0.5;
         // Asked once a cell rather than once a face: whether this block is
         // under another is a fact about the block.
         let [up_x, up_y, up_z] = TileFace::Top.neighbour_offset();
-        let covered_above = height_at(GridCoord3::new(cell.x + up_x, cell.y + up_y, cell.z + up_z))
-            .is_some_and(|fill| fill > 0.0);
+        let covered_above =
+            box_at(GridCoord3::new(cell.x + up_x, cell.y + up_y, cell.z + up_z)).is_some();
 
         for face in TileFace::ALL {
             let [dx, dy, dz] = face.neighbour_offset();
             let neighbour = GridCoord3::new(cell.x + dx, cell.y + dy, cell.z + dz);
-            if covers(face, fill, height_at(neighbour)) {
+            if covers(face, shape, box_at(neighbour)) {
                 continue;
             }
             // Which of a tile's looks this cell wears. Without this every
@@ -197,23 +210,15 @@ pub fn cube_faces(
                 continue;
             };
             let (normal, right, up) = basis_of(face);
-            // A side is as tall as the tile fills its cell; a top and a bottom
-            // are the cell's full footprint however thin the tile is.
-            // A quad's own width runs along whichever world axis `right` picks
-            // out, and its height along `up`: across for a column, into the
-            // scene for a row, and the tile's own fill for anything vertical.
-            let extent = |axis: Vec3| sx * axis.x.abs() + tall * axis.y.abs() + sy * axis.z.abs();
-            let (width, height) = (extent(right), extent(up));
-            let centre = base
-                + Vec3::new(0.0, tall * 0.5, 0.0)
-                + normal
-                    * match face {
-                        // Up and down are half the tile's own height away,
-                        // which is what makes a slab's top lower than a block's.
-                        TileFace::Top | TileFace::Bottom => tall * 0.5,
-                        TileFace::North | TileFace::South => sy * 0.5,
-                        TileFace::East | TileFace::West => sx * 0.5,
-                    };
+            // Every quad is a side of the tile's own box, so its width, its
+            // height and how far it stands from the middle all read off the
+            // same three numbers. A slab's top is lower than a block's and a
+            // post's sides are close together for one reason rather than
+            // three special cases.
+            let reach =
+                |axis: Vec3| span.x * axis.x.abs() + span.y * axis.y.abs() + span.z * axis.z.abs();
+            let (width, height) = (reach(right), reach(up));
+            let centre = middle + normal * reach(normal) * 0.5;
             // The four corners of this face, in the quad's own order. Each is
             // crowded by the two blocks along its edges and the one diagonally
             // between them -- all of them in front of the face, since a block
@@ -229,7 +234,7 @@ pub fn cube_faces(
                             cell.y + ahead[1] + offset[1],
                             cell.z + ahead[2] + offset[2],
                         );
-                        height_at(neighbour).is_some_and(|fill| fill > 0.0)
+                        box_at(neighbour).is_some_and(TileBox::is_full)
                     };
                     let diagonal = [
                         step_right[0] + step_up[0],
@@ -266,22 +271,38 @@ fn axis(value: i32) -> f32 {
     value as f32
 }
 
-/// Whether a neighbour filling `neighbour` hides this face of a tile that
-/// fills `fill` of its own cell.
+/// Whether the tile in the next cell hides this face of this one.
 ///
-/// Sideways, a neighbour has to be at least as tall to cover the whole side.
-/// Up and down, only a tile filling its cell reaches the boundary at all: a
-/// slab's top is in the middle of its cell, so whatever sits in the cell above
-/// is not against it.
-fn covers(face: TileFace, fill: f32, neighbour: Option<f32>) -> bool {
+/// Two things have to be true, and a height could only ever express the
+/// second. The faces have to *meet*: this box has to reach the wall of its
+/// cell that the neighbour is through, and the neighbour has to reach that
+/// same wall from its side. A slab's top is in the middle of its cell, so
+/// whatever sits in the cell above is not against it; a post set back from the
+/// edge is not against the block beside it either.
+///
+/// And the neighbour has to cover the whole face, not merely touch it. A post
+/// against a wall hides a sliver of it, which is to say it hides nothing that
+/// can be dropped: drop the face and the wall has a hole where the post is
+/// thinner than the cell.
+fn covers(face: TileFace, shape: TileBox, neighbour: Option<TileBox>) -> bool {
     let Some(neighbour) = neighbour else {
         return false;
     };
-    match face {
-        TileFace::Top => fill >= 1.0 && neighbour > 0.0,
-        TileFace::Bottom => neighbour >= 1.0,
-        _ => neighbour >= fill,
-    }
+    // Which axis the face looks along, and which end of it the face is.
+    let (axis, mine, theirs) = match face {
+        TileFace::East => (0, shape.max[0], neighbour.min[0]),
+        TileFace::West => (0, shape.min[0], neighbour.max[0]),
+        TileFace::Top => (1, shape.max[1], neighbour.min[1]),
+        TileFace::Bottom => (1, shape.min[1], neighbour.max[1]),
+        TileFace::South => (2, shape.max[2], neighbour.min[2]),
+        TileFace::North => (2, shape.min[2], neighbour.max[2]),
+    };
+    // The wall between the two cells, in each one's own fractions: this box
+    // reaches it at 1 or 0 depending on which way it is looking, and the
+    // neighbour reaches it from the other side.
+    let outward = matches!(face, TileFace::East | TileFace::Top | TileFace::South);
+    let (wall, opposite) = if outward { (1.0, 0.0) } else { (0.0, 1.0) };
+    mine == wall && theirs == opposite && neighbour.spans(shape, axis)
 }
 
 mod aim;

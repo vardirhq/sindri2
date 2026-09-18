@@ -27,7 +27,13 @@ script Builder {
         if which < 1.5 {
             return "earth";
         }
-        return "stone";
+        if which < 2.5 {
+            return "stone";
+        }
+        // A shape rather than a block: a railing post fills a fifth of its
+        // cell and nothing stands on it, which is a thing a tile could not be
+        // when a tile was only ever a height.
+        return "plank-post";
     }
 
     fn update(dt: f32) {
@@ -48,6 +54,9 @@ script Builder {
         }
         if Input.just_pressed("Digit3") {
             chosen = 2.0;
+        }
+        if Input.just_pressed("Digit4") {
+            chosen = 3.0;
         }
 
         // Read by the HUD, and by the test that plays the game without one.
@@ -77,7 +86,8 @@ script Builder {
             // yours to carry away. Which is also what stops the pillar being
             // dismantled instead of climbed.
             let taken = Grid.block(floor, Aim.x, Aim.y, Aim.z);
-            if taken == "plank-slab" || taken == "plank" || taken == "earth" {
+            if taken == "plank-slab" || taken == "plank" || taken == "earth"
+                || taken == "plank-post" {
                 // The empty string clears a cell.
                 Grid.set_block(floor, Aim.x, Aim.y, Aim.z, "");
                 left += 1.0;
