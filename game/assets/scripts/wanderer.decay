@@ -51,7 +51,7 @@ script Wanderer {
         if playing && Gesture.tapped && Aim.hit && !Pointer.over_ui {
             let target = World.find("Target");
             if target != null {
-                Grid.place(target, floor, Aim.x, Aim.y);
+                // A solid grid lies on world XZ. Aim.y is block height, while Grid.place's\n                // second coordinate is the row/depth axis, so the destination is X/Z.\n                Grid.place(target, floor, Aim.x, Aim.z);
             }
         }
 
