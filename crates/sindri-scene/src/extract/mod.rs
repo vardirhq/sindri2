@@ -49,7 +49,7 @@ use sindri_core::TileSetError;
 pub use camera::view::{CameraView, WorldProjection};
 pub use camera::{
     OverlayPlacement, OverlayView, ViewCamera, overlay_for_viewport, overlay_in_scene,
-    world_camera_of,
+    pan_for_drag, world_camera_of,
 };
 
 /// Turns a world into a frame the renderer can draw.
