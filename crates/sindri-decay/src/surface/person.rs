@@ -136,6 +136,48 @@ pub(crate) const AIM_VALUES: &[(&str, AimValue)] = &[
     ("place_z", AimValue::PlaceZ),
 ];
 
+/// What the person just did, as a gesture rather than as a button.
+///
+/// Each gesture has a question before its numbers, for the reason `Aim.hit`
+/// does: nothing happened is the common case, and every coordinate reads zero
+/// when it did, which is a real place on the screen.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum GestureValue {
+    /// A press that arrived, stayed still and left again.
+    Tapped,
+    TapX,
+    TapY,
+    /// A press that stayed still and stayed down. True on the frame it is
+    /// recognised, while the finger is still there -- waiting for the release
+    /// would make holding indistinguishable from tapping slowly.
+    Held,
+    HoldX,
+    HoldY,
+    /// A press that is moving, true on every frame it moves.
+    Dragging,
+    /// How far it moved this frame, which is what panning a camera wants: the
+    /// place it started is rarely the interesting part.
+    DragX,
+    DragY,
+    /// Two fingers moving together or apart, as a ratio since the last frame.
+    Pinching,
+    Pinch,
+}
+
+pub(crate) const GESTURE_VALUES: &[(&str, GestureValue)] = &[
+    ("tapped", GestureValue::Tapped),
+    ("tap_x", GestureValue::TapX),
+    ("tap_y", GestureValue::TapY),
+    ("held", GestureValue::Held),
+    ("hold_x", GestureValue::HoldX),
+    ("hold_y", GestureValue::HoldY),
+    ("dragging", GestureValue::Dragging),
+    ("drag_x", GestureValue::DragX),
+    ("drag_y", GestureValue::DragY),
+    ("pinching", GestureValue::Pinching),
+    ("pinch", GestureValue::Pinch),
+];
+
 /// A value a script reads about the viewport it is running in.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ViewportValue {

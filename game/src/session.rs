@@ -70,6 +70,14 @@ pub struct Session {
     saves: sindri_core::SaveStore,
     /// The live flecks a script has thrown.
     effects: sindri_scene::Effects2d,
+    /// What the person just did, read from the presses each frame.
+    ///
+    /// Lives here rather than being made per frame because recognising a
+    /// gesture is a judgement about a press's whole life: a tap is a tap
+    /// because of where it started and how long ago, and a recogniser built
+    /// fresh each frame would see every press as having just arrived and
+    /// never finish recognising anything.
+    gestures: sindri_core::Gestures,
     /// The ground under each grid, remembered between frames.
     ///
     /// Kept on the session rather than made each frame, because that is the
@@ -125,6 +133,7 @@ impl Session {
             random: sindri_core::Rng::default(),
             saves: sindri_core::SaveStore::default(),
             effects: sindri_scene::Effects2d::default(),
+            gestures: sindri_core::Gestures::new(sindri_core::GestureLimits::default()),
             surfaces: sindri_scene::GridSurfaces::default(),
             since_written: 0.0,
             save_backend: Box::new(sindri_platform::MemorySaves::new()),
@@ -279,6 +288,10 @@ impl Session {
         // layer holding a camera and a viewport. A script asking which block
         // the pointer is on would otherwise have to invert the projection
         // itself, which is the renderer's business leaking into gameplay.
+        // Read before the scripts, from the presses this frame already holds,
+        // so that what a script is told the person did and where the pointer
+        // is are the same instant.
+        self.gestures.update(input.presses());
         let aim = Self::aim(world, &self.components, input, viewport);
         let (physics, events) = self.physics.for_scripts();
         let mut frame = ScriptFrame::new(&self.sources, input, delta_seconds)
@@ -293,6 +306,7 @@ impl Session {
                 events,
             })
             .with_animations(&mut self.animations);
+        frame = frame.with_gestures(&self.gestures);
         if let Some(aim) = aim {
             frame = frame.with_aim(aim);
         }

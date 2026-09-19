@@ -28,6 +28,19 @@ pub(crate) const VIEWPORT: &str = "Viewport";
 /// blocks in it ignore the whole idea.
 pub(crate) const AIM: &str = "Aim";
 
+/// What the person just did with a finger or a mouse, as an intention.
+///
+/// `Pointer` says a button is down and `Touch` says where the fingers are.
+/// Neither can tell a tap from the beginning of a drag, because the difference
+/// is how the press ends and how far it wandered on the way -- which is a
+/// question about a press's whole life rather than about this instant. A game
+/// that tried to work it out from `Pointer` alone would be writing a gesture
+/// recogniser in Decay, badly, once per game.
+///
+/// This is why the same build works on a phone: a mouse has a second button to
+/// mean "remove" and a finger does not, so removing is a hold.
+pub(crate) const GESTURE: &str = "Gesture";
+
 /// The fingers, for a game that wants more than one.
 pub(crate) const TOUCH: &str = "Touch";
 

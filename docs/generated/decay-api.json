@@ -30,6 +30,11 @@
     },
     {
       "kind": "value",
+      "name": "Gesture",
+      "type": "Gesture"
+    },
+    {
+      "kind": "value",
       "name": "Grid",
       "type": "Grid"
     },
@@ -423,6 +428,66 @@
         }
       ],
       "name": "Game"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "drag_x",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "drag_y",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "dragging",
+          "type": "bool"
+        },
+        {
+          "kind": "value",
+          "name": "held",
+          "type": "bool"
+        },
+        {
+          "kind": "value",
+          "name": "hold_x",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "hold_y",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "pinch",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "pinching",
+          "type": "bool"
+        },
+        {
+          "kind": "value",
+          "name": "tap_x",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "tap_y",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "tapped",
+          "type": "bool"
+        }
+      ],
+      "name": "Gesture"
     },
     {
       "members": [

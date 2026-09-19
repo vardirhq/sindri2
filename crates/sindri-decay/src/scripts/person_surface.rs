@@ -8,8 +8,9 @@
 use decay_semantic::{Environment, FunctionType, HostType, Type};
 
 use crate::surface::{
-    AIM, AIM_VALUES, AimValue, POINTER, POINTER_QUERIES, POINTER_VALUES, PointerValue, STICK,
-    STICK_VALUES, StickValue, TOUCH, TOUCH_CALLS, TOUCH_COUNT, VIEWPORT, VIEWPORT_VALUES,
+    AIM, AIM_VALUES, AimValue, GESTURE, GESTURE_VALUES, GestureValue, POINTER, POINTER_QUERIES,
+    POINTER_VALUES, PointerValue, STICK, STICK_VALUES, StickValue, TOUCH, TOUCH_CALLS, TOUCH_COUNT,
+    VIEWPORT, VIEWPORT_VALUES,
 };
 
 /// The shape of the screen the host is drawing into.
@@ -36,6 +37,25 @@ pub(super) fn add_aim_surface(environment: &mut Environment) {
     }
     environment.add_type(AIM, aim);
     environment.add_value(AIM, Type::Named(AIM.to_owned()));
+}
+
+/// What the person just did, as an intention rather than as a button.
+pub(super) fn add_gesture_surface(environment: &mut Environment) {
+    let mut gesture = HostType::new();
+    for (name, value) in GESTURE_VALUES {
+        gesture = gesture.with_value(
+            *name,
+            match value {
+                GestureValue::Tapped
+                | GestureValue::Held
+                | GestureValue::Dragging
+                | GestureValue::Pinching => Type::Bool,
+                _ => Type::F32,
+            },
+        );
+    }
+    environment.add_type(GESTURE, gesture);
+    environment.add_value(GESTURE, Type::Named(GESTURE.to_owned()));
 }
 
 /// Where the person is pointing, and the fingers behind it.
