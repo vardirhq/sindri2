@@ -286,4 +286,3 @@ fn the_sea_is_something_to_build_across_rather_than_to_walk_on() {
         "clicking the shore's side lays a walkway out onto the water"
     );
 }
-
