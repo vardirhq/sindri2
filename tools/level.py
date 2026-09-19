@@ -175,6 +175,20 @@ def entities():
             },
         },
         {
+            "id": "play-debug",
+            "name": "PlayDebug",
+            "transform_3d": transform((0.0, -0.72, 2.0)),
+            "components": {
+                "sindri.ui.text": {
+                    "anchor": "center", "color": [1.0, 0.85, 0.35, 1.0],
+                    "font": "fonts/Inter.ttf", "font_size": 0.03,
+                    "layer": 160, "line_height": 0.04,
+                    "text": "tap {}  aim {}",
+                    "values": [0.0, 0.0],
+                },
+            },
+        },
+        {
             "id": "stock",
             "name": "Stock",
             "transform_3d": transform((0.0, 0.0, 2.0)),

@@ -26,6 +26,26 @@ script Wanderer {
         }
         let playing: bool = Game.get("playing", 0.0) > 0.5;
 
+        // Temporary Play-mode telemetry. Persist the last tap rather than the
+        // current frame so a human can actually read what the input pipeline
+        // decided after lifting a finger.
+        if playing && Gesture.tapped {
+            Game.set("debug_tap", 1.0);
+            if Aim.hit {
+                Game.set("debug_aim", 1.0);
+                Game.set("debug_aim_x", Aim.x);
+                Game.set("debug_aim_y", Aim.y);
+                Game.set("debug_aim_z", Aim.z);
+            } else {
+                Game.set("debug_aim", 0.0);
+            }
+            if Pointer.over_ui {
+                Game.set("debug_ui", 1.0);
+            } else {
+                Game.set("debug_ui", 0.0);
+            }
+        }
+
         // Where a tap said to go. Taken before the step timer, so a tap lands
         // on the frame it happened rather than waiting for the next step.
         if playing && Gesture.tapped && Aim.hit && !Pointer.over_ui {
