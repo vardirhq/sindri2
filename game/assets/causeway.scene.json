@@ -8,29 +8,13 @@
       "id": "beacon",
       "name": "Beacon",
       "transform_3d": {
-        "position": [
-          0,
-          0,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          0.68,
-          1.79,
-          1
-        ]
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.68, 1.79, 1.0]
       },
       "components": {
         "sindri.grid.placement": {
-          "cell": [
-            82,
-            76
-          ],
+          "cell": [82, 76],
           "grid": "floor"
         },
         "sindri.script": {
@@ -43,12 +27,7 @@
         "sindri.sprite": {
           "billboard": true,
           "texture": "textures/beacon.png#south",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -56,27 +35,14 @@
       "id": "builder",
       "name": "Builder",
       "transform_3d": {
-        "position": [
-          0,
-          0,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.script": {
           "properties": {
-            "stock": 12
+            "stock": 12.0
           },
           "script": "Builder",
           "source": "scripts/builder.decay"
@@ -87,33 +53,17 @@
       "id": "floor",
       "name": "Floor",
       "transform_3d": {
-        "position": [
-          0,
-          0,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.grid.navigation": {
-          "max_step": 1
+          "max_step": 1.0
         },
         "sindri.tile_grid": {
-          "cell_height": 1,
-          "cell_size": [
-            1,
-            1
-          ],
+          "cell_height": 1.0,
+          "cell_size": [1.0, 1.0],
           "columns": 160,
           "projection": "isometric",
           "rows": 160,
@@ -129,32 +79,14 @@
       "id": "hint",
       "name": "Hint",
       "transform_3d": {
-        "position": [
-          0,
-          0,
-          2
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [0.0, 0.0, 2.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.ui.text": {
           "anchor": "bottom_left",
-          "color": [
-            0.604,
-            0.651,
-            0.733,
-            1
-          ],
+          "color": [0.604, 0.651, 0.733, 1.0],
           "font": "fonts/Inter.ttf",
           "font_size": 0.0346,
           "layer": 101,
@@ -167,22 +99,9 @@
       "id": "hud",
       "name": "Hud",
       "transform_3d": {
-        "position": [
-          0,
-          0,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -195,32 +114,14 @@
       "id": "kind",
       "name": "Kind",
       "transform_3d": {
-        "position": [
-          0,
-          0,
-          2
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [0.0, 0.0, 2.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.ui.text": {
           "anchor": "top_left",
-          "color": [
-            0.875,
-            0.902,
-            0.949,
-            1
-          ],
+          "color": [0.875, 0.902, 0.949, 1.0],
           "font": "fonts/Inter.ttf",
           "font_size": 0.0407,
           "layer": 101,
@@ -233,22 +134,9 @@
       "id": "mode-button",
       "name": "ModeButton",
       "transform_3d": {
-        "position": [
-          0,
-          0.86,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          0.34,
-          0.1,
-          1
-        ]
+        "position": [0.0, 0.86, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.34, 0.1, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -262,26 +150,16 @@
           "anchor": "center",
           "blend": "over",
           "corner_radius": 0.02,
-          "count": 6,
+          "count": 6.0,
           "dash_duty": 0.5,
-          "dashes": 0,
-          "fill": [
-            0.09,
-            0.11,
-            0.15,
-            0.94
-          ],
+          "dashes": 0.0,
+          "fill": [0.09, 0.11, 0.15, 0.94],
           "kind": "rect",
           "layer": 110,
-          "stroke": [
-            0.949,
-            0.722,
-            0.294,
-            1
-          ],
+          "stroke": [0.949, 0.722, 0.294, 1.0],
           "stroke_width": 0.012,
-          "sweep_start": 0,
-          "sweep_turns": 1
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0
         }
       }
     },
@@ -289,32 +167,14 @@
       "id": "mode-label",
       "name": "ModeLabel",
       "transform_3d": {
-        "position": [
-          0,
-          0.86,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [0.0, 0.86, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.ui.text": {
           "anchor": "center",
-          "color": [
-            0.949,
-            0.722,
-            0.294,
-            1
-          ],
+          "color": [0.949, 0.722, 0.294, 1.0],
           "font": "fonts/Inter.ttf",
           "font_size": 0.038,
           "layer": 140,
@@ -327,22 +187,9 @@
       "id": "modes",
       "name": "Modes",
       "transform_3d": {
-        "position": [
-          0,
-          0,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -355,22 +202,9 @@
       "id": "music",
       "name": "Music",
       "transform_3d": {
-        "position": [
-          0,
-          0,
-          0
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.audio.source": {
@@ -385,41 +219,20 @@
       "id": "play-debug",
       "name": "PlayDebug",
       "transform_3d": {
-        "position": [
-          0,
-          -0.72,
-          2
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [0.0, -0.72, 2.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.ui.text": {
           "anchor": "center",
-          "color": [
-            1,
-            0.85,
-            0.35,
-            1
-          ],
+          "color": [1.0, 0.85, 0.35, 1.0],
           "font": "fonts/Inter.ttf",
           "font_size": 0.03,
           "layer": 160,
           "line_height": 0.04,
           "text": "tap {}  aim {}",
-          "values": [
-            0,
-            0
-          ]
+          "values": [0.0, 0.0]
         }
       }
     },
@@ -427,40 +240,20 @@
       "id": "stock",
       "name": "Stock",
       "transform_3d": {
-        "position": [
-          0,
-          0,
-          2
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [0.0, 0.0, 2.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.ui.text": {
           "anchor": "top_left",
-          "color": [
-            0.949,
-            0.722,
-            0.294,
-            1
-          ],
+          "color": [0.949, 0.722, 0.294, 1.0],
           "font": "fonts/Inter.ttf",
           "font_size": 0.0407,
           "layer": 101,
           "line_height": 0.0519,
           "text": "x {}",
-          "values": [
-            12
-          ]
+          "values": [12.0]
         }
       }
     },
@@ -468,22 +261,9 @@
       "id": "target",
       "name": "Target",
       "transform_3d": {
-        "position": [
-          78,
-          0,
-          84
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          0.38,
-          0.38,
-          1
-        ]
+        "position": [78.0, 0.0, 84.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.38, 0.38, 1.0]
       },
       "components": {
         "sindri.grid.placement": {
@@ -492,12 +272,7 @@
         "sindri.sprite": {
           "billboard": true,
           "texture": "textures/beacon.png#south",
-          "tint": [
-            1,
-            0.25,
-            0.25,
-            0.9
-          ]
+          "tint": [1.0, 0.25, 0.25, 0.9]
         }
       }
     },
@@ -505,32 +280,14 @@
       "id": "title",
       "name": "Title",
       "transform_3d": {
-        "position": [
-          0,
-          0,
-          2
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [0.0, 0.0, 2.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.ui.text": {
           "anchor": "top_left",
-          "color": [
-            0.949,
-            0.722,
-            0.294,
-            1
-          ],
+          "color": [0.949, 0.722, 0.294, 1.0],
           "font": "fonts/Inter.ttf",
           "font_size": 0.0611,
           "layer": 101,
@@ -543,45 +300,24 @@
       "id": "wanderer",
       "name": "Wanderer",
       "transform_3d": {
-        "position": [
-          78,
-          0,
-          84
-        ],
-        "rotation": [
-          0,
-          0,
-          0,
-          1
-        ],
-        "scale": [
-          0.6,
-          2.95,
-          1
-        ]
+        "position": [78.0, 0.0, 84.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.6, 2.95, 1.0]
       },
       "components": {
         "sindri.animation.sprite": {
           "clips": {
             "bob": {
-              "frames": [
-                "bob-0",
-                "bob-1",
-                "bob-2",
-                "bob-3"
-              ],
+              "frames": ["bob-0", "bob-1", "bob-2", "bob-3"],
               "looping": true,
               "seconds_per_frame": 0.16
             }
           },
-          "speed": 1
+          "speed": 1.0
         },
         "sindri.grid.occupant": {
           "footprint": [
-            [
-              0,
-              0
-            ]
+            [0, 0]
           ],
           "grid": "floor"
         },
@@ -598,12 +334,7 @@
         "sindri.sprite": {
           "billboard": true,
           "texture": "textures/wanderer.png#bob-0",
-          "tint": [
-            1,
-            1,
-            1,
-            1
-          ]
+          "tint": [1.0, 1.0, 1.0, 1.0]
         }
       }
     },
@@ -611,33 +342,20 @@
       "id": "world-camera",
       "name": "World Camera",
       "transform_3d": {
-        "position": [
-          95.7909,
-          18.3392,
-          101.7909
-        ],
-        "rotation": [
-          -0.262396,
-          0.366924,
-          0.108688,
-          0.885834
-        ],
-        "scale": [
-          1,
-          1,
-          1
-        ]
+        "position": [95.7909, 18.3392, 101.7909],
+        "rotation": [-0.262396, 0.366924, 0.108688, 0.885834],
+        "scale": [1.0, 1.0, 1.0]
       },
       "components": {
         "sindri.camera": {
-          "far": 400,
+          "far": 400.0,
           "near": 0.1,
           "projection": "orthographic",
-          "vertical_size": 22
+          "vertical_size": 22.0
         },
         "sindri.script": {
           "properties": {
-            "ease": 4,
+            "ease": 4.0,
             "dead_zone": 1.25,
             "height_dead_zone": 0.65
           },
