@@ -288,6 +288,7 @@ fn the_sea_is_something_to_build_across_rather_than_to_walk_on() {
 }
 
 #[test]
+#[allow(clippy::cast_precision_loss)]
 fn play_tap_places_the_target_in_the_aimed_solid_grid_column() {
     // Regression: VolumeAim is XYZ, while a solid Grid.place is X/Z. Passing
     // Aim.y as the second grid coordinate sent taps toward the block's height
