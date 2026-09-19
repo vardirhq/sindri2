@@ -134,9 +134,9 @@
       "id": "mode-button",
       "name": "ModeButton",
       "transform_3d": {
-        "position": [0.82, 0.88, 0.0],
+        "position": [0.0, 0.86, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [0.26, 0.1, 1.0]
+        "scale": [0.34, 0.1, 1.0]
       },
       "components": {
         "sindri.script": {
@@ -167,7 +167,7 @@
       "id": "mode-label",
       "name": "ModeLabel",
       "transform_3d": {
-        "position": [0.82, 0.88, 0.0],
+        "position": [0.0, 0.86, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
         "scale": [1.0, 1.0, 1.0]
       },
