@@ -60,6 +60,7 @@ pub const TEXTURE_IDS: &[&str] = &[
     "textures/slabs-side.png",
     "textures/log-bark.png",
     "textures/log-end.png",
+    "textures/leaves.png",
     "textures/wanderer.png",
     "textures/beacon.png",
 ];
@@ -133,6 +134,10 @@ pub const TEXTURES: &[(&str, &[u8])] = &[
     (
         "textures/log-end.png",
         include_bytes!("../assets/textures/log-end.png"),
+    ),
+    (
+        "textures/leaves.png",
+        include_bytes!("../assets/textures/leaves.png"),
     ),
     (
         "textures/wanderer.png",
