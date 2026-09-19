@@ -41,6 +41,9 @@ script Wanderer {
             }
             if Pointer.over_ui {
                 Game.set("debug_ui", 1.0);
+                // Distinguish a recognised tap rejected by UI from no tap in
+                // the two-value diagnostic HUD and the runtime regression.
+                Game.set("debug_tap", 2.0);
             } else {
                 Game.set("debug_ui", 0.0);
             }
