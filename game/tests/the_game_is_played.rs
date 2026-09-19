@@ -153,6 +153,12 @@ fn entity_position(world: &World, name: &str) -> [f32; 3] {
         .position
 }
 
+fn planar_distance(left: [f32; 3], right: [f32; 3]) -> f32 {
+    let dx = left[0] - right[0];
+    let dz = left[2] - right[2];
+    (dx * dx + dz * dz).sqrt()
+}
+
 fn ui_text(world: &World, scene: &SceneExtractor, name: &str) -> UiTextComponent {
     let entity = world
         .entities()
@@ -239,7 +245,7 @@ fn in_view_away_from(
         if let Some(aim) =
             sindri_scene::voxel::aim_at(world, scene.components(), camera, [across, down])
             && aim.face == sindri_core::TileFace::Top
-            && [aim.cell.x, aim.cell.y] != excluded
+            && (aim.cell.x - excluded[0]).abs() + (aim.cell.y - excluded[1]).abs() >= 4
         {
             return ([aim.cell.x, aim.cell.y, aim.cell.z], at);
         }
@@ -405,6 +411,14 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
 
     let target_before = entity_position(&world, "Target");
     let wanderer_before = entity_position(&world, "Wanderer");
+    let camera_before = entity_position(&world, "World Camera");
+    assert!(
+        wanderer_before[0] >= 16.0
+            && wanderer_before[0] < 144.0
+            && wanderer_before[2] >= 16.0
+            && wanderer_before[2] < 144.0,
+        "the game must start at least one render chunk inside every world edge"
+    );
     let initial_cell =
         sindri_scene::nearest_cell(f64::from(target_before[0]), f64::from(target_before[2]));
     let (_, at) = in_view_away_from(&world, &scene, [initial_cell.x, initial_cell.y]);
@@ -433,10 +447,28 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
         "the target must use the release-frame voxel's logical column and row"
     );
 
-    settle(&mut world, &mut session, 40);
+    settle(&mut world, &mut session, 4);
+    let wanderer_mid_step = entity_position(&world, "Wanderer");
+    let travelled = planar_distance(wanderer_before, wanderer_mid_step);
+    assert!(
+        travelled > 0.0 && travelled < 0.5,
+        "a rendered step must cross part of a cell instead of teleporting: {travelled}"
+    );
+    assert_eq!(
+        entity_position(&world, "World Camera"),
+        camera_before,
+        "the camera must remain still while the Wanderer is inside its dead zone"
+    );
+
+    settle(&mut world, &mut session, 120);
     let wanderer_after = entity_position(&world, "Wanderer");
     assert_ne!(
         wanderer_after, wanderer_before,
-        "the wanderer must start moving toward the touch target"
+        "the wanderer must continue moving toward the touch target"
+    );
+    assert_ne!(
+        entity_position(&world, "World Camera"),
+        camera_before,
+        "the camera must ease after the Wanderer crosses its dead zone"
     );
 }
