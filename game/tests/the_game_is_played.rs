@@ -107,14 +107,20 @@ fn hold(world: &mut World, session: &mut Session, at: [f32; 2]) {
 fn tap_touch(world: &mut World, session: &mut Session, at: [f32; 2]) {
     let mut input = InputState::default();
     input.apply(InputEvent::TouchStarted { id: 7, x: at[0], y: at[1] });
-    session.step(world, &input, VIEWPORT, STEP).expect("the touch press steps");
+    session
+        .step(world, &input, VIEWPORT, STEP)
+        .expect("the touch press steps");
 
     input.begin_frame(std::time::Duration::from_secs_f32(STEP));
     input.apply(InputEvent::TouchEnded { id: 7 });
-    session.step(world, &input, VIEWPORT, STEP).expect("the touch release steps");
+    session
+        .step(world, &input, VIEWPORT, STEP)
+        .expect("the touch release steps");
 
     input.begin_frame(std::time::Duration::from_secs_f32(STEP));
-    session.step(world, &input, VIEWPORT, STEP).expect("the empty touch frame steps");
+    session
+        .step(world, &input, VIEWPORT, STEP)
+        .expect("the empty touch frame steps");
 }
 
 fn entity_position(world: &World, name: &str) -> [f32; 3] {
@@ -316,10 +322,14 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
 
     let mut toggle = InputState::default();
     toggle.apply(InputEvent::KeyPressed(Key::Tab));
-    session.step(&mut world, &toggle, VIEWPORT, STEP).expect("play mode toggles");
+    session
+        .step(&mut world, &toggle, VIEWPORT, STEP)
+        .expect("play mode toggles");
     toggle.begin_frame(std::time::Duration::from_secs_f32(STEP));
     toggle.apply(InputEvent::KeyReleased(Key::Tab));
-    session.step(&mut world, &toggle, VIEWPORT, STEP).expect("tab releases");
+    session
+        .step(&mut world, &toggle, VIEWPORT, STEP)
+        .expect("tab releases");
 
     let (_, at) = in_view(&world, &scene);
     let target_before = entity_position(&world, "Target");
@@ -327,9 +337,15 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
 
     tap_touch(&mut world, &mut session, at);
     let target_after = entity_position(&world, "Target");
-    assert_ne!(target_after, target_before, "a touch tap in Play must move the target");
+    assert_ne!(
+        target_after, target_before,
+        "a touch tap in Play must move the target"
+    );
 
     settle(&mut world, &mut session, 40);
     let wanderer_after = entity_position(&world, "Wanderer");
-    assert_ne!(wanderer_after, wanderer_before, "the wanderer must start moving toward the touch target");
+    assert_ne!(
+        wanderer_after, wanderer_before,
+        "the wanderer must start moving toward the touch target"
+    );
 }
