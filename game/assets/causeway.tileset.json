@@ -753,6 +753,126 @@
         }
       },
       "height": 0.5
+    },
+    "plank-post": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#plank",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#plank",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#plank",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "extent": {
+        "min": [
+          0.4,
+          0.0,
+          0.4
+        ],
+        "max": [
+          0.6,
+          1.0,
+          0.6
+        ]
+      },
+      "occludes": false,
+      "supports": false,
+      "walkable": false
+    },
+    "plank-rail": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#plank",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#plank",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#plank",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "extent": {
+        "min": [
+          0.0,
+          0.55,
+          0.42
+        ],
+        "max": [
+          1.0,
+          0.7,
+          0.58
+        ]
+      },
+      "occludes": false,
+      "supports": false,
+      "walkable": false
+    },
+    "stone-kerb": {
+      "faces": {
+        "top": {
+          "sprite": "textures/blocks-top.png#stone-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "textures/blocks-side.png#stone-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "textures/blocks-side.png#stone-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "extent": {
+        "min": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "max": [
+          1.0,
+          0.3,
+          0.3
+        ]
+      },
+      "occludes": false,
+      "supports": false,
+      "walkable": false
     }
   }
 }

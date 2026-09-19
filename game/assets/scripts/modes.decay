@@ -1,0 +1,36 @@
+// Which game you are playing at the moment.
+//
+// Two modes rather than one set of controls, because a finger has fewer ways
+// to say things than a mouse and keyboard do. Building wants to tap the world
+// and drag the view; walking wants to tap the world and have the view follow.
+// The same tap cannot mean both, and a phone has no second button to tell them
+// apart, so the mode does.
+//
+// Held here rather than in each script so there is one answer: the camera, the
+// builder and the walker all read it, and a mode that meant one thing to the
+// camera and another to the builder would be the bug that mode switching
+// exists to avoid.
+script Modes {
+    // Zero is build, one is play. A number because that is what the
+    // blackboard carries, and because the HUD counts rather than reads.
+    var playing: f32 = 0.0;
+
+    fn update(dt: f32) {
+        // Tab on a keyboard, and the mode button for everyone else. The
+        // button writes "toggle_mode" and this clears it, so the press is
+        // acted on once however long the finger stays down.
+        var toggled: bool = Input.just_pressed("Tab");
+        if Game.get("toggle_mode", 0.0) > 0.5 {
+            toggled = true;
+            Game.set("toggle_mode", 0.0);
+        }
+        if toggled {
+            if playing > 0.5 {
+                playing = 0.0;
+            } else {
+                playing = 1.0;
+            }
+        }
+        Game.set("playing", playing);
+    }
+}

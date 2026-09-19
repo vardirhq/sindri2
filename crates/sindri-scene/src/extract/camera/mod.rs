@@ -412,3 +412,37 @@ fn authored_cameras(
         Ok(resolved)
     }
 }
+
+/// How far to move a camera so a dragged point stays under the finger.
+///
+/// Panning by hand is the one camera control that has to be exact: if the
+/// ground does not stay under the finger, dragging feels like pushing a
+/// sticky drawer rather than like moving a map. Getting it right means
+/// knowing which way the screen's axes point in the world, which is the view
+/// matrix's business and not a game's -- a script working it out itself would
+/// be re-deriving the projection, and would get a different answer for every
+/// camera angle somebody later authored.
+///
+/// `drag` is in the units positions are reported in, with y downward, which is
+/// what both a pointer and a finger report. The answer is the delta to add to
+/// the camera's own position.
+#[must_use]
+pub fn pan_for_drag(camera: &ViewCamera, viewport: (f32, f32), drag: [f32; 2]) -> Vec3 {
+    if viewport.1 <= 0.0 {
+        return Vec3::ZERO;
+    }
+    // The world directions the screen's axes point along. Taken from the
+    // inverse rather than read off the rows, because reading a basis out of a
+    // matrix by hand is how you end up with a sign that is wrong only for some
+    // camera angles.
+    let inverse = camera.view.inverse();
+    let right = inverse.transform_vector3(Vec3::X).normalize_or_zero();
+    let up = inverse.transform_vector3(Vec3::Y).normalize_or_zero();
+    // What one pixel is worth in the world, from the height the camera frames.
+    let per_pixel = camera.framed_half_height * 2.0 / viewport.1;
+    // Moving the camera the way the finger went would drag the world the wrong
+    // way: the camera goes against the drag, so the ground follows the hand.
+    // Screen y runs downward and the camera's up does not, which is the second
+    // negation cancelling on that axis.
+    (right * -drag[0] + up * drag[1]) * per_pixel
+}

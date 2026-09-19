@@ -351,3 +351,105 @@ fn a_block_with_something_on_it_wears_its_buried_look() {
         "a tile with no buried look changed anyway"
     );
 }
+
+/// A post: thin across and into, tall up. The shape `height` could never say.
+const POST: &str = r#","post": {
+    "extent": { "min": [0.4, 0.0, 0.4], "max": [0.6, 1.0, 0.6] },
+    "occludes": false,
+    "faces": {
+      "top":   { "sprite": "b.png#top",  "size": [1.0, 1.0] },
+      "south": { "sprite": "b.png#side", "size": [1.0, 1.0] },
+      "east":  { "sprite": "b.png#side", "size": [1.0, 1.0] }
+    }
+  }"#;
+
+/// A rail: a slice partway up the cell, touching neither floor nor ceiling.
+const RAIL: &str = r#","rail": {
+    "extent": { "min": [0.0, 0.55, 0.42], "max": [1.0, 0.7, 0.58] },
+    "occludes": false,
+    "faces": {
+      "top":   { "sprite": "b.png#top",  "size": [1.0, 1.0] },
+      "south": { "sprite": "b.png#side", "size": [1.0, 1.0] },
+      "east":  { "sprite": "b.png#side", "size": [1.0, 1.0] }
+    }
+  }"#;
+
+#[test]
+fn a_post_is_built_at_the_size_its_box_gives_it() {
+    let faces = faces_of(r#"{ "position": [0, 0, 0], "tile": "post" }"#, POST);
+    let side = faces
+        .iter()
+        .find(|face| face.face == TileFace::East)
+        .expect("a post has an east side");
+    // The quad's own axes are its model's first two columns, so their lengths
+    // are the side's width and height in the world.
+    let width = side.model.col(0).truncate().length();
+    let height = side.model.col(1).truncate().length();
+    assert!(
+        (width - 0.2).abs() < 1e-5 && (height - 1.0).abs() < 1e-5,
+        "a post's side is as wide as the box is deep and as tall as the cell: {width} x {height}"
+    );
+
+    let top = faces
+        .iter()
+        .find(|face| face.face == TileFace::Top)
+        .expect("a post has a top");
+    let centre = top.model.col(3).truncate();
+    assert!(
+        (centre - Vec3::new(0.0, 1.0, 0.0)).length() < 1e-5,
+        "and its top is a fifth of a cell across, up where the box ends: {centre:?}"
+    );
+}
+
+#[test]
+fn a_rail_floats_where_its_box_puts_it() {
+    // The case a height cannot express at all: a height always starts at the
+    // floor, so nothing authored with one can hang in the middle of its cell.
+    let faces = faces_of(r#"{ "position": [0, 0, 0], "tile": "rail" }"#, RAIL);
+    let bottom = faces
+        .iter()
+        .find(|face| face.face == TileFace::Bottom)
+        .expect("a rail has an underside");
+    let centre = bottom.model.col(3).truncate();
+    assert!(
+        (centre.y - 0.55).abs() < 1e-5,
+        "a rail's underside is above the floor it never touches: {centre:?}"
+    );
+}
+
+#[test]
+fn a_post_against_a_block_hides_none_of_it() {
+    // The rule a height got wrong the moment a tile stopped filling its
+    // footprint: covering a face means covering all of it. A post takes a
+    // fifth of the wall, and dropping the wall would leave a hole around it.
+    let faces = faces_of(
+        r#"{ "position": [0, 0, 0], "tile": "stone" },
+           { "position": [1, 0, 0], "tile": "post" }"#,
+        POST,
+    );
+    let stone_sides = faces
+        .iter()
+        .filter(|face| face.cell.x == 0 && face.face == TileFace::East)
+        .count();
+    assert_eq!(
+        stone_sides, 1,
+        "the block keeps the side the post stands against"
+    );
+}
+
+#[test]
+fn a_block_beside_a_block_still_hides_it() {
+    // The other half: the economy that makes drawing a landscape possible has
+    // to survive boxes existing. Two full cells still meet and still cull.
+    let faces = faces_of(
+        r#"{ "position": [0, 0, 0], "tile": "stone" },
+           { "position": [1, 0, 0], "tile": "stone" }"#,
+        POST,
+    );
+    assert!(
+        !faces
+            .iter()
+            .any(|face| face.cell.x == 0 && face.face == TileFace::East),
+        "a full block against a full block hides its side"
+    );
+}

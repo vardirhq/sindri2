@@ -18,6 +18,7 @@ mod dispatch;
 mod effects;
 mod geometry;
 mod map;
+mod person;
 mod physics;
 mod profile;
 mod random;
@@ -40,9 +41,9 @@ use self::convert::{as_f32, describe, number};
 use crate::{
     Blackboard, PrefabSources, ProfileSources,
     surface::{
-        AIM, AIM_VALUES, AimValue, FUNCTIONS, Handle, HostFunction, Leaf, POINTER, POINTER_VALUES,
-        PRINT, PointerValue, STICK, STICK_VALUES, StickValue, TIME, TIME_VALUES, TOUCH,
-        TOUCH_COUNT, TimeValue, TouchCall, VIEWPORT, VIEWPORT_VALUES, ViewportValue, follow_mut,
+        AIM, AIM_VALUES, CAMERA, CAMERA_VALUES, FUNCTIONS, GESTURE, GESTURE_VALUES, Handle,
+        HostFunction, Leaf, POINTER, POINTER_VALUES, PRINT, STICK, STICK_VALUES, TIME, TIME_VALUES,
+        TOUCH, TOUCH_COUNT, TimeValue, VIEWPORT, VIEWPORT_VALUES, ViewportValue, follow_mut,
         handle, leaf, leaf_through_reference,
     },
 };
@@ -125,6 +126,10 @@ pub struct WorldHost<'a> {
     /// pointer that no script owns. A script that could set it would be
     /// deciding what the person was looking at.
     aim: Option<sindri_scene::voxel::VolumeAim>,
+    /// What the person just did, as an intention rather than as a button.
+    gestures: Option<&'a sindri_core::Gestures>,
+    /// How far this frame's drag asks the camera to move.
+    camera_pan: Option<[f32; 3]>,
     /// Where each animated sprite has got to, when the host advances any.
     ///
     /// Mutable for one call: playing the clip already playing has to reset the
@@ -183,6 +188,16 @@ impl Host for WorldHost<'_> {
                 // and the platform bounds it to ten regardless.
                 #[allow(clippy::cast_precision_loss)]
                 return Ok(Some(Value::Number(self.context.input.touch_count() as f64)));
+            }
+            if *namespace == CAMERA
+                && let Some((_, value)) = CAMERA_VALUES.iter().find(|(known, _)| known == name)
+            {
+                return Ok(Some(self.camera_value(*value)));
+            }
+            if *namespace == GESTURE
+                && let Some((_, value)) = GESTURE_VALUES.iter().find(|(known, _)| known == name)
+            {
+                return Ok(Some(self.gesture_value(*value)));
             }
             if *namespace == AIM
                 && let Some((_, value)) = AIM_VALUES.iter().find(|(known, _)| known == name)
@@ -423,121 +438,6 @@ impl WorldHost<'_> {
     /// mid-frame and not a mistake in a script. `Pointer.inside` is how a
     /// script that cares asks, and it has to be asked *before* the position is
     /// believed.
-    /// What the steering finger is asking for.
-    ///
-    /// The host computes it rather than the script, because anchoring, the
-    /// clamp past the radius and the dead zone are the same three decisions in
-    /// every game that has ever needed a stick -- and a script doing the
-    /// subtraction itself gets a slightly different feel and its own bugs.
-    fn stick_value(&self, value: StickValue) -> Value {
-        let stick = self.context.input.stick();
-        let pushed = stick.value();
-        match value {
-            StickValue::X => Value::Number(f64::from(pushed[0])),
-            StickValue::Y => Value::Number(f64::from(pushed[1])),
-            StickValue::Held => Value::Bool(stick.is_engaged()),
-            // Zero when nothing is holding it, like a pointer position read
-            // from outside the window: a script that cares asks `held` first.
-            StickValue::AnchorX => Value::Number(f64::from(
-                stick
-                    .anchor(self.context.input.presses())
-                    .unwrap_or([0.0, 0.0])[0],
-            )),
-            StickValue::AnchorY => Value::Number(f64::from(
-                stick
-                    .anchor(self.context.input.presses())
-                    .unwrap_or([0.0, 0.0])[1],
-            )),
-        }
-    }
-
-    /// What the person is pointing at, in a world made of blocks.
-    ///
-    /// Every cell reads zero when nothing was hit, which is why `hit` exists
-    /// and is not a convenience: zero is a real cell, and a script that
-    /// skipped the question would build a tower at the origin every time the
-    /// pointer left the world. Reporting it as an error instead would be
-    /// wrong -- pointing at the sky is an ordinary thing to do.
-    fn aim_value(&self, value: AimValue) -> Value {
-        let Some(aim) = self.aim else {
-            return match value {
-                AimValue::Hit => Value::Bool(false),
-                _ => Value::Number(0.0),
-            };
-        };
-        match value {
-            AimValue::Hit => Value::Bool(true),
-            AimValue::X => Value::Number(f64::from(aim.cell.x)),
-            AimValue::Y => Value::Number(f64::from(aim.cell.y)),
-            AimValue::Z => Value::Number(f64::from(aim.cell.z)),
-            AimValue::PlaceX => Value::Number(f64::from(aim.against.x)),
-            AimValue::PlaceY => Value::Number(f64::from(aim.against.y)),
-            AimValue::PlaceZ => Value::Number(f64::from(aim.against.z)),
-        }
-    }
-
-    fn pointer_value(&self, value: PointerValue) -> Value {
-        let position = self.context.input.pointer_position();
-        match value {
-            PointerValue::Inside => Value::Bool(position.is_some()),
-            // False with no screen UI running, rather than an error: a host
-            // with no UI has no element to take the pointer, which is a true
-            // answer rather than a missing one.
-            PointerValue::OverUi => Value::Bool(
-                self.screen_ui
-                    .is_some_and(sindri_scene::ScreenUi::captures_pointer),
-            ),
-            PointerValue::X => Value::Number(f64::from(position.unwrap_or([0.0, 0.0])[0])),
-            PointerValue::Y => Value::Number(f64::from(position.unwrap_or([0.0, 0.0])[1])),
-            // Zero with no screen UI running, for the same reason a position
-            // read while the pointer is outside reads zero: the overlay is
-            // where the UI is laid out, and a host laying out none has no
-            // overlay to answer about. A script that cares asks `inside`.
-            PointerValue::OverlayX => Value::Number(f64::from(
-                self.screen_ui
-                    .and_then(sindri_scene::ScreenUi::pointer_overlay)
-                    .unwrap_or([0.0, 0.0])[0],
-            )),
-            PointerValue::OverlayY => Value::Number(f64::from(
-                self.screen_ui
-                    .and_then(sindri_scene::ScreenUi::pointer_overlay)
-                    .unwrap_or([0.0, 0.0])[1],
-            )),
-        }
-    }
-
-    /// Where one finger is.
-    fn touch_call(
-        &self,
-        call: TouchCall,
-        path: &Path,
-        args: &[Value],
-    ) -> Result<Value, RuntimeError> {
-        let index = number(path, args.first().unwrap_or(&Value::Null))?;
-        if !index.is_finite() || index.fract() != 0.0 || index < 0.0 {
-            return Err(RuntimeError::Host(format!(
-                "{} takes which finger, counting from zero, and the script gave {index}",
-                path.dotted()
-            )));
-        }
-        // Guarded above: finite, non-negative, and whole.
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let position = self.context.input.touch_at(index as usize).ok_or_else(|| {
-            // Named rather than answered with zero: a script reading finger
-            // three when two are down has a bound that is wrong, and a zero
-            // would read as a finger in the corner of the screen.
-            RuntimeError::Host(format!(
-                "{} was asked for finger {index}, and {} are down",
-                path.dotted(),
-                self.context.input.touch_count()
-            ))
-        })?;
-        Ok(Value::Number(f64::from(match call {
-            TouchCall::X => position[0],
-            TouchCall::Y => position[1],
-        })))
-    }
-
     pub(super) fn transform_of(&self, entity: EntityId) -> Option<Transform3D> {
         self.world.get(entity)?.transform_3d
     }

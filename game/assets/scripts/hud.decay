@@ -13,7 +13,10 @@ script Hud {
         if which < 1.5 {
             return "earth";
         }
-        return "stone";
+        if which < 2.5 {
+            return "stone";
+        }
+        return "railing";
     }
 
     fn update(dt: f32) {
@@ -25,6 +28,24 @@ script Hud {
         // A game that ends without saying so has not ended.
         if Game.get("arrived", 0.0) > 0.0 {
             Ui.set_text(kind, "The way is open.");
+            Ui.set_text(stock, "");
+            return;
+        }
+        // Which mode the button will switch *from*, so the label names where
+        // you are rather than where you would go. A button that says PLAY
+        // while you are playing is a button nobody can read.
+        let label = World.find("ModeLabel");
+        if label != null {
+            if Game.get("playing", 0.0) > 0.5 {
+                Ui.set_text(label, "PLAY");
+            } else {
+                Ui.set_text(label, "BUILD");
+            }
+        }
+
+        // While walking there is no block in hand and nothing to count.
+        if Game.get("playing", 0.0) > 0.5 {
+            Ui.set_text(kind, "tap to walk");
             Ui.set_text(stock, "");
             return;
         }

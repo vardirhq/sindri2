@@ -1,0 +1,12 @@
+// The mode button, for a device with no Tab key.
+//
+// It reports rather than decides: pressing it raises a flag that Modes reads
+// and clears. One script owning the mode is what stops the button and the
+// keyboard disagreeing about which mode is on.
+script ModeButton {
+    fn update(dt: f32) {
+        if Ui.is_pressed(this.entity) {
+            Game.set("toggle_mode", 1.0);
+        }
+    }
+}

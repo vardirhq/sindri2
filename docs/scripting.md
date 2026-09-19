@@ -1164,6 +1164,16 @@ host guessing which camera controls gameplay.
 
 | Path | Type |
 | --- | --- |
+| `Camera.pan_x` | `f32` |
+| `Camera.pan_y` | `f32` |
+| `Camera.pan_z` | `f32` |
+
+`Camera.pan_{x,y,z}` is the gameplay camera's accumulated world-space pan offset.
+A script writes the offset it wants; the host applies it to the authored camera
+without changing the scene's authored transform.
+
+| Path | Type |
+| --- | --- |
 | `Pointer.x` | `f32` |
 | `Pointer.y` | `f32` |
 | `Pointer.overlay_x` | `f32` |
@@ -1185,6 +1195,58 @@ host guessing which camera controls gameplay.
 | --- | --- |
 | `Touch.x(index)` | `f32` |
 | `Touch.y(index)` | `f32` |
+
+| Path | Type |
+| --- | --- |
+| `Gesture.tapped` | `bool` |
+| `Gesture.tap_x` | `f32` |
+| `Gesture.tap_y` | `f32` |
+| `Gesture.held` | `bool` |
+| `Gesture.hold_x` | `f32` |
+| `Gesture.hold_y` | `f32` |
+| `Gesture.dragging` | `bool` |
+| `Gesture.drag_x` | `f32` |
+| `Gesture.drag_y` | `f32` |
+| `Gesture.pinching` | `bool` |
+| `Gesture.pinch` | `f32` |
+
+`Gesture` says what the person *meant*, where `Pointer` says which button is
+down. The difference matters as soon as a game is played with a finger: a mouse
+has a second button to mean "remove" and a finger does not, so removing becomes
+a hold, and panning becomes a drag that must not also count as a tap when it
+ends. None of that can be worked out from `Pointer` alone, because the
+difference between a tap and the start of a drag is how the press *ends* and how
+far it wandered getting there — a question about a press's whole life rather
+than about this instant.
+
+Each gesture is guarded by its own question for the reason `Aim.hit` is: nothing
+happened is the common case, and every coordinate reads zero when it did, which
+is a real place on the screen. `Gesture.pinch` reads one rather than zero when
+no pinch is happening, so a script that multiplies by it without asking does not
+collapse its camera to a point.
+
+```rust
+script Build {
+    fn update(dt: f32) {
+        // Drag pans, tap builds, hold takes back. The same three lines are the
+        // mouse controls and the touch controls.
+        if Gesture.dragging {
+            Camera.pan_x = Camera.pan_x + Gesture.drag_x;
+            Camera.pan_y = Camera.pan_y + Gesture.drag_y;
+        }
+        if Gesture.tapped && Aim.hit {
+            Grid.set_block(floor, Aim.place_x, Aim.place_y, Aim.place_z, "stone");
+        }
+        if Gesture.held && Aim.hit {
+            Grid.set_block(floor, Aim.x, Aim.y, Aim.z, "");
+        }
+    }
+}
+```
+
+How still a press has to be and how long a hold takes are authorable, because
+the answer is not universal: a stylus is steadier than a thumb, and a game
+played at arm's length wants more slack than one played at a desk.
 
 `Pointer` is **one namespace for the mouse and the finger**, and that is the
 whole point of it: a game that aims at a point should not have to ask which

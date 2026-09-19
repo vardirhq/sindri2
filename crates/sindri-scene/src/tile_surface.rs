@@ -73,7 +73,7 @@ impl TileSurfaces {
             // authors that, and the value is a height to compare rather than a
             // coordinate to store, so the cast is the honest one here.
             #[allow(clippy::cast_precision_loss)]
-            let top = coord.z as f32 + definition.height;
+            let top = coord.z as f32 + definition.bounds().top();
             heights.insert(column, top);
             if definition.walkable {
                 walkable.insert(column);

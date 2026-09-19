@@ -31,8 +31,10 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `Aim`: `Aim`
 - `Animation`: `Animation`
 - `Audio`: `Audio`
+- `Camera`: `Camera`
 - `Effects`: `Effects`
 - `Game`: `Game`
+- `Gesture`: `Gesture`
 - `Grid`: `Grid`
 - `Input`: `Input`
 - `Physics`: `Physics`
@@ -87,6 +89,12 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `resume_all()` → `unit`
 - `stop_all()` → `unit`
 
+### `Camera`
+
+- `pan_x`: `f32`
+- `pan_y`: `f32`
+- `pan_z`: `f32`
+
 ### `Effects`
 
 - `burst(Entity)` → `f32`
@@ -104,6 +112,20 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 
 - `get(String, f32)` → `f32`
 - `set(String, f32)` → `unit`
+
+### `Gesture`
+
+- `drag_x`: `f32`
+- `drag_y`: `f32`
+- `dragging`: `bool`
+- `held`: `bool`
+- `hold_x`: `f32`
+- `hold_y`: `f32`
+- `pinch`: `f32`
+- `pinching`: `bool`
+- `tap_x`: `f32`
+- `tap_y`: `f32`
+- `tapped`: `bool`
 
 ### `Grid`
 

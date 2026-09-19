@@ -43,6 +43,18 @@ pub struct ScriptFrame<'a> {
     pub screen_ui: Option<&'a sindri_scene::ScreenUi>,
     /// Which block the pointer is on, when the host picked one this frame.
     pub aim: Option<sindri_scene::voxel::VolumeAim>,
+    /// How far this frame's drag asks the camera to move, in world units.
+    ///
+    /// Worked out by whatever is running the game, because it needs the view
+    /// matrix and the viewport and a script has neither.
+    pub camera_pan: Option<[f32; 3]>,
+    /// What the person just did, recognised from the presses.
+    ///
+    /// Borrowed rather than copied because a recogniser has to remember what
+    /// each press has been doing across frames -- a tap is only a tap because
+    /// of where it started -- so it belongs to whatever is running the game
+    /// and is lent here for the frame.
+    pub gestures: Option<&'a sindri_core::Gestures>,
     /// The run's random stream, when the host is running one.
     ///
     /// `None` for a host that seeds nothing, and then `Random.value` says so
@@ -94,6 +106,8 @@ impl<'a> ScriptFrame<'a> {
             physics: None,
             screen_ui: None,
             aim: None,
+            gestures: None,
+            camera_pan: None,
             random: None,
             saves: None,
             effects: None,
@@ -148,6 +162,18 @@ impl<'a> ScriptFrame<'a> {
     /// viewport. Left unset, `Aim.hit` is false and a builder script simply
     /// finds the person pointing at nothing -- which is the right answer for a
     /// host with no pointer rather than an error to report.
+    #[must_use]
+    pub const fn with_camera_pan(mut self, pan: [f32; 3]) -> Self {
+        self.camera_pan = Some(pan);
+        self
+    }
+
+    #[must_use]
+    pub const fn with_gestures(mut self, gestures: &'a sindri_core::Gestures) -> Self {
+        self.gestures = Some(gestures);
+        self
+    }
+
     #[must_use]
     pub const fn with_aim(mut self, aim: sindri_scene::voxel::VolumeAim) -> Self {
         self.aim = Some(aim);

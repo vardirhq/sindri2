@@ -96,6 +96,14 @@ pub(crate) const SCRIPTS: &[(&str, &str)] = &[
         "scripts/camera-follow.decay",
         include_str!("../assets/scripts/camera-follow.decay"),
     ),
+    (
+        "scripts/modes.decay",
+        include_str!("../assets/scripts/modes.decay"),
+    ),
+    (
+        "scripts/mode-button.decay",
+        include_str!("../assets/scripts/mode-button.decay"),
+    ),
 ];
 
 /// Native art bytes used by the standalone game and capture tests.

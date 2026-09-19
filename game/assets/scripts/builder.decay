@@ -27,7 +27,13 @@ script Builder {
         if which < 1.5 {
             return "earth";
         }
-        return "stone";
+        if which < 2.5 {
+            return "stone";
+        }
+        // A shape rather than a block: a railing post fills a fifth of its
+        // cell and nothing stands on it, which is a thing a tile could not be
+        // when a tile was only ever a height.
+        return "plank-post";
     }
 
     fn update(dt: f32) {
@@ -49,10 +55,19 @@ script Builder {
         if Input.just_pressed("Digit3") {
             chosen = 2.0;
         }
+        if Input.just_pressed("Digit4") {
+            chosen = 3.0;
+        }
 
         // Read by the HUD, and by the test that plays the game without one.
         Game.set("chosen", chosen);
         Game.set("left", left);
+
+        // Building is a mode. While walking, a tap means "go there" and the
+        // walker reads it instead.
+        if Game.get("playing", 0.0) > 0.5 {
+            return;
+        }
 
         // Pointing at nothing is an ordinary thing to do, and every cell
         // reads zero when it happens -- so this is asked before anything is
@@ -61,7 +76,11 @@ script Builder {
             return;
         }
 
-        if Pointer.just_pressed("Left") && left > 0.0 {
+        // A tap rather than a press, because a press is also how a drag
+        // starts and a drag pans the view: building on the press would lay a
+        // block every time somebody moved the camera. A tap is a press that
+        // stayed still and let go, which is exactly the difference.
+        if Gesture.tapped && left > 0.0 {
             // A cell already holding this block is not a placement, and
             // spending a plank to replace a plank is the kind of quiet loss
             // that makes a puzzle feel broken rather than hard.
@@ -72,12 +91,16 @@ script Builder {
             }
         }
 
-        if Pointer.just_pressed("Right") {
+        // A hold rather than a right-click. A finger has no second button, so
+        // taking a block back has to be something a finger can say -- and a
+        // mouse can hold too, so this is one rule rather than two.
+        if Gesture.held {
             // Taking back what you laid returns it; the island itself is not
             // yours to carry away. Which is also what stops the pillar being
             // dismantled instead of climbed.
             let taken = Grid.block(floor, Aim.x, Aim.y, Aim.z);
-            if taken == "plank-slab" || taken == "plank" || taken == "earth" {
+            if taken == "plank-slab" || taken == "plank" || taken == "earth"
+                || taken == "plank-post" {
                 // The empty string clears a cell.
                 Grid.set_block(floor, Aim.x, Aim.y, Aim.z, "");
                 left += 1.0;
