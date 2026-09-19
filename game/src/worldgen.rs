@@ -505,6 +505,15 @@ mod tests {
     }
 
     #[test]
+    fn generated_world_contains_block_built_trees() {
+        let volume = super::generate(super::WorldShape::default(), "causeway.tileset.json");
+        let logs = volume.cells.iter().filter(|cell| cell.tile == "log").count();
+        let leaves = volume.cells.iter().filter(|cell| cell.tile == "leaves").count();
+        assert!(logs > 0, "the generated world grows log trunks");
+        assert!(leaves > logs, "tree crowns contain more leaves than trunk blocks");
+    }
+
+    #[test]
     fn the_same_column_is_always_decided_the_same_way() {
         // A world that reshuffled its own coastline between two runs would
         // make every render capture a coin toss.
