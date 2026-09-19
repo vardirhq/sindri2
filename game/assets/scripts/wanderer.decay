@@ -78,9 +78,9 @@ script Wanderer {
             }
         }
 
-        // A grid step is committed up front so navigation and occupancy stay
-        // discrete. Its visible transform is then put back and travels across
-        // the committed edge over step_seconds instead of teleporting a cell.
+        // Ask pathfinding for the next whole cell up front, then put the
+        // transform back and cross that chosen edge continuously. Route choices
+        // remain grid-based while the picture no longer teleports a cell.
         if moving {
             step_elapsed += dt;
             let amount = min(1.0, step_elapsed / max(0.001, step_seconds));
