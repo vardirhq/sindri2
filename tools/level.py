@@ -121,9 +121,13 @@ def entities():
             # could not go.
             "id": "target",
             "name": "Target",
-            "transform_3d": transform((0.0, 0.0, 0.0)),
+            "transform_3d": transform((0.0, 0.0, 0.0), scale=(0.38, 0.38, 1.0)),
             "components": {
                 "sindri.grid.placement": {"grid": "floor", "cell": list(WANDERER)},
+                # Temporary diagnostic marker: if this moves where the player taps,
+                # gesture/Aim/placement worked and any bad movement is downstream.
+                "sindri.sprite": {"texture": "textures/beacon.png#south",
+                                  "tint": [1.0, 0.25, 0.25, 0.9], "billboard": True},
             },
         },
         {
@@ -198,7 +202,7 @@ def entities():
             # it on the device this was hardest to play on.
             "id": "mode-button",
             "name": "ModeButton",
-            "transform_3d": transform((0.82, 0.88, 0.0), scale=(0.26, 0.1, 1.0)),
+            "transform_3d": transform((0.0, 0.86, 0.0), scale=(0.34, 0.1, 1.0)),
             "components": {
                 "sindri.ui.button": {"label": "mode"},
                 "sindri.ui.shape": {
@@ -215,7 +219,7 @@ def entities():
         {
             "id": "mode-label",
             "name": "ModeLabel",
-            "transform_3d": transform((0.82, 0.88, 0.0)),
+            "transform_3d": transform((0.0, 0.86, 0.0)),
             "components": {
                 "sindri.ui.text": {
                     "anchor": "center", "color": [0.949, 0.722, 0.294, 1.0],
