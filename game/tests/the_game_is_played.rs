@@ -471,4 +471,31 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
         camera_before,
         "the camera must ease after the Wanderer crosses its dead zone"
     );
+
+    // Build edits the world; it must not quietly give the Wanderer its old
+    // Beacon destination again. Switching modes may finish a grid step that
+    // pathfinding already committed, but after that the Wanderer stays put.
+    let mut build = InputState::default();
+    build.apply(InputEvent::KeyPressed(Key::Tab));
+    session
+        .step(&mut world, &build, VIEWPORT, STEP)
+        .expect("build mode toggles");
+    build.begin_frame(std::time::Duration::from_secs_f32(STEP));
+    build.apply(InputEvent::KeyReleased(Key::Tab));
+    session
+        .step(&mut world, &build, VIEWPORT, STEP)
+        .expect("tab releases into build");
+    assert_eq!(
+        ui_text(&world, &scene, "ModeLabel").text,
+        "BUILD",
+        "the regression must actually enter Build mode"
+    );
+
+    let build_position = entity_position(&world, "Wanderer");
+    settle(&mut world, &mut session, 120);
+    assert_eq!(
+        entity_position(&world, "Wanderer"),
+        build_position,
+        "the Wanderer must stay where Play left it while building"
+    );
 }
