@@ -16,7 +16,7 @@ use sindri_causeway::{
     worldgen::{SEA, WorldShape},
 };
 use sindri_core::World;
-use sindri_platform::{InputEvent, InputState, MouseButton};
+use sindri_platform::{InputEvent, InputState, Key, MouseButton};
 use sindri_scene::{SceneExtractor, TileVolumeComponent};
 
 const VIEWPORT: (f32, f32) = (1000.0, 720.0);
@@ -102,6 +102,28 @@ fn hold(world: &mut World, session: &mut Session, at: [f32; 2]) {
     session
         .step(world, &held, VIEWPORT, STEP)
         .expect("the release steps");
+}
+
+fn tap_touch(world: &mut World, session: &mut Session, at: [f32; 2]) {
+    let mut input = InputState::default();
+    input.apply(InputEvent::TouchStarted { id: 7, x: at[0], y: at[1] });
+    session.step(world, &input, VIEWPORT, STEP).expect("the touch press steps");
+
+    input.begin_frame(std::time::Duration::from_secs_f32(STEP));
+    input.apply(InputEvent::TouchEnded { id: 7 });
+    session.step(world, &input, VIEWPORT, STEP).expect("the touch release steps");
+
+    input.begin_frame(std::time::Duration::from_secs_f32(STEP));
+    session.step(world, &input, VIEWPORT, STEP).expect("the empty touch frame steps");
+}
+
+fn entity_position(world: &World, name: &str) -> [f32; 3] {
+    world
+        .entities()
+        .find(|(_, data)| data.name.as_deref() == Some(name))
+        .and_then(|(_, data)| data.transform_3d)
+        .expect("named entity has a transform")
+        .position
 }
 
 fn settle(world: &mut World, session: &mut Session, steps: usize) {
@@ -285,4 +307,29 @@ fn the_sea_is_something_to_build_across_rather_than_to_walk_on() {
         Some("plank-slab"),
         "clicking the shore's side lays a walkway out onto the water"
     );
+}
+
+#[test]
+fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
+    let (mut world, scene, mut session) = session();
+    settle(&mut world, &mut session, 2);
+
+    let mut toggle = InputState::default();
+    toggle.apply(InputEvent::KeyPressed(Key::Tab));
+    session.step(&mut world, &toggle, VIEWPORT, STEP).expect("play mode toggles");
+    toggle.begin_frame(std::time::Duration::from_secs_f32(STEP));
+    toggle.apply(InputEvent::KeyReleased(Key::Tab));
+    session.step(&mut world, &toggle, VIEWPORT, STEP).expect("tab releases");
+
+    let (_, at) = in_view(&world, &scene);
+    let target_before = entity_position(&world, "Target");
+    let wanderer_before = entity_position(&world, "Wanderer");
+
+    tap_touch(&mut world, &mut session, at);
+    let target_after = entity_position(&world, "Target");
+    assert_ne!(target_after, target_before, "a touch tap in Play must move the target");
+
+    settle(&mut world, &mut session, 40);
+    let wanderer_after = entity_position(&world, "Wanderer");
+    assert_ne!(wanderer_after, wanderer_before, "the wanderer must start moving toward the touch target");
 }
