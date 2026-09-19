@@ -320,6 +320,7 @@ fn the_sea_is_something_to_build_across_rather_than_to_walk_on() {
 }
 
 #[test]
+#[allow(clippy::float_cmp)]
 fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
     let (mut world, scene, mut session) = session();
     settle(&mut world, &mut session, 2);
