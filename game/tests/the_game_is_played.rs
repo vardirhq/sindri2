@@ -185,6 +185,38 @@ fn in_view(world: &World, scene: &SceneExtractor) -> ([i32; 3], [f32; 2]) {
     panic!("nothing in the middle of the picture to point at");
 }
 
+/// A visible top face outside one logical grid cell.
+///
+/// Play starts with Target under the Wanderer and the camera centred there,
+/// so the ordinary centre-of-view helper can legitimately return Target's
+/// current cell. A movement regression must choose somewhere else or a
+/// correctly handled tap can look like no movement at all.
+fn in_view_away_from(
+    world: &World,
+    scene: &SceneExtractor,
+    excluded: [i32; 2],
+) -> ([i32; 3], [f32; 2]) {
+    let camera = view_projection(world, scene);
+    for (across, down) in [
+        (0.32, 0.58),
+        (0.68, 0.42),
+        (0.36, 0.42),
+        (0.64, 0.58),
+        (0.5, 0.68),
+        (0.5, 0.32),
+    ] {
+        let at = [across * VIEWPORT.0, down * VIEWPORT.1];
+        if let Some(aim) =
+            sindri_scene::voxel::aim_at(world, scene.components(), camera, [across, down])
+            && aim.face == sindri_core::TileFace::Top
+            && [aim.cell.x, aim.cell.y] != excluded
+        {
+            return ([aim.cell.x, aim.cell.y, aim.cell.z], at);
+        }
+    }
+    panic!("nothing outside {excluded:?} is visible to tap");
+}
+
 #[test]
 fn clicking_the_top_of_the_ground_puts_a_block_on_it() {
     let (mut world, scene, mut session) = session();
@@ -320,7 +352,7 @@ fn the_sea_is_something_to_build_across_rather_than_to_walk_on() {
 }
 
 #[test]
-#[allow(clippy::float_cmp)]
+#[allow(clippy::cast_precision_loss, clippy::float_cmp)]
 fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
     let (mut world, scene, mut session) = session();
     settle(&mut world, &mut session, 2);
@@ -336,15 +368,24 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
         .step(&mut world, &toggle, VIEWPORT, STEP)
         .expect("tab releases");
 
-    let (_, at) = in_view(&world, &scene);
     let target_before = entity_position(&world, "Target");
     let wanderer_before = entity_position(&world, "Wanderer");
+    let initial_cell = sindri_scene::nearest_cell(
+        f64::from(target_before[0]),
+        f64::from(target_before[2]),
+    );
+    let (ground, at) = in_view_away_from(&world, &scene, [initial_cell.x, initial_cell.y]);
 
     tap_touch(&mut world, &mut session, at);
     let target_after = entity_position(&world, "Target");
     assert_ne!(
         target_after, target_before,
         "a touch tap in Play must move the target"
+    );
+    assert_eq!(
+        [target_after[0], target_after[2]],
+        [ground[0] as f32, ground[1] as f32],
+        "the target must use the voxel's logical column and row"
     );
 
     settle(&mut world, &mut session, 40);
