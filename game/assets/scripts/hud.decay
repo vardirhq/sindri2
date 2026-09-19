@@ -1,55 +1,58 @@
-// What the player needs to know, and nothing else.
-//
-// Which block is in hand and how many are left are the two facts a build
-// decision turns on, so they are on screen rather than in a menu. Two elements
-// rather than one sentence, because a name is text and a count is a number and
-// the host formats each properly -- a script gluing them together would be a
-// script deciding how numbers look.
+// Temporary phone diagnostic for Causeway Play input.
 script Hud {
-    fn named(which: f32) -> String {
-        if which < 0.5 {
-            return "planks";
-        }
-        if which < 1.5 {
-            return "earth";
-        }
-        if which < 2.5 {
-            return "stone";
-        }
-        return "railing";
-    }
-
     fn update(dt: f32) {
         let kind = World.find("Kind");
         let stock = World.find("Stock");
+        let debug = World.find("PlayDebug");
         if kind == null || stock == null {
             return;
         }
-        // A game that ends without saying so has not ended.
-        if Game.get("arrived", 0.0) > 0.0 {
-            Ui.set_text(kind, "The way is open.");
-            Ui.set_text(stock, "");
-            return;
-        }
-        // Which mode the button will switch *from*, so the label names where
-        // you are rather than where you would go. A button that says PLAY
-        // while you are playing is a button nobody can read.
+
+        let playing: bool = Game.get("playing", 0.0) > 0.5;
         let label = World.find("ModeLabel");
         if label != null {
-            if Game.get("playing", 0.0) > 0.5 {
+            if playing {
                 Ui.set_text(label, "PLAY");
             } else {
                 Ui.set_text(label, "BUILD");
             }
         }
 
-        // While walking there is no block in hand and nothing to count.
-        if Game.get("playing", 0.0) > 0.5 {
+        if playing {
             Ui.set_text(kind, "tap to walk");
+            Ui.set_text(stock, "");
+            if debug != null {
+                Ui.set_numbers(
+                    debug,
+                    Game.get("debug_tap", 0.0),
+                    Game.get("debug_aim", 0.0),
+                    Game.get("debug_ui", 0.0),
+                    Game.get("debug_aim_x", 0.0),
+                    Game.get("debug_aim_y", 0.0),
+                    Game.get("debug_aim_z", 0.0)
+                );
+            }
+            return;
+        }
+
+        if debug != null {
+            Ui.set_text(debug, "");
+        }
+        if Game.get("arrived", 0.0) > 0.0 {
+            Ui.set_text(kind, "The way is open.");
             Ui.set_text(stock, "");
             return;
         }
-        Ui.set_text(kind, named(Game.get("chosen", 0.0)));
+        let chosen = Game.get("chosen", 0.0);
+        if chosen < 0.5 {
+            Ui.set_text(kind, "planks");
+        } else if chosen < 1.5 {
+            Ui.set_text(kind, "earth");
+        } else if chosen < 2.5 {
+            Ui.set_text(kind, "stone");
+        } else {
+            Ui.set_text(kind, "railing");
+        }
         Ui.set_number(stock, Game.get("left", 0.0));
     }
 }
