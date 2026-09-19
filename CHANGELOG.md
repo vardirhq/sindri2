@@ -29,6 +29,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Fixed
 
+- Causeway's Wanderer now crosses grid steps smoothly, and the Play camera
+  holds a small dead zone before easing after it. The generated scene also keeps
+  its intended central start instead of a stale override placing it beside the
+  world edge, so BUILD panning has terrain around it in every direction.
 - Causeway Play taps now move their runtime Target instead of having its
   authored cell snap it back every frame, and use the voxel's grid row rather
   than its height, so the Wanderer walks toward the place the player tapped.

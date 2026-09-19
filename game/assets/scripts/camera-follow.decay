@@ -19,6 +19,15 @@ script CameraFollow {
     @export
     let ease: f32 = 4.0;
 
+    // How far the walker may move from the framed point before the camera
+    // follows. The camera then moves only enough to keep it on this boundary,
+    // rather than dragging the whole world for every fraction of a step.
+    @export
+    let dead_zone: f32 = 1.25;
+
+    @export
+    let height_dead_zone: f32 = 1.0;
+
     // A thirty-unit arm at forty-five degrees round and thirty-three up, which
     // is the isometric viewpoint this game is drawn from.
     @export
@@ -65,9 +74,32 @@ script CameraFollow {
             return;
         }
 
-        let amount = min(1.0, ease * dt);
-        this.transform.position.x += (want_x - this.transform.position.x) * amount;
-        this.transform.position.y += (want_y - this.transform.position.y) * amount;
-        this.transform.position.z += (want_z - this.transform.position.z) * amount;
+        var follow_x: f32 = this.transform.position.x;
+        var follow_y: f32 = this.transform.position.y;
+        var follow_z: f32 = this.transform.position.z;
+        let dx = want_x - this.transform.position.x;
+        let dy = want_y - this.transform.position.y;
+        let dz = want_z - this.transform.position.z;
+
+        if dx > dead_zone {
+            follow_x = want_x - dead_zone;
+        } else if dx < -dead_zone {
+            follow_x = want_x + dead_zone;
+        }
+        if dy > height_dead_zone {
+            follow_y = want_y - height_dead_zone;
+        } else if dy < -height_dead_zone {
+            follow_y = want_y + height_dead_zone;
+        }
+        if dz > dead_zone {
+            follow_z = want_z - dead_zone;
+        } else if dz < -dead_zone {
+            follow_z = want_z + dead_zone;
+        }
+
+        let amount = 1.0 - exp(-ease * max(0.0, dt));
+        this.transform.position.x += (follow_x - this.transform.position.x) * amount;
+        this.transform.position.y += (follow_y - this.transform.position.y) * amount;
+        this.transform.position.z += (follow_z - this.transform.position.z) * amount;
     }
 }
