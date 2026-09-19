@@ -1,14 +1,10 @@
 // The one who walks, and the reason any of it matters.
 //
-// While building it knows nothing about building: it asks the ground whether
-// the beacon can be reached and takes one step if it can, so laying a block
-// across a channel is not a command, it is the answer becoming yes.
-//
-// While playing it goes where it is told. A tap on the ground moves the
-// Target, and it walks to that instead -- the same routing call, given a
-// different entity to reach, which is why tap-to-move needed no new way to
-// ask. What it cannot do either way is walk somewhere there is no route to,
-// so being told is still a request rather than an order.
+// Play owns movement: a tap moves the Target and the Wanderer routes toward it.
+// Build owns the world instead, so switching to Build finishes any grid step
+// already committed by pathfinding and then leaves the Wanderer where it is.
+// What it cannot do in Play is walk somewhere there is no route to, so being
+// told is still a request rather than an order.
 script Wanderer {
     // Seconds a step takes. The pathfinder still commits one whole grid step,
     // while the transform crosses that step continuously for rendering.
@@ -68,15 +64,30 @@ script Wanderer {
             }
         }
 
-        // Which entity is being walked to. Building has no destination of its
-        // own, so it keeps the beacon and the game it always was.
-        var goal: Entity = beacon;
-        if playing {
-            let target = World.find("Target");
-            if target != null {
-                goal = target;
+        // Pathfinding commits the next grid cell before the transform eases
+        // across it. If Build is entered mid-step, finish that already-committed
+        // step so the rendered transform agrees with the logical grid cell,
+        // then stop. Build must never choose a new navigation destination.
+        if !playing {
+            if moving {
+                this.transform.position.x = to_x;
+                this.transform.position.y = to_y;
+                this.transform.position.z = to_z;
+                moving = false;
+                step_elapsed = 0.0;
             }
+            if !waiting {
+                waiting = true;
+                Animation.stop(this.entity);
+            }
+            return;
         }
+
+        let target = World.find("Target");
+        if target == null {
+            return;
+        }
+        let goal: Entity = target;
 
         // Ask pathfinding for the next whole cell up front, then put the
         // transform back and cross that chosen edge continuously. Route choices
