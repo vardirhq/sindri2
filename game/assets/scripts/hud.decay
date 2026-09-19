@@ -25,11 +25,7 @@ script Hud {
                 Ui.set_numbers(
                     debug,
                     Game.get("debug_tap", 0.0),
-                    Game.get("debug_aim", 0.0),
-                    Game.get("debug_ui", 0.0),
-                    Game.get("debug_aim_x", 0.0),
-                    Game.get("debug_aim_y", 0.0),
-                    Game.get("debug_aim_z", 0.0)
+                    Game.get("debug_aim", 0.0)
                 );
             }
             return;
