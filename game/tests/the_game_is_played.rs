@@ -17,7 +17,7 @@ use sindri_causeway::{
 };
 use sindri_core::World;
 use sindri_platform::{InputEvent, InputState, Key, MouseButton};
-use sindri_scene::{SceneExtractor, TileVolumeComponent};
+use sindri_scene::{SceneExtractor, TileVolumeComponent, UiTextComponent};
 
 const VIEWPORT: (f32, f32) = (1000.0, 720.0);
 const STEP: f32 = 1.0 / 60.0;
@@ -134,6 +134,19 @@ fn entity_position(world: &World, name: &str) -> [f32; 3] {
         .and_then(|(_, data)| data.transform_3d)
         .expect("named entity has a transform")
         .position
+}
+
+fn ui_text(world: &World, scene: &SceneExtractor, name: &str) -> UiTextComponent {
+    let entity = world
+        .entities()
+        .find(|(_, data)| data.name.as_deref() == Some(name))
+        .map(|(entity, _)| entity)
+        .expect("named UI entity exists");
+    scene
+        .components()
+        .get::<UiTextComponent>(world, entity)
+        .expect("the UI text schema reads")
+        .expect("the named UI text is active")
 }
 
 fn settle(world: &mut World, session: &mut Session, steps: usize) {
@@ -367,6 +380,11 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
     session
         .step(&mut world, &toggle, VIEWPORT, STEP)
         .expect("tab releases");
+    assert_eq!(
+        ui_text(&world, &scene, "ModeLabel").text,
+        "PLAY",
+        "Game.playing must be true before the touch"
+    );
 
     let target_before = entity_position(&world, "Target");
     let wanderer_before = entity_position(&world, "Wanderer");
@@ -375,6 +393,18 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
     let (ground, at) = in_view_away_from(&world, &scene, [initial_cell.x, initial_cell.y]);
 
     tap_touch(&mut world, &mut session, at);
+    let debug = ui_text(&world, &scene, "PlayDebug");
+    assert_eq!(
+        debug.values.first().copied(),
+        Some(1.0),
+        "Wanderer must observe Gesture.tapped (2 means Pointer.over_ui rejected it)"
+    );
+    assert_eq!(
+        debug.values.get(1).copied(),
+        Some(1.0),
+        "Aim.hit must be true during the Play tap"
+    );
+
     let target_after = entity_position(&world, "Target");
     assert_ne!(
         target_after, target_before,
