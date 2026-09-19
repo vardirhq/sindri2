@@ -347,8 +347,18 @@ pub fn generate(shape: WorldShape, tileset: &str) -> TileVolumeComponent {
     // trunks and alpha-cutout leaves share terrain depth, picking and rotation.
     for row in (3..shape.rows - 3).step_by(6) {
         for column in (3..shape.columns - 3).step_by(6) {
-            let x = column + if hashed(shape.seed ^ 0xF1, column, row) > 0.5 { 1 } else { -1 };
-            let y = row + if hashed(shape.seed ^ 0xF2, column, row) > 0.5 { 1 } else { -1 };
+            let x = column
+                + if hashed(shape.seed ^ 0xF1, column, row) > 0.5 {
+                    1
+                } else {
+                    -1
+                };
+            let y = row
+                + if hashed(shape.seed ^ 0xF2, column, row) > 0.5 {
+                    1
+                } else {
+                    -1
+                };
             let described = shape.column(x, y);
             let surface = shape.surface(x, y, described);
             if described.ground <= SEA
@@ -507,10 +517,21 @@ mod tests {
     #[test]
     fn generated_world_contains_block_built_trees() {
         let volume = super::generate(super::WorldShape::default(), "causeway.tileset.json");
-        let logs = volume.cells.iter().filter(|cell| cell.tile == "log").count();
-        let leaves = volume.cells.iter().filter(|cell| cell.tile == "leaves").count();
+        let logs = volume
+            .cells
+            .iter()
+            .filter(|cell| cell.tile == "log")
+            .count();
+        let leaves = volume
+            .cells
+            .iter()
+            .filter(|cell| cell.tile == "leaves")
+            .count();
         assert!(logs > 0, "the generated world grows log trunks");
-        assert!(leaves > logs, "tree crowns contain more leaves than trunk blocks");
+        assert!(
+            leaves > logs,
+            "tree crowns contain more leaves than trunk blocks"
+        );
     }
 
     #[test]
