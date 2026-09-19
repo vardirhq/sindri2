@@ -370,10 +370,8 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
 
     let target_before = entity_position(&world, "Target");
     let wanderer_before = entity_position(&world, "Wanderer");
-    let initial_cell = sindri_scene::nearest_cell(
-        f64::from(target_before[0]),
-        f64::from(target_before[2]),
-    );
+    let initial_cell =
+        sindri_scene::nearest_cell(f64::from(target_before[0]), f64::from(target_before[2]));
     let (ground, at) = in_view_away_from(&world, &scene, [initial_cell.x, initial_cell.y]);
 
     tap_touch(&mut world, &mut session, at);
