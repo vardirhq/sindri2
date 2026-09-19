@@ -1164,6 +1164,16 @@ host guessing which camera controls gameplay.
 
 | Path | Type |
 | --- | --- |
+| `Camera.pan_x` | `f32` |
+| `Camera.pan_y` | `f32` |
+| `Camera.pan_z` | `f32` |
+
+`Camera.pan_{x,y,z}` is the gameplay camera's accumulated world-space pan offset.
+A script writes the offset it wants; the host applies it to the authored camera
+without changing the scene's authored transform.
+
+| Path | Type |
+| --- | --- |
 | `Pointer.x` | `f32` |
 | `Pointer.y` | `f32` |
 | `Pointer.overlay_x` | `f32` |
@@ -1221,7 +1231,8 @@ script Build {
         // Drag pans, tap builds, hold takes back. The same three lines are the
         // mouse controls and the touch controls.
         if Gesture.dragging {
-            Camera.pan(Gesture.drag_x, Gesture.drag_y);
+            Camera.pan_x = Camera.pan_x + Gesture.drag_x;
+            Camera.pan_y = Camera.pan_y + Gesture.drag_y;
         }
         if Gesture.tapped && Aim.hit {
             Grid.set_block(floor, Aim.place_x, Aim.place_y, Aim.place_z, "stone");
