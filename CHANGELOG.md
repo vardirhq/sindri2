@@ -29,6 +29,9 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Fixed
 
+- Causeway Play taps now send the Wanderer toward the voxel's grid row rather
+  than treating its height as the row, so touch destinations land where the
+  player tapped instead of repeatedly returning near the starting area.
 - The editor no longer draws a tile volume as a comb of vertical stripes after
   the first edit. A volume names a tile set rather than a texture, so nothing
   about the world asked for the sheet that cuts its blocks: the tile set's
