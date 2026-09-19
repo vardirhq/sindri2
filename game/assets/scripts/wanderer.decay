@@ -10,13 +10,20 @@
 // ask. What it cannot do either way is walk somewhere there is no route to,
 // so being told is still a request rather than an order.
 script Wanderer {
-    // Seconds a step takes. Slow enough to watch, so a way opening reads as
-    // the walker setting off rather than as it teleporting.
+    // Seconds a step takes. The pathfinder still commits one whole grid step,
+    // while the transform crosses that step continuously for rendering.
     @export
     let step_seconds: f32 = 0.34;
 
-    var elapsed: f32 = 0.0;
+    var moving: bool = false;
     var waiting: bool = true;
+    var step_elapsed: f32 = 0.0;
+    var from_x: f32 = 0.0;
+    var from_y: f32 = 0.0;
+    var from_z: f32 = 0.0;
+    var to_x: f32 = 0.0;
+    var to_y: f32 = 0.0;
+    var to_z: f32 = 0.0;
 
     fn update(dt: f32) {
         let floor = World.find("Floor");
@@ -49,8 +56,8 @@ script Wanderer {
             }
         }
 
-        // Where a tap said to go. Taken before the step timer, so a tap lands
-        // on the frame it happened rather than waiting for the next step.
+        // Where a tap said to go. Taken before movement advances, so a tap
+        // lands on the frame it happened rather than waiting for a step.
         if playing && Gesture.tapped && Aim.hit && !Pointer.over_ui {
             let target = World.find("Target");
             if target != null {
@@ -71,11 +78,21 @@ script Wanderer {
             }
         }
 
-        elapsed += dt;
-        if elapsed < step_seconds {
-            return;
+        // A grid step is committed up front so navigation and occupancy stay
+        // discrete. Its visible transform is then put back and travels across
+        // the committed edge over step_seconds instead of teleporting a cell.
+        if moving {
+            step_elapsed += dt;
+            let amount = min(1.0, step_elapsed / max(0.001, step_seconds));
+            this.transform.position.x = from_x + (to_x - from_x) * amount;
+            this.transform.position.y = from_y + (to_y - from_y) * amount;
+            this.transform.position.z = from_z + (to_z - from_z) * amount;
+            if amount < 1.0 {
+                return;
+            }
+            moving = false;
+            step_elapsed = 0.0;
         }
-        elapsed = 0.0;
 
         // Asked every step rather than once, because the ground changes under
         // it: a route that existed a moment ago can be taken apart, and one
@@ -87,15 +104,32 @@ script Wanderer {
             }
             return;
         }
-        if waiting {
-            waiting = false;
-            Animation.play(this.entity, "bob");
-        }
+
+        from_x = this.transform.position.x;
+        from_y = this.transform.position.y;
+        from_z = this.transform.position.z;
+
         // False when there is nowhere further to go, which on a route that
         // exists means it has arrived.
         if !Grid.step_toward(this.entity, floor, goal) {
             Game.set("arrived", 1.0);
+            waiting = true;
             Animation.stop(this.entity);
+            return;
+        }
+
+        to_x = this.transform.position.x;
+        to_y = this.transform.position.y;
+        to_z = this.transform.position.z;
+        this.transform.position.x = from_x;
+        this.transform.position.y = from_y;
+        this.transform.position.z = from_z;
+        moving = true;
+        step_elapsed = 0.0;
+
+        if waiting {
+            waiting = false;
+            Animation.play(this.entity, "bob");
         }
     }
 }
