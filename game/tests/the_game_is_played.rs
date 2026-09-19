@@ -106,7 +106,11 @@ fn hold(world: &mut World, session: &mut Session, at: [f32; 2]) {
 
 fn tap_touch(world: &mut World, session: &mut Session, at: [f32; 2]) {
     let mut input = InputState::default();
-    input.apply(InputEvent::TouchStarted {\n        id: 7,\n        x: at[0],\n        y: at[1],\n    });
+    input.apply(InputEvent::TouchStarted {
+        id: 7,
+        x: at[0],
+        y: at[1],
+    });
     session
         .step(world, &input, VIEWPORT, STEP)
         .expect("the touch press steps");
