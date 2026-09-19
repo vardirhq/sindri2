@@ -38,7 +38,6 @@ def camera():
     ]
     return eye, look_at(eye, centre)
 
-WANDERER = (2, 7)
 
 def entities():
     eye, rotation = camera()
@@ -278,7 +277,8 @@ def entities():
                 },
                 "sindri.script": {"source": "scripts/camera-follow.decay",
                                   "script": "CameraFollow",
-                                  "properties": {"ease": 4.0}},
+                                  "properties": {"ease": 4.0, "dead_zone": 1.25,
+                                                 "height_dead_zone": 0.65}},
             },
         },
     ]
