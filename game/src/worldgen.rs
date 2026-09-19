@@ -343,6 +343,58 @@ pub fn generate(shape: WorldShape, tileset: &str) -> TileVolumeComponent {
         }
     }
 
+    // Trees are ordinary volume cells, not a special renderer. This makes
+    // trunks and alpha-cutout leaves share terrain depth, picking and rotation.
+    for row in (3..shape.rows - 3).step_by(6) {
+        for column in (3..shape.columns - 3).step_by(6) {
+            let x = column + if hashed(shape.seed ^ 0xF1, column, row) > 0.5 { 1 } else { -1 };
+            let y = row + if hashed(shape.seed ^ 0xF2, column, row) > 0.5 { 1 } else { -1 };
+            let described = shape.column(x, y);
+            let surface = shape.surface(x, y, described);
+            if described.ground <= SEA
+                || !matches!(surface, "ground" | "moss")
+                || hashed(shape.seed ^ 0xF3, x, y) < 0.58
+            {
+                continue;
+            }
+
+            let base = described.ground + 1;
+            for level in base..base + 4 {
+                cells.push(TileCellDocument {
+                    position: [x, y, level],
+                    tile: "log".to_owned(),
+                    visual_override: None,
+                });
+            }
+            // Chunky broadleaf crown, asymmetric enough not to become a green
+            // cube while remaining readable from each 90-degree camera view.
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    if dx == 0 && dy == 0 {
+                        continue;
+                    }
+                    cells.push(TileCellDocument {
+                        position: [x + dx, y + dy, base + 3],
+                        tile: "leaves".to_owned(),
+                        visual_override: None,
+                    });
+                }
+            }
+            for (dx, dy) in [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)] {
+                cells.push(TileCellDocument {
+                    position: [x + dx, y + dy, base + 4],
+                    tile: "leaves".to_owned(),
+                    visual_override: None,
+                });
+            }
+            cells.push(TileCellDocument {
+                position: [x, y, base + 5],
+                tile: "leaves".to_owned(),
+                visual_override: None,
+            });
+        }
+    }
+
     TileVolumeComponent {
         tileset: tileset.to_owned(),
         cells,
