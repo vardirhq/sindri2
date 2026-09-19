@@ -409,7 +409,7 @@ impl WorldShape {
 }
 
 fn grow_trees(shape: WorldShape, cells: &mut Vec<TileCellDocument>) {
-for row in (3..shape.rows - 3).step_by(6) {
+    for row in (3..shape.rows - 3).step_by(6) {
     for column in (3..shape.columns - 3).step_by(6) {
         let x = column
             + if hashed(shape.seed ^ 0xF1, column, row) > 0.5 {
@@ -431,7 +431,7 @@ for row in (3..shape.rows - 3).step_by(6) {
         {
             continue;
         }
-
+    
         let base = described.ground + 1;
         for level in base..base + 4 {
             cells.push(TileCellDocument {
@@ -467,8 +467,8 @@ for row in (3..shape.rows - 3).step_by(6) {
             visual_override: None,
         });
     }
-}
-}
+    }
+    }
 
 #[cfg(test)]
 mod tests {
