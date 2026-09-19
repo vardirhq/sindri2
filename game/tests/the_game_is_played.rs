@@ -312,7 +312,9 @@ fn play_tap_places_the_target_in_the_aimed_solid_grid_column() {
     click(&mut world, &mut session, at, MouseButton::Left);
 
     let target = world
-        .find_by_name("Target")
+        .entities()
+        .find(|(_, data)| data.name.as_deref() == Some("Target"))
+        .map(|(entity, _)| entity)
         .expect("the play target exists");
     let target_position = world
         .get(target)
