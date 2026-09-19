@@ -16,8 +16,8 @@ use sindri_causeway::{
     worldgen::{SEA, WorldShape},
 };
 use sindri_core::World;
-use sindri_platform::{InputEvent, InputState, MouseButton};
-use sindri_scene::{SceneExtractor, TileVolumeComponent};
+use sindri_platform::{InputEvent, InputState, Key, MouseButton};
+use sindri_scene::{SceneExtractor, TileVolumeComponent, UiTextComponent};
 
 const VIEWPORT: (f32, f32) = (1000.0, 720.0);
 const STEP: f32 = 1.0 / 60.0;
@@ -104,6 +104,51 @@ fn hold(world: &mut World, session: &mut Session, at: [f32; 2]) {
         .expect("the release steps");
 }
 
+fn tap_touch(world: &mut World, session: &mut Session, at: [f32; 2]) {
+    let mut input = InputState::default();
+    input.apply(InputEvent::TouchStarted {
+        id: 7,
+        x: at[0],
+        y: at[1],
+    });
+    session
+        .step(world, &input, VIEWPORT, STEP)
+        .expect("the touch press steps");
+
+    input.begin_frame(std::time::Duration::from_secs_f32(STEP));
+    input.apply(InputEvent::TouchEnded { id: 7 });
+    session
+        .step(world, &input, VIEWPORT, STEP)
+        .expect("the touch release steps");
+
+    input.begin_frame(std::time::Duration::from_secs_f32(STEP));
+    session
+        .step(world, &input, VIEWPORT, STEP)
+        .expect("the empty touch frame steps");
+}
+
+fn entity_position(world: &World, name: &str) -> [f32; 3] {
+    world
+        .entities()
+        .find(|(_, data)| data.name.as_deref() == Some(name))
+        .and_then(|(_, data)| data.transform_3d)
+        .expect("named entity has a transform")
+        .position
+}
+
+fn ui_text(world: &World, scene: &SceneExtractor, name: &str) -> UiTextComponent {
+    let entity = world
+        .entities()
+        .find(|(_, data)| data.name.as_deref() == Some(name))
+        .map(|(entity, _)| entity)
+        .expect("named UI entity exists");
+    scene
+        .components()
+        .get::<UiTextComponent>(world, entity)
+        .expect("the UI text schema reads")
+        .expect("the named UI text is active")
+}
+
 fn settle(world: &mut World, session: &mut Session, steps: usize) {
     let idle = InputState::default();
     for _ in 0..steps {
@@ -151,6 +196,38 @@ fn in_view(world: &World, scene: &SceneExtractor) -> ([i32; 3], [f32; 2]) {
         }
     }
     panic!("nothing in the middle of the picture to point at");
+}
+
+/// A visible top face outside one logical grid cell.
+///
+/// Play starts with Target under the Wanderer and the camera centred there,
+/// so the ordinary centre-of-view helper can legitimately return Target's
+/// current cell. A movement regression must choose somewhere else or a
+/// correctly handled tap can look like no movement at all.
+fn in_view_away_from(
+    world: &World,
+    scene: &SceneExtractor,
+    excluded: [i32; 2],
+) -> ([i32; 3], [f32; 2]) {
+    let camera = view_projection(world, scene);
+    for (across, down) in [
+        (0.32, 0.58),
+        (0.68, 0.42),
+        (0.36, 0.42),
+        (0.64, 0.58),
+        (0.5, 0.68),
+        (0.5, 0.32),
+    ] {
+        let at = [across * VIEWPORT.0, down * VIEWPORT.1];
+        if let Some(aim) =
+            sindri_scene::voxel::aim_at(world, scene.components(), camera, [across, down])
+            && aim.face == sindri_core::TileFace::Top
+            && [aim.cell.x, aim.cell.y] != excluded
+        {
+            return ([aim.cell.x, aim.cell.y, aim.cell.z], at);
+        }
+    }
+    panic!("nothing outside {excluded:?} is visible to tap");
 }
 
 #[test]
@@ -284,5 +361,65 @@ fn the_sea_is_something_to_build_across_rather_than_to_walk_on() {
         block_at(&world, &scene, onto).as_deref(),
         Some("plank-slab"),
         "clicking the shore's side lays a walkway out onto the water"
+    );
+}
+
+#[test]
+#[allow(clippy::cast_precision_loss, clippy::float_cmp)]
+fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
+    let (mut world, scene, mut session) = session();
+    settle(&mut world, &mut session, 2);
+
+    let mut toggle = InputState::default();
+    toggle.apply(InputEvent::KeyPressed(Key::Tab));
+    session
+        .step(&mut world, &toggle, VIEWPORT, STEP)
+        .expect("play mode toggles");
+    toggle.begin_frame(std::time::Duration::from_secs_f32(STEP));
+    toggle.apply(InputEvent::KeyReleased(Key::Tab));
+    session
+        .step(&mut world, &toggle, VIEWPORT, STEP)
+        .expect("tab releases");
+    assert_eq!(
+        ui_text(&world, &scene, "ModeLabel").text,
+        "PLAY",
+        "Game.playing must be true before the touch"
+    );
+
+    let target_before = entity_position(&world, "Target");
+    let wanderer_before = entity_position(&world, "Wanderer");
+    let initial_cell =
+        sindri_scene::nearest_cell(f64::from(target_before[0]), f64::from(target_before[2]));
+    let (ground, at) = in_view_away_from(&world, &scene, [initial_cell.x, initial_cell.y]);
+
+    tap_touch(&mut world, &mut session, at);
+    let debug = ui_text(&world, &scene, "PlayDebug");
+    assert_eq!(
+        debug.values.first().copied(),
+        Some(1.0),
+        "Wanderer must observe Gesture.tapped (2 means Pointer.over_ui rejected it)"
+    );
+    assert_eq!(
+        debug.values.get(1).copied(),
+        Some(1.0),
+        "Aim.hit must be true during the Play tap"
+    );
+
+    let target_after = entity_position(&world, "Target");
+    assert_ne!(
+        target_after, target_before,
+        "a touch tap in Play must move the target"
+    );
+    assert_eq!(
+        [target_after[0], target_after[2]],
+        [ground[0] as f32, ground[1] as f32],
+        "the target must use the voxel's logical column and row"
+    );
+
+    settle(&mut world, &mut session, 40);
+    let wanderer_after = entity_position(&world, "Wanderer");
+    assert_ne!(
+        wanderer_after, wanderer_before,
+        "the wanderer must start moving toward the touch target"
     );
 }
