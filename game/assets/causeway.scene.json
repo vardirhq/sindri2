@@ -242,12 +242,17 @@
       "transform_3d": {
         "position": [0.0, 0.0, 0.0],
         "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [1.0, 1.0, 1.0]
+        "scale": [0.38, 0.38, 1.0]
       },
       "components": {
         "sindri.grid.placement": {
           "cell": [2, 7],
           "grid": "floor"
+        },
+        "sindri.sprite": {
+          "billboard": true,
+          "texture": "textures/beacon.png#south",
+          "tint": [1.0, 0.25, 0.25, 0.9]
         }
       }
     },
