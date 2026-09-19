@@ -343,6 +343,8 @@ pub fn generate(shape: WorldShape, tileset: &str) -> TileVolumeComponent {
         }
     }
 
+    grow_trees(shape, &mut cells);
+
     TileVolumeComponent {
         tileset: tileset.to_owned(),
         cells,
@@ -406,6 +408,68 @@ impl WorldShape {
     }
 }
 
+fn grow_trees(shape: WorldShape, cells: &mut Vec<TileCellDocument>) {
+    for row in (3..shape.rows - 3).step_by(6) {
+        for column in (3..shape.columns - 3).step_by(6) {
+            let x = column
+                + if hashed(shape.seed ^ 0xF1, column, row) > 0.5 {
+                    1
+                } else {
+                    -1
+                };
+            let y = row
+                + if hashed(shape.seed ^ 0xF2, column, row) > 0.5 {
+                    1
+                } else {
+                    -1
+                };
+            let described = shape.column(x, y);
+            let surface = shape.surface(x, y, described);
+            if described.ground <= SEA
+                || !matches!(surface, "ground" | "moss")
+                || hashed(shape.seed ^ 0xF3, x, y) < 0.58
+            {
+                continue;
+            }
+
+            let base = described.ground + 1;
+            for level in base..base + 4 {
+                cells.push(TileCellDocument {
+                    position: [x, y, level],
+                    tile: "log".to_owned(),
+                    visual_override: None,
+                });
+            }
+            // Chunky broadleaf crown, asymmetric enough not to become a green
+            // cube while remaining readable from each 90-degree camera view.
+            for dy in -1..=1 {
+                for dx in -1..=1 {
+                    if dx == 0 && dy == 0 {
+                        continue;
+                    }
+                    cells.push(TileCellDocument {
+                        position: [x + dx, y + dy, base + 3],
+                        tile: "leaves".to_owned(),
+                        visual_override: None,
+                    });
+                }
+            }
+            for (dx, dy) in [(0, 0), (-1, 0), (1, 0), (0, -1), (0, 1)] {
+                cells.push(TileCellDocument {
+                    position: [x + dx, y + dy, base + 4],
+                    tile: "leaves".to_owned(),
+                    visual_override: None,
+                });
+            }
+            cells.push(TileCellDocument {
+                position: [x, y, base + 5],
+                tile: "leaves".to_owned(),
+                visual_override: None,
+            });
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::past;
@@ -449,6 +513,26 @@ mod tests {
             "neighbouring columns mostly agree: {flips} changes in {} columns, \
              which is speckle rather than a boundary",
             answers.len()
+        );
+    }
+
+    #[test]
+    fn generated_world_contains_block_built_trees() {
+        let volume = super::generate(super::WorldShape::default(), "causeway.tileset.json");
+        let logs = volume
+            .cells
+            .iter()
+            .filter(|cell| cell.tile == "log")
+            .count();
+        let leaves = volume
+            .cells
+            .iter()
+            .filter(|cell| cell.tile == "leaves")
+            .count();
+        assert!(logs > 0, "the generated world grows log trunks");
+        assert!(
+            leaves > logs,
+            "tree crowns contain more leaves than trunk blocks"
         );
     }
 

@@ -918,7 +918,57 @@
             1
           ]
         }
-      }
+      },
+      "walkable": false,
+      "supports": false
+    },
+    "leaves": {
+      "faces": {
+        "top": {
+          "sprite": "textures/leaves.png",
+          "size": [
+            1,
+            1
+          ]
+        },
+        "bottom": {
+          "sprite": "textures/leaves.png",
+          "size": [
+            1,
+            1
+          ]
+        },
+        "north": {
+          "sprite": "textures/leaves.png",
+          "size": [
+            1,
+            1
+          ]
+        },
+        "south": {
+          "sprite": "textures/leaves.png",
+          "size": [
+            1,
+            1
+          ]
+        },
+        "east": {
+          "sprite": "textures/leaves.png",
+          "size": [
+            1,
+            1
+          ]
+        },
+        "west": {
+          "sprite": "textures/leaves.png",
+          "size": [
+            1,
+            1
+          ]
+        }
+      },
+      "walkable": false,
+      "supports": false
     }
   }
 }

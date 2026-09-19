@@ -18,7 +18,7 @@ fn surfaces(shape: WorldShape) -> BTreeMap<String, usize> {
         let entry = tops
             .entry((column, row))
             .or_insert((i32::MIN, String::new()));
-        if level > entry.0 {
+        if level > entry.0 && !matches!(cell.tile.as_str(), "log" | "leaves") {
             *entry = (level, cell.tile.clone());
         }
     }
