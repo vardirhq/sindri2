@@ -41,10 +41,10 @@ use self::convert::{as_f32, describe, number};
 use crate::{
     Blackboard, PrefabSources, ProfileSources,
     surface::{
-        AIM, AIM_VALUES, FUNCTIONS, GESTURE, GESTURE_VALUES, Handle, HostFunction, Leaf, POINTER,
-        POINTER_VALUES, PRINT, STICK, STICK_VALUES, TIME, TIME_VALUES, TOUCH, TOUCH_COUNT,
-        TimeValue, VIEWPORT, VIEWPORT_VALUES, ViewportValue, follow_mut, handle, leaf,
-        leaf_through_reference,
+        AIM, AIM_VALUES, CAMERA, CAMERA_VALUES, FUNCTIONS, GESTURE, GESTURE_VALUES, Handle,
+        HostFunction, Leaf, POINTER, POINTER_VALUES, PRINT, STICK, STICK_VALUES, TIME, TIME_VALUES,
+        TOUCH, TOUCH_COUNT, TimeValue, VIEWPORT, VIEWPORT_VALUES, ViewportValue, follow_mut,
+        handle, leaf, leaf_through_reference,
     },
 };
 
@@ -128,6 +128,8 @@ pub struct WorldHost<'a> {
     aim: Option<sindri_scene::voxel::VolumeAim>,
     /// What the person just did, as an intention rather than as a button.
     gestures: Option<&'a sindri_core::Gestures>,
+    /// How far this frame's drag asks the camera to move.
+    camera_pan: Option<[f32; 3]>,
     /// Where each animated sprite has got to, when the host advances any.
     ///
     /// Mutable for one call: playing the clip already playing has to reset the
@@ -186,6 +188,11 @@ impl Host for WorldHost<'_> {
                 // and the platform bounds it to ten regardless.
                 #[allow(clippy::cast_precision_loss)]
                 return Ok(Some(Value::Number(self.context.input.touch_count() as f64)));
+            }
+            if *namespace == CAMERA
+                && let Some((_, value)) = CAMERA_VALUES.iter().find(|(known, _)| known == name)
+            {
+                return Ok(Some(self.camera_value(*value)));
             }
             if *namespace == GESTURE
                 && let Some((_, value)) = GESTURE_VALUES.iter().find(|(known, _)| known == name)

@@ -117,6 +117,7 @@ pub fn environment() -> Environment {
     super::person_surface::add_viewport_surface(&mut environment);
     super::person_surface::add_aim_surface(&mut environment);
     super::person_surface::add_gesture_surface(&mut environment);
+    super::person_surface::add_camera_surface(&mut environment);
     add_physics_surface(&mut environment);
     add_ui_surface(&mut environment);
     add_animation_surface(&mut environment);

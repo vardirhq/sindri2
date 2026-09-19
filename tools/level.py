@@ -110,6 +110,23 @@ def entities():
             },
         },
         {
+            # Where the walker was last told to go, in play mode.
+            #
+            # A marker rather than a pair of numbers on the walker, because
+            # routing already takes an entity as its destination -- the same
+            # call that walks to the beacon walks to this, and tap-to-move
+            # needs no new way to ask. Deliberately not an occupant, for the
+            # reason the beacon is not: nothing routes into a filled cell, so
+            # marking it would make the place you tapped the one place you
+            # could not go.
+            "id": "target",
+            "name": "Target",
+            "transform_3d": transform((0.0, 0.0, 0.0)),
+            "components": {
+                "sindri.grid.placement": {"grid": "floor", "cell": list(WANDERER)},
+            },
+        },
+        {
             "id": "builder",
             "name": "Builder",
             "transform_3d": transform((0.0, 0.0, 0.0)),
@@ -167,6 +184,47 @@ def entities():
             },
         },
         {
+            # Which game you are playing at the moment. One entity so there is
+            # one answer, read by the camera, the builder and the walker.
+            "id": "modes",
+            "name": "Modes",
+            "transform_3d": transform((0.0, 0.0, 0.0)),
+            "components": {
+                "sindri.script": {"source": "scripts/modes.decay", "script": "Modes"},
+            },
+        },
+        {
+            # Switching modes without a keyboard, which is the only way to do
+            # it on the device this was hardest to play on.
+            "id": "mode-button",
+            "name": "ModeButton",
+            "transform_3d": transform((0.82, 0.88, 0.0), scale=(0.26, 0.1, 1.0)),
+            "components": {
+                "sindri.ui.button": {"label": "mode"},
+                "sindri.ui.shape": {
+                    "kind": "rect", "count": 6.0, "fill": [0.09, 0.11, 0.15, 0.94],
+                    "stroke": [0.949, 0.722, 0.294, 1.0], "stroke_width": 0.012,
+                    "corner_radius": 0.02, "dashes": 0.0, "dash_duty": 0.5,
+                    "sweep_start": 0.0, "sweep_turns": 1.0, "blend": "over",
+                    "anchor": "center", "layer": 110,
+                },
+                "sindri.script": {"source": "scripts/mode-button.decay",
+                                  "script": "ModeButton"},
+            },
+        },
+        {
+            "id": "mode-label",
+            "name": "ModeLabel",
+            "transform_3d": transform((0.82, 0.88, 0.0)),
+            "components": {
+                "sindri.ui.text": {
+                    "anchor": "center", "color": [0.949, 0.722, 0.294, 1.0],
+                    "font": "fonts/Inter.ttf", "font_size": 0.038,
+                    "layer": 140, "line_height": 0.045, "text": "BUILD",
+                },
+            },
+        },
+        {
             "id": "hint",
             "name": "Hint",
             "transform_3d": transform((0.0, 0.0, 2.0)),
@@ -175,7 +233,7 @@ def entities():
                     "anchor": "bottom_left", "color": [0.604, 0.651, 0.733, 1.0],
                     "font": "fonts/Inter.ttf", "font_size": 0.0346,
                     "layer": 101, "line_height": 0.0481,
-                    "text": "Click a block's side to build from it. Right-click to take one back. 1-2-3 to choose.",
+                    "text": "Tap a block's side to build from it. Hold to take one back. Drag to look. 1-2-3-4 to choose.",
                 },
             },
         },

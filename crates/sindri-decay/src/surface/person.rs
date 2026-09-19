@@ -136,6 +136,29 @@ pub(crate) const AIM_VALUES: &[(&str, AimValue)] = &[
     ("place_z", AimValue::PlaceZ),
 ];
 
+/// What a script reads about the camera it is seen through.
+///
+/// The pan is the world-space distance the camera must move so that the ground
+/// under the finger stays under the finger, for whatever drag is happening this
+/// frame. Zero when nothing is being dragged, so a camera script can add it
+/// every frame without asking first -- adding zero is the right answer when
+/// nobody is dragging.
+///
+/// Three numbers rather than one because Decay has no vector value yet, the
+/// same reason `Aim` splits a cell into three.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum CameraValue {
+    PanX,
+    PanY,
+    PanZ,
+}
+
+pub(crate) const CAMERA_VALUES: &[(&str, CameraValue)] = &[
+    ("pan_x", CameraValue::PanX),
+    ("pan_y", CameraValue::PanY),
+    ("pan_z", CameraValue::PanZ),
+];
+
 /// What the person just did, as a gesture rather than as a button.
 ///
 /// Each gesture has a question before its numbers, for the reason `Aim.hit`

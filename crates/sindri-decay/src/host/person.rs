@@ -10,7 +10,7 @@ use decay_runtime::{RuntimeError, Value};
 
 use super::WorldHost;
 use super::convert::number;
-use crate::surface::{AimValue, GestureValue, PointerValue, StickValue, TouchCall};
+use crate::surface::{AimValue, CameraValue, GestureValue, PointerValue, StickValue, TouchCall};
 
 impl WorldHost<'_> {
     /// What the steering finger is asking for.
@@ -48,6 +48,20 @@ impl WorldHost<'_> {
     /// skipped the question would build a tower at the origin every time the
     /// pointer left the world. Reporting it as an error instead would be
     /// wrong -- pointing at the sky is an ordinary thing to do.
+    /// How far this frame's drag asks the camera to move.
+    ///
+    /// Zero when nothing is being dragged, and zero rather than an error when
+    /// the host runs no camera at all: a script adding a pan every frame is
+    /// doing the right thing, and adding nothing is the right answer.
+    pub(super) fn camera_value(&self, value: CameraValue) -> Value {
+        let pan = self.camera_pan.unwrap_or([0.0; 3]);
+        Value::Number(f64::from(match value {
+            CameraValue::PanX => pan[0],
+            CameraValue::PanY => pan[1],
+            CameraValue::PanZ => pan[2],
+        }))
+    }
+
     /// What the person just did.
     ///
     /// Nothing is the common answer, and every coordinate reads zero then --

@@ -91,7 +91,7 @@
           "font_size": 0.0346,
           "layer": 101,
           "line_height": 0.0481,
-          "text": "Click a block's side to build from it. Right-click to take one back. 1-2-3-4 to choose."
+          "text": "Tap a block's side to build from it. Hold to take one back. Drag to look. 1-2-3-4 to choose."
         }
       }
     },
@@ -131,6 +131,74 @@
       }
     },
     {
+      "id": "mode-button",
+      "name": "ModeButton",
+      "transform_3d": {
+        "position": [0.82, 0.88, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.26, 0.1, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "script": "ModeButton",
+          "source": "scripts/mode-button.decay"
+        },
+        "sindri.ui.button": {
+          "label": "mode"
+        },
+        "sindri.ui.shape": {
+          "anchor": "center",
+          "blend": "over",
+          "corner_radius": 0.02,
+          "count": 6.0,
+          "dash_duty": 0.5,
+          "dashes": 0.0,
+          "fill": [0.09, 0.11, 0.15, 0.94],
+          "kind": "rect",
+          "layer": 110,
+          "stroke": [0.949, 0.722, 0.294, 1.0],
+          "stroke_width": 0.012,
+          "sweep_start": 0.0,
+          "sweep_turns": 1.0
+        }
+      }
+    },
+    {
+      "id": "mode-label",
+      "name": "ModeLabel",
+      "transform_3d": {
+        "position": [0.82, 0.88, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [0.949, 0.722, 0.294, 1.0],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.038,
+          "layer": 140,
+          "line_height": 0.045,
+          "text": "BUILD"
+        }
+      }
+    },
+    {
+      "id": "modes",
+      "name": "Modes",
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.script": {
+          "script": "Modes",
+          "source": "scripts/modes.decay"
+        }
+      }
+    },
+    {
       "id": "music",
       "name": "Music",
       "transform_3d": {
@@ -165,6 +233,21 @@
           "line_height": 0.0519,
           "text": "x {}",
           "values": [12.0]
+        }
+      }
+    },
+    {
+      "id": "target",
+      "name": "Target",
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.grid.placement": {
+          "cell": [2, 7],
+          "grid": "floor"
         }
       }
     },

@@ -229,6 +229,31 @@ impl Session {
         Ok(())
     }
 
+    /// How far this frame's drag asks the camera to move.
+    ///
+    /// Zero covers every way there is nothing to move: nobody dragging, no
+    /// camera, a viewport with no area. They are one situation to a script --
+    /// the camera stays where it is.
+    fn camera_pan(
+        world: &World,
+        components: &ComponentSchemaRegistry,
+        gestures: &sindri_core::Gestures,
+        viewport: (f32, f32),
+    ) -> [f32; 3] {
+        let Some(drag) = gestures.drag() else {
+            return [0.0; 3];
+        };
+        if viewport.0 <= 0.0 || viewport.1 <= 0.0 {
+            return [0.0; 3];
+        }
+        let Ok(Some(camera)) =
+            sindri_scene::world_camera_of(world, components, viewport.0 / viewport.1)
+        else {
+            return [0.0; 3];
+        };
+        sindri_scene::pan_for_drag(&camera, viewport, drag).to_array()
+    }
+
     /// Which block the pointer is on, if it is on one.
     ///
     /// `None` covers every way there is nothing to answer -- the pointer
@@ -293,6 +318,11 @@ impl Session {
         // is are the same instant.
         self.gestures.update(input.presses());
         let aim = Self::aim(world, &self.components, input, viewport);
+        // Worked out here rather than by the scripts, for the same reason the
+        // aim is: it needs the view matrix and the viewport, and a script has
+        // neither. Zero when nothing is being dragged, so a camera script can
+        // add it every frame without asking.
+        let pan = Self::camera_pan(world, &self.components, &self.gestures, viewport);
         let (physics, events) = self.physics.for_scripts();
         let mut frame = ScriptFrame::new(&self.sources, input, delta_seconds)
             .with_prefabs(&self.prefabs)
@@ -306,7 +336,7 @@ impl Session {
                 events,
             })
             .with_animations(&mut self.animations);
-        frame = frame.with_gestures(&self.gestures);
+        frame = frame.with_gestures(&self.gestures).with_camera_pan(pan);
         if let Some(aim) = aim {
             frame = frame.with_aim(aim);
         }

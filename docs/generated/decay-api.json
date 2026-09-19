@@ -20,6 +20,11 @@
     },
     {
       "kind": "value",
+      "name": "Camera",
+      "type": "Camera"
+    },
+    {
+      "kind": "value",
       "name": "Effects",
       "type": "Effects"
     },
@@ -351,6 +356,26 @@
         }
       ],
       "name": "Audio"
+    },
+    {
+      "members": [
+        {
+          "kind": "value",
+          "name": "pan_x",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "pan_y",
+          "type": "f32"
+        },
+        {
+          "kind": "value",
+          "name": "pan_z",
+          "type": "f32"
+        }
+      ],
+      "name": "Camera"
     },
     {
       "members": [

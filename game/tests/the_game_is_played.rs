@@ -68,6 +68,40 @@ fn click(world: &mut World, session: &mut Session, at: [f32; 2], button: MouseBu
     session
         .step(world, &held, VIEWPORT, STEP)
         .expect("the release steps");
+    // One frame with nothing down, which is what a host does between two
+    // clicks. Without it the finished press is still in the set when the next
+    // one starts, and the recogniser -- which keeps what it has decided about
+    // a press for as long as the press exists -- carries the first click's
+    // verdict onto the second.
+    held.begin_frame(std::time::Duration::from_secs_f32(STEP));
+    session
+        .step(world, &held, VIEWPORT, STEP)
+        .expect("the empty frame steps");
+}
+
+/// Holding still, which is how a block is taken back.
+///
+/// A finger has no second button, so removing is a press that stays put and
+/// stays down past the long-press limit. The press is left down for a good
+/// while rather than one step, because that duration is the whole gesture.
+fn hold(world: &mut World, session: &mut Session, at: [f32; 2]) {
+    let mut held = InputState::default();
+    held.apply(InputEvent::PointerMoved { x: at[0], y: at[1] });
+    held.apply(InputEvent::ButtonPressed(MouseButton::Left));
+    session
+        .step(world, &held, VIEWPORT, STEP)
+        .expect("the press steps");
+    // Past the long-press limit without moving. Reported once, while the
+    // finger is still down, so one hold takes one block.
+    held.begin_frame(std::time::Duration::from_millis(600));
+    session
+        .step(world, &held, VIEWPORT, STEP)
+        .expect("the hold steps");
+    held.begin_frame(std::time::Duration::from_secs_f32(STEP));
+    held.apply(InputEvent::ButtonReleased(MouseButton::Left));
+    session
+        .step(world, &held, VIEWPORT, STEP)
+        .expect("the release steps");
 }
 
 fn settle(world: &mut World, session: &mut Session, steps: usize) {
@@ -137,23 +171,48 @@ fn clicking_the_top_of_the_ground_puts_a_block_on_it() {
 
 #[test]
 fn a_click_lands_on_what_is_there_now_rather_than_on_the_world_as_generated() {
-    // The difference between picking and arithmetic. The second click names a
+    // The difference between picking and arithmetic. The second tap names a
     // cell that did not exist when the world was built; only a ray cast
     // against the volume as it currently stands can find it.
     let (mut world, scene, mut session) = session();
     settle(&mut world, &mut session, 2);
     let (ground, at) = in_view(&world, &scene);
 
-    // The same point on the picture, twice. The second ray meets the block
-    // the first one made -- which is a shorter way of saying what this test is
-    // for than computing where that block's top ended up, and is what a player
+    // The same point on the picture, twice. The second ray meets the block the
+    // first one made -- which is what this test is for, and is what a player
     // does anyway.
+    //
+    // Which *face* of that block it meets is not fixed, and asserting one was
+    // this test's own mistake: a pixel that struck the ground's top strikes
+    // whichever part of the new block now covers it, top or side, depending on
+    // where in the cell it fell. What can be said is that the second tap built
+    // against the first block rather than at the first block's own cell, and
+    // no arithmetic on the world as generated could have found that cell.
     click(&mut world, &mut session, at, MouseButton::Left);
-    click(&mut world, &mut session, at, MouseButton::Left);
+    let first = [ground[0], ground[1], ground[2] + 1];
     assert_eq!(
-        block_at(&world, &scene, [ground[0], ground[1], ground[2] + 2]).as_deref(),
+        block_at(&world, &scene, first).as_deref(),
         Some("plank-slab"),
-        "the second click stacked onto the block the first one made"
+        "the first tap builds on the ground"
+    );
+
+    click(&mut world, &mut session, at, MouseButton::Left);
+    let second = [-1, 0, 1]
+        .into_iter()
+        .flat_map(|dx| [-1, 0, 1].map(move |dy| (dx, dy)))
+        .flat_map(|(dx, dy)| [0, 1].map(move |dz| [first[0] + dx, first[1] + dy, first[2] + dz]))
+        .find(|cell| {
+            *cell != first && block_at(&world, &scene, *cell).as_deref() == Some("plank-slab")
+        })
+        .expect("the second tap built somewhere against the first block");
+
+    // Touching it, which is what building against a face means.
+    let reach =
+        (second[0] - first[0]).abs() + (second[1] - first[1]).abs() + (second[2] - first[2]).abs();
+    assert_eq!(
+        reach, 1,
+        "and built against the block the first tap made, not somewhere else: \
+         {first:?} then {second:?}"
     );
 }
 
@@ -165,7 +224,7 @@ fn what_you_laid_comes_back_but_the_world_is_not_yours_to_carry_away() {
     let above = [ground[0], ground[1], ground[2] + 1];
 
     click(&mut world, &mut session, at, MouseButton::Left);
-    click(&mut world, &mut session, at, MouseButton::Right);
+    hold(&mut world, &mut session, at);
     assert_eq!(
         block_at(&world, &scene, above),
         None,
@@ -173,7 +232,7 @@ fn what_you_laid_comes_back_but_the_world_is_not_yours_to_carry_away() {
     );
 
     let was = block_at(&world, &scene, ground);
-    click(&mut world, &mut session, at, MouseButton::Right);
+    hold(&mut world, &mut session, at);
     assert_eq!(
         block_at(&world, &scene, ground),
         was,

@@ -29,6 +29,8 @@ pub struct WorldServices<'a> {
     pub aim: Option<sindri_scene::voxel::VolumeAim>,
     /// What the person just did, as an intention rather than as a button.
     pub gestures: Option<&'a sindri_core::Gestures>,
+    /// How far this frame's drag asks the camera to move.
+    pub camera_pan: Option<[f32; 3]>,
     pub random: Option<&'a mut sindri_core::Rng>,
     /// Where each animated sprite has got to, when the host advances any.
     pub animations: Option<&'a mut sindri_scene::SpriteAnimations>,
@@ -58,6 +60,7 @@ impl<'a> WorldHost<'a> {
             screen_ui,
             aim,
             gestures,
+            camera_pan,
             random,
             animations,
             scenes,
@@ -74,6 +77,7 @@ impl<'a> WorldHost<'a> {
             screen_ui,
             aim,
             gestures,
+            camera_pan,
             random,
             saves,
             effects,

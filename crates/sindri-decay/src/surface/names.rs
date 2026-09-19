@@ -28,6 +28,15 @@ pub(crate) const VIEWPORT: &str = "Viewport";
 /// blocks in it ignore the whole idea.
 pub(crate) const AIM: &str = "Aim";
 
+/// The camera the scene is seen through, as far as a script needs it.
+///
+/// Only what a script cannot work out for itself. Where the camera *is* is its
+/// own transform and a script that has it can read it; how far a drag should
+/// move it is a question about the projection, and a script answering that
+/// would be re-deriving the view matrix and getting a different answer for
+/// every camera angle anybody later authored.
+pub(crate) const CAMERA: &str = "Camera";
+
 /// What the person just did with a finger or a mouse, as an intention.
 ///
 /// `Pointer` says a button is down and `Touch` says where the fingers are.

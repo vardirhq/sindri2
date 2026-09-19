@@ -63,6 +63,12 @@ script Builder {
         Game.set("chosen", chosen);
         Game.set("left", left);
 
+        // Building is a mode. While walking, a tap means "go there" and the
+        // walker reads it instead.
+        if Game.get("playing", 0.0) > 0.5 {
+            return;
+        }
+
         // Pointing at nothing is an ordinary thing to do, and every cell
         // reads zero when it happens -- so this is asked before anything is
         // built, not after.
@@ -70,7 +76,11 @@ script Builder {
             return;
         }
 
-        if Pointer.just_pressed("Left") && left > 0.0 {
+        // A tap rather than a press, because a press is also how a drag
+        // starts and a drag pans the view: building on the press would lay a
+        // block every time somebody moved the camera. A tap is a press that
+        // stayed still and let go, which is exactly the difference.
+        if Gesture.tapped && left > 0.0 {
             // A cell already holding this block is not a placement, and
             // spending a plank to replace a plank is the kind of quiet loss
             // that makes a puzzle feel broken rather than hard.
@@ -81,7 +91,10 @@ script Builder {
             }
         }
 
-        if Pointer.just_pressed("Right") {
+        // A hold rather than a right-click. A finger has no second button, so
+        // taking a block back has to be something a finger can say -- and a
+        // mouse can hold too, so this is one rule rather than two.
+        if Gesture.held {
             // Taking back what you laid returns it; the island itself is not
             // yours to carry away. Which is also what stops the pillar being
             // dismantled instead of climbed.

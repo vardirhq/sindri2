@@ -8,9 +8,9 @@
 use decay_semantic::{Environment, FunctionType, HostType, Type};
 
 use crate::surface::{
-    AIM, AIM_VALUES, AimValue, GESTURE, GESTURE_VALUES, GestureValue, POINTER, POINTER_QUERIES,
-    POINTER_VALUES, PointerValue, STICK, STICK_VALUES, StickValue, TOUCH, TOUCH_CALLS, TOUCH_COUNT,
-    VIEWPORT, VIEWPORT_VALUES,
+    AIM, AIM_VALUES, AimValue, CAMERA, CAMERA_VALUES, GESTURE, GESTURE_VALUES, GestureValue,
+    POINTER, POINTER_QUERIES, POINTER_VALUES, PointerValue, STICK, STICK_VALUES, StickValue, TOUCH,
+    TOUCH_CALLS, TOUCH_COUNT, VIEWPORT, VIEWPORT_VALUES,
 };
 
 /// The shape of the screen the host is drawing into.
@@ -37,6 +37,16 @@ pub(super) fn add_aim_surface(environment: &mut Environment) {
     }
     environment.add_type(AIM, aim);
     environment.add_value(AIM, Type::Named(AIM.to_owned()));
+}
+
+/// What a script reads about the camera it is seen through.
+pub(super) fn add_camera_surface(environment: &mut Environment) {
+    let mut camera = HostType::new();
+    for (name, _) in CAMERA_VALUES {
+        camera = camera.with_value(*name, Type::F32);
+    }
+    environment.add_type(CAMERA, camera);
+    environment.add_value(CAMERA, Type::Named(CAMERA.to_owned()));
 }
 
 /// What the person just did, as an intention rather than as a button.

@@ -1,4 +1,14 @@
-// Keeps the walker in frame in a world too big to frame at once.
+// Keeps the walker in frame while playing, and gets out of the way while
+// building.
+//
+// Two modes want opposite things from a camera. Walking wants the walker kept
+// in frame without being asked; building wants to go and look at somewhere
+// else and stay there, which a camera that springs back to the walker makes
+// impossible. So play follows and build is free.
+//
+// How far a drag moves the camera is the host's answer rather than this
+// script's: it needs the view matrix and the viewport, and getting it wrong by
+// a sign means the ground slides away from the finger instead of with it.
 //
 // The offset is exported rather than measured on the first frame, and the
 // world being generated is why: the walker starts wherever this seed put dry
@@ -23,6 +33,19 @@ script CameraFollow {
     var framed: bool = false;
 
     fn update(dt: f32) {
+        // Free while building: the drag moves the camera and nothing pulls it
+        // back. Adding the pan unasked is right because it is zero whenever
+        // nobody is dragging.
+        if Game.get("playing", 0.0) < 0.5 {
+            this.transform.position.x += Camera.pan_x;
+            this.transform.position.y += Camera.pan_y;
+            this.transform.position.z += Camera.pan_z;
+            // Left alone, so switching back to play eases from wherever the
+            // building left the view rather than snapping.
+            framed = true;
+            return;
+        }
+
         let walker = World.find("Wanderer");
         if walker == null {
             return;

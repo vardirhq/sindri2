@@ -31,6 +31,7 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `Aim`: `Aim`
 - `Animation`: `Animation`
 - `Audio`: `Audio`
+- `Camera`: `Camera`
 - `Effects`: `Effects`
 - `Game`: `Game`
 - `Gesture`: `Gesture`
@@ -87,6 +88,12 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `play(String, f32)` → `unit`
 - `resume_all()` → `unit`
 - `stop_all()` → `unit`
+
+### `Camera`
+
+- `pan_x`: `f32`
+- `pan_y`: `f32`
+- `pan_z`: `f32`
 
 ### `Effects`
 
