@@ -16,7 +16,7 @@ use sindri_causeway::{
     worldgen::{SEA, WorldShape},
 };
 use sindri_core::World;
-use sindri_platform::{InputEvent, InputState, MouseButton};
+use sindri_platform::{InputEvent, InputState, Key, MouseButton};
 use sindri_scene::{SceneExtractor, TileVolumeComponent};
 
 const VIEWPORT: (f32, f32) = (1000.0, 720.0);
@@ -284,5 +284,60 @@ fn the_sea_is_something_to_build_across_rather_than_to_walk_on() {
         block_at(&world, &scene, onto).as_deref(),
         Some("plank-slab"),
         "clicking the shore's side lays a walkway out onto the water"
+    );
+}
+
+
+#[test]
+fn play_tap_places_the_target_in_the_aimed_solid_grid_column() {
+    // Regression: VolumeAim is XYZ, while a solid Grid.place is X/Z. Passing
+    // Aim.y as the second grid coordinate sent taps toward the block's height
+    // as a row, which made most destinations unreachable and occasional moves
+    // appear to head back toward the edge of the world.
+    let (mut world, scene, mut session) = session();
+    settle(&mut world, &mut session, 2);
+
+    let mut toggle = InputState::default();
+    toggle.apply(InputEvent::KeyPressed(Key::Tab));
+    session
+        .step(&mut world, &toggle, VIEWPORT, STEP)
+        .expect("play mode starts");
+    toggle.begin_frame(std::time::Duration::from_secs_f32(STEP));
+    toggle.apply(InputEvent::KeyReleased(Key::Tab));
+    session
+        .step(&mut world, &toggle, VIEWPORT, STEP)
+        .expect("the mode switch settles");
+
+    let camera = view_projection(&world, &scene);
+    let (hit, at) = in_view(&world, &scene);
+    click(&mut world, &mut session, at, MouseButton::Left);
+
+    let target = world
+        .find_by_name("Target")
+        .expect("the play target exists");
+    let target_position = world
+        .get(target)
+        .and_then(|data| data.transform_3d)
+        .expect("the target has a transform")
+        .position;
+
+    let aimed = sindri_scene::voxel::aim_at(
+        &world,
+        scene.components(),
+        camera,
+        [at[0] / VIEWPORT.0, at[1] / VIEWPORT.1],
+    )
+    .expect("the tap still points at the volume");
+
+    assert_eq!(hit, [aimed.cell.x, aimed.cell.y, aimed.cell.z]);
+    assert!(
+        (target_position[0] - aimed.cell.x as f32).abs() < 0.51,
+        "target X follows the aimed column: {target_position:?} vs {:?}",
+        aimed.cell
+    );
+    assert!(
+        (target_position[2] - aimed.cell.z as f32).abs() < 0.51,
+        "target row follows Aim.z, not the block height Aim.y: {target_position:?} vs {:?}",
+        aimed.cell
     );
 }
