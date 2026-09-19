@@ -104,7 +104,12 @@ fn hold(world: &mut World, session: &mut Session, at: [f32; 2]) {
         .expect("the release steps");
 }
 
-fn tap_touch(world: &mut World, session: &mut Session, at: [f32; 2]) {
+fn tap_touch(
+    world: &mut World,
+    scene: &SceneExtractor,
+    session: &mut Session,
+    at: [f32; 2],
+) -> [i32; 3] {
     let mut input = InputState::default();
     input.apply(InputEvent::TouchStarted {
         id: 7,
@@ -117,6 +122,17 @@ fn tap_touch(world: &mut World, session: &mut Session, at: [f32; 2]) {
 
     input.begin_frame(std::time::Duration::from_secs_f32(STEP));
     input.apply(InputEvent::TouchEnded { id: 7 });
+    // Play's follow camera can advance between press and release. Capture the
+    // release-frame Aim the script will consume rather than assuming touch-down
+    // and touch-up project onto the same voxel.
+    let aim = sindri_scene::voxel::aim_at(
+        world,
+        scene.components(),
+        view_projection(world, scene),
+        [at[0] / VIEWPORT.0, at[1] / VIEWPORT.1],
+    )
+    .expect("the released touch still points at the world");
+    let touched = [aim.cell.x, aim.cell.y, aim.cell.z];
     session
         .step(world, &input, VIEWPORT, STEP)
         .expect("the touch release steps");
@@ -125,6 +141,7 @@ fn tap_touch(world: &mut World, session: &mut Session, at: [f32; 2]) {
     session
         .step(world, &input, VIEWPORT, STEP)
         .expect("the empty touch frame steps");
+    touched
 }
 
 fn entity_position(world: &World, name: &str) -> [f32; 3] {
@@ -390,9 +407,9 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
     let wanderer_before = entity_position(&world, "Wanderer");
     let initial_cell =
         sindri_scene::nearest_cell(f64::from(target_before[0]), f64::from(target_before[2]));
-    let (ground, at) = in_view_away_from(&world, &scene, [initial_cell.x, initial_cell.y]);
+    let (_, at) = in_view_away_from(&world, &scene, [initial_cell.x, initial_cell.y]);
 
-    tap_touch(&mut world, &mut session, at);
+    let touched = tap_touch(&mut world, &scene, &mut session, at);
     let debug = ui_text(&world, &scene, "PlayDebug");
     assert_eq!(
         debug.values.first().copied(),
@@ -412,8 +429,8 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
     );
     assert_eq!(
         [target_after[0], target_after[2]],
-        [ground[0] as f32, ground[1] as f32],
-        "the target must use the voxel's logical column and row"
+        [touched[0] as f32, touched[1] as f32],
+        "the target must use the release-frame voxel's logical column and row"
     );
 
     settle(&mut world, &mut session, 40);
