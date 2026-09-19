@@ -26,7 +26,7 @@ script CameraFollow {
     let dead_zone: f32 = 1.25;
 
     @export
-    let height_dead_zone: f32 = 0.65;
+    let height_dead_zone: f32 = 1.0;
 
     // A thirty-unit arm at forty-five degrees round and thirty-three up, which
     // is the isometric viewpoint this game is drawn from.
