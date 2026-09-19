@@ -278,7 +278,7 @@ def entities():
                 "sindri.script": {"source": "scripts/camera-follow.decay",
                                   "script": "CameraFollow",
                                   "properties": {"dead_zone": 1.25, "ease": 4.0,
-                                                 "height_dead_zone": 0.65}},
+                                                 "height_dead_zone": 1.0}},
             },
         },
     ]
