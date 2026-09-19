@@ -41,6 +41,9 @@ script Wanderer {
             }
             if Pointer.over_ui {
                 Game.set("debug_ui", 1.0);
+                // Distinguish a recognised tap rejected by UI from no tap in
+                // the two-value diagnostic HUD and the runtime regression.
+                Game.set("debug_tap", 2.0);
             } else {
                 Game.set("debug_ui", 0.0);
             }
@@ -51,9 +54,10 @@ script Wanderer {
         if playing && Gesture.tapped && Aim.hit && !Pointer.over_ui {
             let target = World.find("Target");
             if target != null {
-                // A solid grid lies on world XZ. Aim.y is block height, while Grid.place's
-                // second coordinate is the row/depth axis, so the destination is X/Z.
-                Grid.place(target, floor, Aim.x, Aim.z);
+                // Aim names a voxel as column, row, height. Grid.place takes
+                // the same logical column and row; the host maps that row to
+                // world Z for a solid grid and resolves height separately.
+                Grid.place(target, floor, Aim.x, Aim.y);
             }
         }
 

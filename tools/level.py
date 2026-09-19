@@ -121,9 +121,13 @@ def entities():
             # could not go.
             "id": "target",
             "name": "Target",
-            "transform_3d": transform((0.0, 0.0, 0.0), scale=(0.38, 0.38, 1.0)),
+            "transform_3d": transform(
+                (WANDERER[0] * CELL, 0.0, WANDERER[1] * CELL),
+                scale=(0.38, 0.38, 1.0)),
             "components": {
-                "sindri.grid.placement": {"grid": "floor", "cell": list(WANDERER)},
+                # Target moves at runtime, so an authored cell would pin it
+                # back here after every script update.
+                "sindri.grid.placement": {"grid": "floor"},
                 # Temporary diagnostic marker: if this moves where the player taps,
                 # gesture/Aim/placement worked and any bad movement is downstream.
                 "sindri.sprite": {"texture": "textures/beacon.png#south",
