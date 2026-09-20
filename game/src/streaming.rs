@@ -1,6 +1,7 @@
 //! Camera-driven materialization of Causeway's generated terrain.
 
-use sindri_core::World;
+use glam::Vec3;
+use sindri_core::{ComponentSchemaRegistry, Transform3D, World};
 use sindri_scene::{
     TILE_CHUNK_SIZE, TileChunkCoord, TileChunkStore, TileGridComponent, TileVolumeComponent,
 };
@@ -13,6 +14,7 @@ use crate::{
 pub(crate) const WORLD_EDGE: i32 = 65_536;
 pub(crate) const WORLD_CENTRE: i32 = WORLD_EDGE / 2;
 const LOAD_RADIUS: i32 = 3;
+const VIEW_MARGIN: i32 = 1;
 const FLOOR: &str = "sindri.tile_grid";
 const VOLUME: &str = "sindri.tile_volume";
 pub(crate) const TILE_SET: &str = "causeway.tileset.json";
@@ -31,21 +33,22 @@ pub(crate) const fn world_shape() -> WorldShape {
 /// The chunks currently present in the live tile-volume component.
 #[derive(Debug, Default)]
 pub(crate) struct TerrainStream {
-    focus: Option<TileChunkCoord>,
+    window: Option<(TileChunkCoord, TileChunkCoord)>,
     chunks: TileChunkStore,
 }
 
 impl TerrainStream {
-    /// Ensures terrain around the camera after gameplay has moved it.
-    pub(crate) fn update(&mut self, world: &mut World) -> Result<bool, CausewayError> {
-        let Some(camera_position) = world
-            .entities()
-            .find(|(_, data)| data.name.as_deref() == Some("World Camera"))
-            .and_then(|(_, data)| data.transform_3d.map(|transform| transform.position))
-        else {
+    /// Ensures terrain covers the ground footprint the camera can actually see.
+    pub(crate) fn update(
+        &mut self,
+        world: &mut World,
+        components: &ComponentSchemaRegistry,
+        viewport: (f32, f32),
+    ) -> Result<bool, CausewayError> {
+        if viewport.0 <= 0.0 || viewport.1 <= 0.0 {
             return Ok(false);
-        };
-        let Some((floor_entity, grid, origin, volume)) = world
+        }
+        let Some((floor_entity, grid, transform, volume)) = world
             .entities()
             .find(|(_, data)| data.components.contains_key(FLOOR))
             .map(|(entity, data)| {
@@ -56,7 +59,7 @@ impl TerrainStream {
                 (
                     entity,
                     grid,
-                    data.transform_3d.unwrap_or_default().position,
+                    data.transform_3d.unwrap_or_default(),
                     volume,
                 )
             })
@@ -68,21 +71,26 @@ impl TerrainStream {
         let Some([across, into, _]) = grid.solid_cell() else {
             return Ok(false);
         };
-        #[allow(clippy::cast_possible_truncation)]
-        let focus = TileChunkCoord::containing(
-            ((camera_position[0] - origin[0]) / across).round() as i32,
-            ((camera_position[2] - origin[2]) / into).round() as i32,
-        );
-        if self.focus == Some(focus) {
+        let camera = sindri_scene::world_camera_of(world, components, viewport.0 / viewport.1)
+            .map_err(|error| CausewayError::Generated(error.to_string()))?;
+        let Some(camera) = camera else {
+            return Ok(false);
+        };
+        let Some(window) =
+            visible_chunk_window(transform, camera.view_projection, across, into)
+        else {
+            return Ok(false);
+        };
+        if self.window == Some(window) {
             return Ok(false);
         }
 
-        // The component may have been edited since the last boundary crossing.
-        // It wins before new generated chunks are added, so building is never
-        // undone by streaming.
+        // The component may have been edited since the last window change. It
+        // wins before generated chunks are added, so building is never undone
+        // by streaming.
         self.chunks.replace_from_volume(&volume);
-        let changed = load_around(&mut self.chunks, world_shape(), focus);
-        self.focus = Some(focus);
+        let changed = load_window(&mut self.chunks, world_shape(), window);
+        self.window = Some(window);
         if !changed {
             return Ok(false);
         }
@@ -94,6 +102,52 @@ impl TerrainStream {
         }
         Ok(true)
     }
+}
+
+/// The chunk rectangle under the viewport, plus one preload chunk on every side.
+///
+/// Rays are intersected with the volume's local ground plane. That is the point
+/// the camera is looking at, unlike the elevated eye position, and using all
+/// four corners means portrait and landscape windows both load what they frame.
+fn visible_chunk_window(
+    transform: Transform3D,
+    view_projection: glam::Mat4,
+    across: f32,
+    into: f32,
+) -> Option<(TileChunkCoord, TileChunkCoord)> {
+    if across <= 0.0 || into <= 0.0 {
+        return None;
+    }
+    let mut min = TileChunkCoord::new(i32::MAX, i32::MAX);
+    let mut max = TileChunkCoord::new(i32::MIN, i32::MIN);
+    for point in [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]] {
+        let (origin, direction) =
+            sindri_scene::voxel::ray_at_viewport(transform, view_projection, point)?;
+        if direction.y.abs() <= f32::EPSILON {
+            return None;
+        }
+        let distance = -origin.y / direction.y;
+        if !distance.is_finite() || distance < 0.0 {
+            return None;
+        }
+        let hit = origin + direction * distance;
+        let column = cell_coordinate(hit.x / across);
+        let row = cell_coordinate(hit.z / into);
+        let chunk = TileChunkCoord::containing(column, row);
+        min.x = min.x.min(chunk.x);
+        min.y = min.y.min(chunk.y);
+        max.x = max.x.max(chunk.x);
+        max.y = max.y.max(chunk.y);
+    }
+    Some((
+        TileChunkCoord::new(min.x - VIEW_MARGIN, min.y - VIEW_MARGIN),
+        TileChunkCoord::new(max.x + VIEW_MARGIN, max.y + VIEW_MARGIN),
+    ))
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn cell_coordinate(value: f32) -> i32 {
+    value.round() as i32
 }
 
 #[must_use]
@@ -112,10 +166,25 @@ pub(crate) fn initial_volume(focus_cell: [i32; 2]) -> TileVolumeComponent {
 }
 
 fn load_around(chunks: &mut TileChunkStore, shape: WorldShape, focus: TileChunkCoord) -> bool {
+    load_window(
+        chunks,
+        shape,
+        (
+            TileChunkCoord::new(focus.x - LOAD_RADIUS, focus.y - LOAD_RADIUS),
+            TileChunkCoord::new(focus.x + LOAD_RADIUS, focus.y + LOAD_RADIUS),
+        ),
+    )
+}
+
+fn load_window(
+    chunks: &mut TileChunkStore,
+    shape: WorldShape,
+    window: (TileChunkCoord, TileChunkCoord),
+) -> bool {
     let mut changed = false;
     let chunk_limit = WORLD_EDGE / TILE_CHUNK_SIZE;
-    for y in focus.y - LOAD_RADIUS..=focus.y + LOAD_RADIUS {
-        for x in focus.x - LOAD_RADIUS..=focus.x + LOAD_RADIUS {
+    for y in window.0.y..=window.1.y {
+        for x in window.0.x..=window.1.x {
             if x < 0 || y < 0 || x >= chunk_limit || y >= chunk_limit {
                 continue;
             }
@@ -143,5 +212,12 @@ mod tests {
         );
         assert!(volume.cells.iter().any(|cell| cell.tile == "water"));
         assert!(volume.cells.iter().any(|cell| cell.tile != "water"));
+    }
+
+    #[test]
+    fn cell_coordinate_uses_cell_centres() {
+        assert_eq!(cell_coordinate(12.49), 12);
+        assert_eq!(cell_coordinate(12.51), 13);
+        assert_eq!(cell_coordinate(-0.49), 0);
     }
 }
