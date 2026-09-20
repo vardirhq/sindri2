@@ -93,12 +93,20 @@ fn adjacent_sections_do_not_emit_internal_boundary_faces() {
     let right = mesh_block_section(&TwoSections, SectionCoord::new(1, 0, 0));
     assert_eq!(left.face_count(), 5 * 16 * 16);
     assert_eq!(right.face_count(), 5 * 16 * 16);
-    assert!(!left.opaque.vertices.iter().any(|vertex| {
-        vertex.position[0] == 16 && vertex.face == VoxelFace::Right
-    }));
-    assert!(!right.opaque.vertices.iter().any(|vertex| {
-        vertex.position[0] == 0 && vertex.face == VoxelFace::Left
-    }));
+    assert!(
+        !left
+            .opaque
+            .vertices
+            .iter()
+            .any(|vertex| { vertex.position[0] == 16 && vertex.face == VoxelFace::Right })
+    );
+    assert!(
+        !right
+            .opaque
+            .vertices
+            .iter()
+            .any(|vertex| { vertex.position[0] == 0 && vertex.face == VoxelFace::Left })
+    );
 }
 
 #[test]
@@ -137,11 +145,8 @@ fn geometry_is_split_by_render_class() {
         }
     }
 
-    let mesh = mesh_block_section_with_materials(
-        &ThreeBlocks,
-        &TestMaterials,
-        SectionCoord::new(0, 0, 0),
-    );
+    let mesh =
+        mesh_block_section_with_materials(&ThreeBlocks, &TestMaterials, SectionCoord::new(0, 0, 0));
     assert_eq!(mesh.opaque.face_count(), 6);
     assert_eq!(mesh.cutout.face_count(), 6);
     assert_eq!(mesh.transparent.face_count(), 6);

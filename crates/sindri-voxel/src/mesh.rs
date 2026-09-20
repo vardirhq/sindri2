@@ -57,24 +57,14 @@ impl VoxelFace {
                 [right, top, z],
                 [right, top, front],
             ],
-            Self::Bottom => [
-                [x, y, front],
-                [x, y, z],
-                [right, y, z],
-                [right, y, front],
-            ],
+            Self::Bottom => [[x, y, front], [x, y, z], [right, y, z], [right, y, front]],
             Self::Top => [
                 [x, top, z],
                 [x, top, front],
                 [right, top, front],
                 [right, top, z],
             ],
-            Self::Back => [
-                [right, y, z],
-                [x, y, z],
-                [x, top, z],
-                [right, top, z],
-            ],
+            Self::Back => [[right, y, z], [x, y, z], [x, top, z], [right, top, z]],
             Self::Front => [
                 [x, y, front],
                 [right, y, front],
@@ -243,8 +233,7 @@ pub fn mesh_block_section_with_materials(
                 ];
                 for face in VoxelFace::ALL {
                     let (dx, dy, dz) = face.offset();
-                    let neighbour_coord =
-                        VoxelCoord::new(voxel.x + dx, voxel.y + dy, voxel.z + dz);
+                    let neighbour_coord = VoxelCoord::new(voxel.x + dx, voxel.y + dy, voxel.z + dz);
                     let neighbour = source.voxel(neighbour_coord);
                     let visible = neighbour.is_air()
                         || !materials
