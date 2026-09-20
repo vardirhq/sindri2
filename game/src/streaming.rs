@@ -2,7 +2,7 @@
 
 use sindri_core::World;
 use sindri_scene::{
-    TileChunkCoord, TileChunkStore, TileGridComponent, TileVolumeComponent, TILE_CHUNK_SIZE,
+    TILE_CHUNK_SIZE, TileChunkCoord, TileChunkStore, TileGridComponent, TileVolumeComponent,
 };
 
 use crate::{
@@ -49,12 +49,10 @@ impl TerrainStream {
             .entities()
             .find(|(_, data)| data.components.contains_key(FLOOR))
             .map(|(entity, data)| {
-                let grid = serde_json::from_value::<TileGridComponent>(
-                    data.components[FLOOR].clone(),
-                );
-                let volume = serde_json::from_value::<TileVolumeComponent>(
-                    data.components[VOLUME].clone(),
-                );
+                let grid =
+                    serde_json::from_value::<TileGridComponent>(data.components[FLOOR].clone());
+                let volume =
+                    serde_json::from_value::<TileVolumeComponent>(data.components[VOLUME].clone());
                 (
                     entity,
                     grid,
@@ -113,11 +111,7 @@ pub(crate) fn initial_volume(focus_cell: [i32; 2]) -> TileVolumeComponent {
     })
 }
 
-fn load_around(
-    chunks: &mut TileChunkStore,
-    shape: WorldShape,
-    focus: TileChunkCoord,
-) -> bool {
+fn load_around(chunks: &mut TileChunkStore, shape: WorldShape, focus: TileChunkCoord) -> bool {
     let mut changed = false;
     let chunk_limit = WORLD_EDGE / TILE_CHUNK_SIZE;
     for y in focus.y - LOAD_RADIUS..=focus.y + LOAD_RADIUS {

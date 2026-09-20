@@ -11,10 +11,7 @@
 //! the world where the game starts and work from there.
 
 use glam::{Mat4, Vec3};
-use sindri_causeway::{
-    Session, extractor, world,
-    worldgen::SEA,
-};
+use sindri_causeway::{Session, extractor, world, worldgen::SEA};
 use sindri_core::World;
 use sindri_platform::{InputEvent, InputState, Key, MouseButton};
 use sindri_scene::{SceneExtractor, TileChunkCoord, TileVolumeComponent, UiTextComponent};
@@ -378,7 +375,10 @@ fn build_camera_materializes_the_chunks_it_moves_toward() {
         .expect("the build camera pans");
 
     let camera_after = entity_position(&world, "World Camera");
-    assert_ne!(camera_after, camera_before, "the regression must pan the camera");
+    assert_ne!(
+        camera_after, camera_before,
+        "the regression must pan the camera"
+    );
     let after = loaded_chunks(&world, &scene);
     assert!(
         after.len() > before.len(),
@@ -389,7 +389,10 @@ fn build_camera_materializes_the_chunks_it_moves_toward() {
     let camera_cell =
         sindri_scene::nearest_cell(f64::from(camera_after[0]), f64::from(camera_after[2]));
     let focus = TileChunkCoord::containing(camera_cell.x, camera_cell.y);
-    assert!(after.contains(&focus), "the camera's own chunk must be loaded");
+    assert!(
+        after.contains(&focus),
+        "the camera's own chunk must be loaded"
+    );
     assert!(
         sindri_scene::voxel::aim_at(
             &world,
@@ -416,19 +419,17 @@ fn the_sea_is_something_to_build_across_rather_than_to_walk_on() {
 
     // A shore: land with water immediately to its east, which is the side this
     // camera can see and so the side a player can click.
-    let shore = (0..80)
-        .map(|step| [start[0] + step, start[1]])
-        .find(|at| {
-            let here = volume(&world, &scene)
-                .cells
-                .iter()
-                .any(|cell| cell.position == [at[0], at[1], SEA + 1]);
-            let east = volume(&world, &scene)
-                .cells
-                .iter()
-                .any(|cell| cell.position == [at[0] + 1, at[1], SEA] && cell.tile == "water");
-            here && east
-        });
+    let shore = (0..80).map(|step| [start[0] + step, start[1]]).find(|at| {
+        let here = volume(&world, &scene)
+            .cells
+            .iter()
+            .any(|cell| cell.position == [at[0], at[1], SEA + 1]);
+        let east = volume(&world, &scene)
+            .cells
+            .iter()
+            .any(|cell| cell.position == [at[0] + 1, at[1], SEA] && cell.tile == "water");
+        here && east
+    });
     let Some(shore) = shore else {
         // Not every world puts a coast due east of where it starts you. That
         // is the generator being a generator, not a failure.

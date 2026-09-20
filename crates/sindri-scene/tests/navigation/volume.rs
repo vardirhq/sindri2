@@ -205,10 +205,8 @@ fn a_volume_beside_a_flat_map_does_not_close_the_floor() {
 
 #[test]
 fn sparse_navigation_cost_follows_loaded_ground_not_declared_bounds() {
-    let (mut loaded, tile_sets) = volume_world(
-        r#"[{ "position": [0, 0, 0], "tile": "block" }]"#,
-        1.0,
-    );
+    let (mut loaded, tile_sets) =
+        volume_world(r#"[{ "position": [0, 0, 0], "tile": "block" }]"#, 1.0);
     let floor_id = loaded.entity_map[&id("floor")];
     let floor = loaded.world.get_mut(floor_id).expect("the floor remains");
     floor.components["sindri.tile_grid"]["columns"] = json!(65_536);

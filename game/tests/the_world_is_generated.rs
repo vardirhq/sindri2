@@ -10,10 +10,12 @@ use std::collections::BTreeMap;
 use sindri_causeway::worldgen::{SEA, WorldShape, generate};
 use sindri_scene::TileChunkCoord;
 
-fn cell_key(
-    cell: &sindri_scene::TileCellDocument,
-) -> ([i32; 3], String, Option<String>) {
-    (cell.position, cell.tile.clone(), cell.visual_override.clone())
+fn cell_key(cell: &sindri_scene::TileCellDocument) -> ([i32; 3], String, Option<String>) {
+    (
+        cell.position,
+        cell.tile.clone(),
+        cell.visual_override.clone(),
+    )
 }
 
 fn surfaces(shape: WorldShape) -> BTreeMap<String, usize> {
@@ -117,7 +119,10 @@ fn chunks_reassemble_the_same_biomed_world() {
     }
     whole.sort_by_key(cell_key);
     chunked.sort_by_key(cell_key);
-    assert_eq!(chunked, whole, "streaming must not move biome or tree seams");
+    assert_eq!(
+        chunked, whole,
+        "streaming must not move biome or tree seams"
+    );
 }
 
 /// The top tile of every column, by where the column is.

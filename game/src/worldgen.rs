@@ -444,13 +444,10 @@ fn grow_trees(shape: WorldShape, cells: &mut Vec<TileCellDocument>) {
                 };
             let described = shape.column(x, y);
             let surface = shape.surface(x, y, described);
-            if described.ground <= SEA
-                || !matches!(surface, "ground" | "moss")
-                || {
-                    let (sample_x, sample_y) = shape.sample(x, y);
-                    hashed(shape.seed ^ 0xF3, sample_x, sample_y) < 0.58
-                }
-            {
+            if described.ground <= SEA || !matches!(surface, "ground" | "moss") || {
+                let (sample_x, sample_y) = shape.sample(x, y);
+                hashed(shape.seed ^ 0xF3, sample_x, sample_y) < 0.58
+            } {
                 continue;
             }
 

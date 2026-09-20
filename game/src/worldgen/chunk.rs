@@ -1,8 +1,8 @@
 //! Bounded pieces of a deterministic Causeway world.
 
-use sindri_scene::{TileCellDocument, TileChunkCoord, TILE_CHUNK_SIZE};
+use sindri_scene::{TILE_CHUNK_SIZE, TileCellDocument, TileChunkCoord};
 
-use super::{hashed, WorldShape, MAX_SKIRT, SEA};
+use super::{MAX_SKIRT, SEA, WorldShape, hashed};
 
 /// Generates exactly one engine-sized chunk.
 ///
@@ -67,11 +67,7 @@ fn first_lattice_at_or_after(value: i32) -> i32 {
     first
 }
 
-fn grow_trees_in(
-    shape: WorldShape,
-    chunk: TileChunkCoord,
-    cells: &mut Vec<TileCellDocument>,
-) {
+fn grow_trees_in(shape: WorldShape, chunk: TileChunkCoord, cells: &mut Vec<TileCellDocument>) {
     // A crown reaches one column beyond its trunk, so anchors are considered
     // through a one-cell halo and each emitted block is clipped back to this
     // chunk. No chunk owns a tree; every block has exactly one owning chunk.
@@ -101,13 +97,10 @@ fn grow_trees_in(
                 };
             let described = shape.column(x, y);
             let surface = shape.surface(x, y, described);
-            if described.ground <= SEA
-                || !matches!(surface, "ground" | "moss")
-                || {
-                    let (sample_x, sample_y) = shape.sample(x, y);
-                    hashed(shape.seed ^ 0xF3, sample_x, sample_y) < 0.58
-                }
-            {
+            if described.ground <= SEA || !matches!(surface, "ground" | "moss") || {
+                let (sample_x, sample_y) = shape.sample(x, y);
+                hashed(shape.seed ^ 0xF3, sample_x, sample_y) < 0.58
+            } {
                 continue;
             }
 

@@ -338,16 +338,13 @@ pub(crate) fn fill_the_world(world: &mut World) -> Result<(), CausewayError> {
         .entities()
         .find(|(_, data)| data.name.as_deref() == Some("Wanderer"))
         .and_then(|(_, data)| data.transform_3d)
-        .map_or(
-            [crate::streaming::WORLD_CENTRE; 2],
-            |transform| {
-                #[allow(clippy::cast_possible_truncation)]
-                [
-                    transform.position[0].round() as i32,
-                    transform.position[2].round() as i32,
-                ]
-            },
-        );
+        .map_or([crate::streaming::WORLD_CENTRE; 2], |transform| {
+            #[allow(clippy::cast_possible_truncation)]
+            [
+                transform.position[0].round() as i32,
+                transform.position[2].round() as i32,
+            ]
+        });
     let volume = crate::streaming::initial_volume(focus);
     let payload = serde_json::to_value(&volume)
         .map_err(|error| CausewayError::Generated(error.to_string()))?;

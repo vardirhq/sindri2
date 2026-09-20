@@ -134,9 +134,21 @@ mod tests {
     #[test]
     fn chunk_edges_use_euclidean_coordinates() {
         assert_eq!(TileChunkCoord::containing(0, 0), TileChunkCoord::new(0, 0));
-        assert_eq!(TileChunkCoord::containing(15, 15), TileChunkCoord::new(0, 0));
-        assert_eq!(TileChunkCoord::containing(16, 16), TileChunkCoord::new(1, 1));
-        assert_eq!(TileChunkCoord::containing(-1, -1), TileChunkCoord::new(-1, -1));
-        assert_eq!(TileChunkCoord::containing(-16, -16), TileChunkCoord::new(-1, -1));
+        assert_eq!(
+            TileChunkCoord::containing(15, 15),
+            TileChunkCoord::new(0, 0)
+        );
+        assert_eq!(
+            TileChunkCoord::containing(16, 16),
+            TileChunkCoord::new(1, 1)
+        );
+        assert_eq!(
+            TileChunkCoord::containing(-1, -1),
+            TileChunkCoord::new(-1, -1)
+        );
+        assert_eq!(
+            TileChunkCoord::containing(-16, -16),
+            TileChunkCoord::new(-1, -1)
+        );
     }
 }
