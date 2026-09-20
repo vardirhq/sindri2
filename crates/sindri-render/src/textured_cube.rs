@@ -231,7 +231,7 @@ impl TexturedCubeRenderer {
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Sindri textured cube pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: target,
+                view: target.color,
                 depth_slice: None,
                 resolve_target: None,
                 ops: wgpu::Operations {
@@ -240,7 +240,7 @@ impl TexturedCubeRenderer {
                 },
             })],
             depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                view: depth.view(),
+                view: target.depth.view(),
                 depth_ops: Some(wgpu::Operations {
                     load: wgpu::LoadOp::Load,
                     store: wgpu::StoreOp::Store,
@@ -270,8 +270,7 @@ impl TexturedCubeRenderer {
         &mut self,
         context: DrawContext<'_>,
         encoder: &mut wgpu::CommandEncoder,
-        target: &wgpu::TextureView,
-        depth: &DepthTarget,
+        target: RenderTarget<'_>,
         model_view_projection: Mat4,
         vertices: &[TexturedVertex],
         indices: &[u16],
