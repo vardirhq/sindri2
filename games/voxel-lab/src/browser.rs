@@ -18,6 +18,8 @@ use thiserror::Error;
 
 use crate::{VoxelLabRuntime, VoxelLabStats};
 
+const TOP_LABEL: &str = "textures/blocks-top.png";
+const SIDE_LABEL: &str = "textures/blocks-side.png";
 const CAUSEWAY_TOPS: &[u8] = include_bytes!("../../../game/assets/textures/blocks-top.png");
 const CAUSEWAY_SIDES: &[u8] = include_bytes!("../../../game/assets/textures/blocks-side.png");
 
@@ -75,18 +77,8 @@ impl DesktopApp for VoxelLabApp {
 
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let mut textures = TextureRegistry::new(context.device(), context.queue());
-        let top_texture = causeway_atlas(
-            context,
-            &mut textures,
-            "textures/blocks-top.png",
-            CAUSEWAY_TOPS,
-        )?;
-        let side_texture = causeway_atlas(
-            context,
-            &mut textures,
-            "textures/blocks-side.png",
-            CAUSEWAY_SIDES,
-        )?;
+        let top_texture = causeway_atlas(context, &mut textures, TOP_LABEL, CAUSEWAY_TOPS)?;
+        let side_texture = causeway_atlas(context, &mut textures, SIDE_LABEL, CAUSEWAY_SIDES)?;
         let material_textures = [top_texture, side_texture];
         Ok(Self {
             lab: VoxelLabRuntime::new(),
