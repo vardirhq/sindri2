@@ -10,7 +10,7 @@
 //! how a stack of cells becomes a wall.
 
 use sindri_core::{EntityData, EntityId, SceneComponent};
-use sindri_grid::{GridBounds, GridCoord, GridSpace, GridWalls};
+use sindri_grid::{GridBounds, GridSpace, GridWalls};
 
 use crate::{
     TileGridComponent, TileSetBindings, TileSurfaces, TileVolumeComponent, TilemapComponent,
@@ -26,9 +26,11 @@ use super::GridNavigationError;
 /// height per column and the edges that are too big a step -- or that lead into
 /// a column with no floor at all -- become walls like any other.
 ///
-/// Only cardinal edges exist, so only cardinal edges are considered. Each is
-/// visited once, from its western and northern side, because a wall is
-/// symmetric and blocking it twice would say the same thing twice.
+/// Only cardinal edges exist, so only cardinal edges are considered. Work
+/// begins at a loaded walkable column rather than walking every coordinate in
+/// the declared bounds. That distinction is invisible on a farm-sized grid
+/// and essential for a sparse streamed world: an empty million-cell horizon
+/// must cost nothing.
 pub(super) fn block_unwalkable_steps(
     grid: EntityId,
     data: &EntityData,
@@ -51,11 +53,8 @@ pub(super) fn block_unwalkable_steps(
     let surfaces = TileSurfaces::derive(&volume, tile_set)
         .map_err(|source| GridNavigationError::InvalidTileSurface { grid, source })?;
 
-    for from in bounds.iter() {
-        for to in [
-            GridCoord::new(from.x.saturating_add(1), from.y),
-            GridCoord::new(from.x, from.y.saturating_add(1)),
-        ] {
+    for (from, _) in surfaces.walkable_columns() {
+        for to in from.cardinal_neighbours() {
             if !bounds.contains(to) || surfaces.step_is_walkable(from, to, max_step) {
                 continue;
             }

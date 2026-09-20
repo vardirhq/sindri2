@@ -47,9 +47,19 @@ Sparse 3D cell storage attached to a grid:
 - optional deliberate visual override
 - volume-wide visibility and ordering policy
 
-Empty is absence, not a reserved tile ID. The serialized form starts sparse so
-an empty sky costs nothing; chunked or dense runtime storage may replace its
-index later without changing what one cell means.
+Empty is absence, not a reserved tile ID. The serialized form stays a readable
+sparse cell list. Runtime code shares a 16×16 `TileChunkCoord` and
+`TileChunkStore`, so generators and render culling use the same seams while a
+scene or save needs no second chunk-shaped file format. Causeway exercises the
+first streaming slice: its camera materializes deterministic terrain chunks as
+Build pans or Play follows, and sparse navigation derives frontier walls from
+loaded walkable columns rather than scanning the enormous declared envelope.
+
+This is not complete residency management yet. Loaded Causeway chunks remain
+resident for the run; eviction, persisted player deltas, asynchronous generation,
+and budgets for generation/rebuild work are the next layer. The current slice
+fixes the finite-map camera failure and establishes the engine unit those
+systems will manage without pretending an ever-growing resident set is endless.
 
 A surface is a derived view of a volume, not its storage model. Terrain tools
 usually edit the highest occupied level in a column and may fill supporting

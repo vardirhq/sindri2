@@ -10,8 +10,8 @@ use sindri_grid::GridCoord3;
 use sindri_render::{SpriteInstance, TextureId, TransparentOrder, UvRect};
 
 use crate::{
-    TextureBindings, TileGridComponent, TileGridError, TileSetBindings, TileVolumeComponent,
-    TileVolumeIndex, cell_to_local_in,
+    TILE_CHUNK_SIZE, TextureBindings, TileGridComponent, TileGridError, TileSetBindings,
+    TileVolumeComponent, TileVolumeIndex, cell_to_local_in,
 };
 
 use super::camera::ResolvedCameras;
@@ -69,8 +69,6 @@ struct BakedChunk {
 /// large enough that the per-chunk test is not itself the cost. At sixteen, a
 /// hundred and sixty square world is a hundred chunks and a framed view
 /// touches a handful.
-const CHUNK: i32 = 16;
-
 impl BakedChunk {
     /// Whether any of this chunk could be on screen.
     ///
@@ -392,7 +390,10 @@ fn solid_faces(
         let shade = [face.shade, face.shade, face.shade, 1.0];
         let placed = model * face.model;
         let centre = placed.w_axis.truncate();
-        let key = (face.cell.x.div_euclid(CHUNK), face.cell.y.div_euclid(CHUNK));
+        let key = (
+            face.cell.x.div_euclid(TILE_CHUNK_SIZE),
+            face.cell.y.div_euclid(TILE_CHUNK_SIZE),
+        );
         let entry = bounds.entry(key).or_insert((centre, centre));
         entry.0 = entry.0.min(centre);
         entry.1 = entry.1.max(centre);

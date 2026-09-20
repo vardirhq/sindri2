@@ -728,6 +728,37 @@ Typed host members landed first deliberately: a language server whose completion
 
 Exit gate: a representative scripted vertical slice runs with equivalent behavior on native and web, receives schema-derived tooling, and hot-reloads behavior while preserving compatible state.
 
+## Streamed voxel worlds
+
+Causeway made the deferred terrain engine immediate: a free Build camera can
+leave any finite generated island, and deep editable terrain cannot be generated
+or rebuilt as one volume. This track is engine work found by making Causeway a
+better game; Causeway is its vertical proof.
+
+- [x] Establish one engine-owned 16×16 tile-chunk coordinate and sparse runtime
+  store, use the same size for solid-volume culling, and prove deterministic
+  Causeway biome/tree generation reassembles without seams.
+- [x] Materialize Causeway chunks around the live camera in Build and Play, and
+  make navigation derivation proportional to loaded walkable terrain rather
+  than the declared coordinate envelope.
+- [ ] Add bounded residency with asynchronous generation/rebuild budgets. Keep
+  player edits as deltas from the deterministic seed so evicting a chunk never
+  loses a block and saving does not serialize untouched terrain.
+- [ ] Move generation profiles into an engine asset: seed, elevation and
+  climate fields, biome rules, strata, caves, deposits, structures, and
+  decoration. Causeway's current generator is the proving implementation, not
+  yet the general authoring surface.
+- [ ] Support multiple terrain representations behind the same chunk lifecycle:
+  block cells first, height/mesh terrain next, then density-field meshing where
+  caves and smooth terrain justify marching cubes or dual contouring.
+- [ ] Derive multi-level navigation, collision, and editor slice/cutaway views
+  per dirty chunk; add 90-degree camera rotation only after every solid view
+  culls, picks, and rebuilds the same cells correctly.
+
+Exit gate: a Causeway world can be explored and edited for an extended run with
+bounded memory and frame time; revisiting an evicted chunk restores the same
+biome plus saved edits; native and browser generation agree from the seed.
+
 ## Explicitly deferred beyond the first major release
 
 - [ ] PBR and advanced shadows
@@ -737,7 +768,6 @@ Exit gate: a representative scripted vertical slice runs with equivalent behavio
 - [ ] Native mobile and consoles
 - [ ] Render graphs and general compute API
 - [ ] Visual scripting or shader graphs
-- [ ] Terrain engine
 - [ ] Plugin marketplace
 - [ ] Cloud services
 - [ ] AI-assisted actions beyond a structured editor command proof

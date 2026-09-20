@@ -8,6 +8,15 @@
 use std::collections::BTreeMap;
 
 use sindri_causeway::worldgen::{SEA, WorldShape, generate};
+use sindri_scene::TileChunkCoord;
+
+fn cell_key(cell: &sindri_scene::TileCellDocument) -> ([i32; 3], String, Option<String>) {
+    (
+        cell.position,
+        cell.tile.clone(),
+        cell.visual_override.clone(),
+    )
+}
 
 fn surfaces(shape: WorldShape) -> BTreeMap<String, usize> {
     let volume = generate(shape, "causeway.tileset.json");
@@ -93,6 +102,27 @@ fn the_same_seed_builds_the_same_world_twice() {
         generate(shape, "t").cells.len()
     );
     assert_eq!(generate(shape, "t").cells, generate(shape, "t").cells);
+}
+
+#[test]
+fn chunks_reassemble_the_same_biomed_world() {
+    let shape = WorldShape::default();
+    let mut whole = generate(shape, "t").cells;
+    let mut chunked = Vec::new();
+    for y in 0..10 {
+        for x in 0..10 {
+            chunked.extend(sindri_causeway::worldgen::generate_chunk(
+                shape,
+                TileChunkCoord::new(x, y),
+            ));
+        }
+    }
+    whole.sort_by_key(cell_key);
+    chunked.sort_by_key(cell_key);
+    assert_eq!(
+        chunked, whole,
+        "streaming must not move biome or tree seams"
+    );
 }
 
 /// The top tile of every column, by where the column is.

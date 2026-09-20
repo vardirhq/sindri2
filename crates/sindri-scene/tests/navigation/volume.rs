@@ -202,3 +202,26 @@ fn a_volume_beside_a_flat_map_does_not_close_the_floor() {
         "the flat map is still the floor, so its three empty columns stay walkable"
     );
 }
+
+#[test]
+fn sparse_navigation_cost_follows_loaded_ground_not_declared_bounds() {
+    let (mut loaded, tile_sets) =
+        volume_world(r#"[{ "position": [0, 0, 0], "tile": "block" }]"#, 1.0);
+    let floor_id = loaded.entity_map[&id("floor")];
+    let floor = loaded.world.get_mut(floor_id).expect("the floor remains");
+    let grid = floor
+        .components
+        .get_mut("sindri.tile_grid")
+        .expect("the grid component remains");
+    grid["columns"] = json!(65_536);
+    grid["rows"] = json!(65_536);
+
+    let navigation =
+        WorldGridNavigation::from_world_with_tile_sets(&loaded.world, floor_id, &tile_sets)
+            .expect("sparse navigation derives");
+    assert_eq!(
+        navigation.walls().len(),
+        2,
+        "one loaded corner cell has only its two in-bounds frontier edges"
+    );
+}
