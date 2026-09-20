@@ -1,4 +1,4 @@
-use crate::{SectionCoord, VoxelCoord, VoxelId, VoxelSection, SECTION_EDGE};
+use crate::{SECTION_EDGE, SectionCoord, VoxelCoord, VoxelId, VoxelSection};
 
 /// Deterministic random access to an authoritative voxel world.
 ///
@@ -44,8 +44,14 @@ mod tests {
         let source = HalfSpace;
         let below = source.generate_section(SectionCoord::new(3, -1, -2));
         let above = source.generate_section(SectionCoord::new(3, 0, -2));
-        assert_eq!(below.get(crate::LocalVoxelCoord::new(7, 15, 9)), VoxelId::new(1));
-        assert_eq!(above.get(crate::LocalVoxelCoord::new(7, 0, 9)), VoxelId::AIR);
+        assert_eq!(
+            below.get(crate::LocalVoxelCoord::new(7, 15, 9)),
+            VoxelId::new(1)
+        );
+        assert_eq!(
+            above.get(crate::LocalVoxelCoord::new(7, 0, 9)),
+            VoxelId::AIR
+        );
         assert_eq!(below, source.generate_section(SectionCoord::new(3, -1, -2)));
     }
 }
