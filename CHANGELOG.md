@@ -27,6 +27,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- `sindri-voxel` now compiles neighbour-aware block sections into indexed
+  CPU geometry split into opaque, cutout, and transparent passes. Material and
+  face identity remain semantic so renderers can choose their own atlas or
+  shader path, while configurable occlusion avoids internal transparent faces.
 - Causeway can derive a smoothed textured triangle surface from the same
   deterministic voxel terrain that still owns picking, building and navigation.
   The first slice intentionally meshes only one 16×16 camera-centre chunk so
