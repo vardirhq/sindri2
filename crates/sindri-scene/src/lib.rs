@@ -20,6 +20,7 @@ mod physics_sync;
 mod placement;
 pub(crate) mod screen_ui;
 mod textures;
+mod tile_chunk;
 mod tile_surface;
 mod tilesets;
 
@@ -61,6 +62,7 @@ pub use textures::{
     TEXTURE_NAMING_COMPONENTS, TextureBindings, referenced_fonts, referenced_sheets,
     referenced_textures, unresolved_sprites, unresolved_textures,
 };
+pub use tile_chunk::{TILE_CHUNK_SIZE, TileChunkCoord, TileChunkStore};
 pub use tile_surface::{TileSurfaceError, TileSurfaces};
 pub mod voxel;
 pub use voxel::{VoxelError, VoxelFace, VoxelHit, cube_faces, face_quad, pick};
