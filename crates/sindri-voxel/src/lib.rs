@@ -4,11 +4,15 @@
 //! addressed, stored in sections, revised, and eventually handed to meshers.
 
 mod coord;
+mod mesh;
+mod queue;
 mod section;
 mod source;
 mod world;
 
 pub use coord::{LocalVoxelCoord, SECTION_EDGE, SECTION_VOLUME, SectionCoord, VoxelCoord};
+pub use mesh::{BlockFace, BlockMesh, VoxelFace, mesh_block_section};
+pub use queue::VoxelWorkQueue;
 pub use section::{VoxelId, VoxelSection};
 pub use source::VoxelSource;
 pub use world::{ResidencyConfig, ResidencyDelta, VoxelWorld};
