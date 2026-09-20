@@ -9,14 +9,16 @@
       * { box-sizing: border-box; }
       body { margin: 0; overflow: hidden; background: #09101a; color: #e9f1ff; }
       canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
-      .panel { position: fixed; z-index: 2; left: max(16px, env(safe-area-inset-left)); top: max(16px, env(safe-area-inset-top)); max-width: min(680px, calc(100vw - 32px)); padding: 14px 16px; border: 1px solid #ffffff24; border-radius: 14px; background: #08101bdb; box-shadow: 0 14px 50px #0008; backdrop-filter: blur(14px); }
+      .panel { position: fixed; z-index: 2; left: max(16px, env(safe-area-inset-left)); top: max(16px, env(safe-area-inset-top)); max-width: min(680px, calc(100vw - 32px)); padding: 14px 16px; border: 1px solid #ffffff24; border-radius: 14px; background: #08101bdb; box-shadow: 0 14px 50px #0008; backdrop-filter: blur(14px); pointer-events: none; }
       h1 { margin: 0 0 5px; font-size: 18px; letter-spacing: .02em; }
       p { margin: 4px 0; color: #aebdd0; font-size: 13px; line-height: 1.45; }
       #voxel-stats { color: #8ee7b0; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-      .controls { position: fixed; z-index: 2; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(3, 48px); gap: 8px; }
-      button { width: 48px; height: 48px; border: 1px solid #ffffff26; border-radius: 12px; background: #14243de8; color: white; font: 700 18px inherit; }
-      button:active { background: #2c8b61; transform: translateY(1px); }
-      .wide { grid-column: span 3; width: 160px; font-size: 13px; }
+      .mobile-hint { display: none; }
+      @media (pointer: coarse) {
+        .panel { top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); max-width: calc(100vw - 20px); }
+        .desktop-hint { display: none; }
+        .mobile-hint { display: block; }
+      }
     </style>
   </head>
   <body>
@@ -25,20 +27,13 @@
       <h1>Sindri Voxel Lab</h1>
       <p>Engine-owned 16³ sections → neighbour-aware meshing → persistent GPU cache.</p>
       <p id="voxel-stats">Starting WebGPU…</p>
-      <p>Move with WASD/arrows, orbit with Q/E, dig with Space. Settled movement inside a section should keep meshes and uploads at zero.</p>
+      <p class="desktop-hint">Move with WASD/arrows, orbit with Q/E, dig with Space.</p>
+      <p class="mobile-hint">Drag the world to pan. Tap to dig the surface at the camera focus.</p>
     </section>
-    <nav class="controls" aria-label="Voxel Lab controls">
-      <button data-code="KeyQ" aria-label="Orbit left">↶</button><button data-code="ArrowUp" aria-label="Move forward">↑</button><button data-code="KeyE" aria-label="Orbit right">↷</button>
-      <button data-code="ArrowLeft" aria-label="Move left">←</button><button data-code="ArrowDown" aria-label="Move backward">↓</button><button data-code="ArrowRight" aria-label="Move right">→</button>
-      <button class="wide" data-code="Space">Dig surface</button>
-    </nav>
     <script type="module">
       import init from './pkg/voxel_lab.js';
       const stats = document.querySelector('#voxel-stats');
       addEventListener('sindri-failure', event => { stats.textContent = event.detail || 'Voxel Lab failed to start'; });
-      for (const button of document.querySelectorAll('[data-code]')) {
-        button.addEventListener('click', () => dispatchEvent(new KeyboardEvent('keydown', { code: button.dataset.code, bubbles: true })));
-      }
       try { await init(); } catch (error) { stats.textContent = String(error); throw error; }
     </script>
   </body>
