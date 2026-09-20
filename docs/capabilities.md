@@ -540,8 +540,7 @@ the initial world contains only a bounded window, moving either the free Build
 camera or the Play follow camera generates adjacent chunks from the same seed,
 and biome and tree decisions meet identically across their seams. Navigation
 derives walls from loaded walkable columns, so a 65,536×65,536 coordinate
-envelope does not mean visiting four billion empty cells. Loaded chunks are not
-evicted or persisted separately yet, and generation is synchronous.
+envelope does not mean visiting four billion empty cells. Residency is bounded to the current camera window and player-edited chunks are remembered separately; generation is still synchronous.\n\n**The same voxel terrain can drive a second visual representation.** Causeway now overlays one 16×16 generated chunk with a smoothed textured triangle surface while the voxel cells remain authoritative for picking, building, navigation, and world generation. The renderer accepts explicit textured triangles through the existing opaque 3D path, and a surface mesh may sample one sprite-sheet region rather than requiring a standalone texture. This is deliberately a prototype: only the camera-centre chunk is meshed, biome materials are not blended, the block surface still renders underneath it, and the prototype uploads inline mesh buffers when drawn. Those limitations are the evidence needed before chunk meshing and GPU residency become an engine-owned voxel capability.
 
 **A tile can be shorter than its cell.** `height` is a fraction of a cell
 measured from its floor, defaulting to one, so every tile written before heights
