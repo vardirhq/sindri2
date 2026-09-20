@@ -1,5 +1,5 @@
 use crate::{
-    FaceOcclusion, RenderClass, SectionBounds, SectionCoord, VoxelCoord, VoxelId,
+    FaceOcclusion, RenderClass, SectionBounds, SectionCoord, VoxelCoord, VoxelFace, VoxelId,
     VoxelMaterial, VoxelMaterialSource, VoxelSource, mesh_block_section,
     mesh_block_section_with_materials,
 };
