@@ -380,29 +380,28 @@ fn build_camera_materializes_the_chunks_it_moves_toward() {
         "the regression must pan the camera"
     );
     let after = loaded_chunks(&world, &scene);
+    assert_ne!(
+        after, before,
+        "crossing a chunk boundary must replace the resident terrain window"
+    );
     assert!(
-        after.len() > before.len(),
-        "crossing a chunk boundary must materialize new terrain: {} before, {} after",
+        after.len() <= before.len() + 16,
+        "streaming must stay near a viewport-sized residency instead of growing forever: {} before, {} after",
         before.len(),
         after.len()
     );
-    let camera_cell =
-        sindri_scene::nearest_cell(f64::from(camera_after[0]), f64::from(camera_after[2]));
-    let focus = TileChunkCoord::containing(camera_cell.x, camera_cell.y);
-    assert!(
-        after.contains(&focus),
-        "the camera's own chunk must be loaded"
-    );
-    assert!(
-        sindri_scene::voxel::aim_at(
-            &world,
-            scene.components(),
-            view_projection(&world, &scene),
-            [0.5, 0.5],
-        )
-        .is_some(),
-        "the newly framed world must be pickable, not empty space"
-    );
+    for point in [[0.1, 0.1], [0.5, 0.5], [0.1, 0.9], [0.9, 0.9]] {
+        assert!(
+            sindri_scene::voxel::aim_at(
+                &world,
+                scene.components(),
+                view_projection(&world, &scene),
+                point,
+            )
+            .is_some(),
+            "the newly framed world must cover visible point {point:?}, not empty space"
+        );
+    }
 }
 
 #[test]
