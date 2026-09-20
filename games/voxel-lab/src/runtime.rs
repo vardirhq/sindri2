@@ -171,7 +171,7 @@ mod tests {
         let mut lab = VoxelLabRuntime::new();
         let focus = SectionCoord::new(0, 0, 0);
         lab.frame(focus, &texture).unwrap();
-        assert!(lab.set_voxel(VoxelCoord::new(15, 4, 0), VoxelId::AIR));
+        assert!(lab.set_voxel(VoxelCoord::new(15, 4, 4), VoxelId::AIR));
 
         let edited = lab.frame(focus, &texture).unwrap();
         assert_eq!(edited.stats.entering_sections, 0);
