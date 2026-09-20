@@ -99,12 +99,7 @@ impl TerrainStream {
         // more expensive and forced the renderer to rebake an ever-growing
         // volume on a phone's main thread.
         let mut resident = TileChunkStore::default();
-        load_window(
-            &mut resident,
-            world_shape(),
-            window,
-            &self.edits,
-        );
+        load_window(&mut resident, world_shape(), window, &self.edits);
         self.chunks = resident;
         self.window = Some(window);
         let materialized = self.chunks.materialize(&volume);
