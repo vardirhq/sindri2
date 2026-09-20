@@ -436,8 +436,13 @@ bindings, and GPU upload deliberately remain outside this crate. A generic
 `SectionMeshCache<T>` owns the renderer-independent lifetime contract: block,
 smooth, hybrid, and custom representations are separate; current geometry
 stays available while a replacement is pending; superseded worker results are
-rejected; and one removal releases every profile of a leaving section. The
-scene/render bridge does not use that cache yet.
+rejected; and one removal releases every profile of a leaving section.
+`sindri-render` now has the matching GPU-side contract for textured meshes:
+opaque cache identities and monotonic revisions reuse unchanged vertex/index
+buffers, retain the last buffers while replacement geometry is unavailable,
+accept 32-bit indices, release departed entries explicitly, and expose
+cumulative cache counters. The voxel-to-render identity/material bridge does
+not use that GPU cache yet.
 Causeway has not migrated to this path yet, so it is engine-tested foundation
 rather than game proof.
 

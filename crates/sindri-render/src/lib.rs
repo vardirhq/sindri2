@@ -17,6 +17,7 @@ mod target;
 mod text;
 mod texture;
 mod textured_cube;
+mod textured_mesh_cache;
 mod transparency;
 mod triangle;
 mod uv_rect;
@@ -56,6 +57,7 @@ pub use text::{
 };
 pub use texture::{Texture2D, TextureError, TextureFilter, TextureId, TextureRegistry};
 pub use textured_cube::{DrawContext, TexturedCubeRenderer};
+pub use textured_mesh_cache::{CachedMeshId, CachedTexturedMeshUpload, TexturedMeshCacheStats};
 pub use transparency::{TransparentOrder, TransparentOrderError};
 pub use triangle::TriangleRenderer;
 pub use uv_rect::{UvRect, UvRectError};

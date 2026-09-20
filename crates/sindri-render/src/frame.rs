@@ -2,7 +2,8 @@ use glam::Mat4;
 use thiserror::Error;
 
 use crate::{
-    ShapeBlend, ShapeInstance, SpriteDepth, SpriteInstance, TextInstance, TextureId, TexturedVertex,
+    CachedMeshId, CachedTexturedMeshUpload, ShapeBlend, ShapeInstance, SpriteDepth, SpriteInstance,
+    TextInstance, TextureId, TexturedVertex,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -80,6 +81,17 @@ pub enum FrameCommand {
         texture: TextureId,
         vertices: Vec<TexturedVertex>,
         indices: Vec<u16>,
+    },
+    /// Persistent textured triangles, uploaded only when `revision` advances.
+    ///
+    /// With no replacement, the renderer draws the last cached revision. That
+    /// keeps old terrain visible while asynchronous meshing finishes.
+    CachedTexturedMesh {
+        model: Mat4,
+        texture: TextureId,
+        cache: CachedMeshId,
+        revision: u64,
+        replacement: Option<CachedTexturedMeshUpload>,
     },
     /// One batch per texture: instances sharing a texture draw in a single call.
     SpriteBatch {

@@ -49,6 +49,7 @@ pub struct MeshBuffers {
     vertex: wgpu::Buffer,
     index: wgpu::Buffer,
     index_count: u32,
+    index_format: wgpu::IndexFormat,
 }
 
 impl MeshBuffers {
@@ -58,6 +59,40 @@ impl MeshBuffers {
         vertices: &[Vertex],
         indices: &[u16],
     ) -> Self {
+        Self::from_bytes(
+            device,
+            label,
+            vertices,
+            bytemuck::cast_slice(indices),
+            indices.len(),
+            wgpu::IndexFormat::Uint16,
+        )
+    }
+
+    pub fn new_u32<Vertex: bytemuck::Pod>(
+        device: &wgpu::Device,
+        label: &str,
+        vertices: &[Vertex],
+        indices: &[u32],
+    ) -> Self {
+        Self::from_bytes(
+            device,
+            label,
+            vertices,
+            bytemuck::cast_slice(indices),
+            indices.len(),
+            wgpu::IndexFormat::Uint32,
+        )
+    }
+
+    fn from_bytes<Vertex: bytemuck::Pod>(
+        device: &wgpu::Device,
+        label: &str,
+        vertices: &[Vertex],
+        indices: &[u8],
+        index_count: usize,
+        index_format: wgpu::IndexFormat,
+    ) -> Self {
         let vertex = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(&format!("{label} vertices")),
             contents: bytemuck::cast_slice(vertices),
@@ -65,13 +100,14 @@ impl MeshBuffers {
         });
         let index = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some(&format!("{label} indices")),
-            contents: bytemuck::cast_slice(indices),
+            contents: indices,
             usage: wgpu::BufferUsages::INDEX,
         });
         Self {
             vertex,
             index,
-            index_count: u32::try_from(indices.len()).expect("mesh index count exceeds u32"),
+            index_count: u32::try_from(index_count).expect("mesh index count exceeds u32"),
+            index_format,
         }
     }
 
@@ -85,7 +121,7 @@ impl MeshBuffers {
         instances: std::ops::Range<u32>,
     ) {
         pass.set_vertex_buffer(0, self.vertex.slice(..));
-        pass.set_index_buffer(self.index.slice(..), wgpu::IndexFormat::Uint16);
+        pass.set_index_buffer(self.index.slice(..), self.index_format);
         pass.draw_indexed(0..self.index_count, 0, instances);
     }
 

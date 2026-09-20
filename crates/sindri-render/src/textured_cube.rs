@@ -3,7 +3,10 @@ use std::borrow::Cow;
 use glam::Mat4;
 use wgpu::util::DeviceExt;
 
-use crate::{DepthTarget, MeshBuffers, TextureId, TextureRegistry, TexturedVertex};
+use crate::{
+    CachedMeshId, CachedTexturedMeshUpload, DepthTarget, MeshBuffers, TextureId, TextureRegistry,
+    TexturedMeshCacheStats, TexturedVertex, textured_mesh_cache::TexturedMeshCache,
+};
 
 const SHADER: &str = include_str!("textured_cube.wgsl");
 
@@ -136,6 +139,7 @@ pub struct TexturedCubeRenderer {
     current: TextureId,
     uniform: wgpu::Buffer,
     mesh: MeshBuffers,
+    cached_meshes: TexturedMeshCache,
 }
 
 /// The GPU handles and texture a draw resolves against.
@@ -148,6 +152,13 @@ pub struct DrawContext<'a> {
     pub queue: &'a wgpu::Queue,
     pub textures: &'a TextureRegistry,
     pub texture: TextureId,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct CachedMeshRequest<'a> {
+    pub id: CachedMeshId,
+    pub revision: u64,
+    pub replacement: Option<&'a CachedTexturedMeshUpload>,
 }
 
 impl TexturedCubeRenderer {
@@ -170,6 +181,7 @@ impl TexturedCubeRenderer {
             current: TextureRegistry::MISSING,
             uniform,
             mesh: MeshBuffers::new(device, "Sindri textured cube", &VERTICES, &INDICES),
+            cached_meshes: TexturedMeshCache::default(),
         }
     }
 
@@ -220,52 +232,26 @@ impl TexturedCubeRenderer {
         model_view_projection: Mat4,
     ) {
         self.bind_texture(context.device, context.textures, context.texture);
-        let queue = context.queue;
-        queue.write_buffer(
-            &self.uniform,
-            0,
-            bytemuck::bytes_of(&CubeUniform {
-                model_view_projection: model_view_projection.to_cols_array_2d(),
-            }),
-        );
-        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("Sindri textured cube pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: target,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                view: depth.view(),
-                depth_ops: Some(wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
-                    store: wgpu::StoreOp::Store,
-                }),
-                stencil_ops: None,
-            }),
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        pass.set_pipeline(&self.pipeline);
         let bind_group = self
             .bind_groups
             .get(&self.current)
             .expect("the texture is bound before encoding");
-        pass.set_bind_group(0, bind_group, &[]);
-        self.mesh.draw(&mut pass);
+        encode_mesh_buffers(
+            context.queue,
+            encoder,
+            (target, depth),
+            model_view_projection,
+            (&self.uniform, &self.pipeline, bind_group),
+            &self.mesh,
+            "Sindri textured cube pass",
+        );
     }
 
     /// Draws caller-provided textured triangles through the same opaque 3D
     /// pipeline as cubes.
     ///
-    /// The inline buffers are intentionally a prototype boundary. Generated
-    /// terrain proves the geometry contract first; persistent GPU mesh caches
-    /// belong with chunk residency once that contract has survived a game.
+    /// This remains the transient path for authored surface meshes. Generated
+    /// terrain should use [`Self::encode_cached_mesh`].
     pub fn encode_mesh(
         &mut self,
         context: DrawContext<'_>,
@@ -280,47 +266,112 @@ impl TexturedCubeRenderer {
         }
         let mesh = MeshBuffers::new(context.device, "Sindri textured surface", vertices, indices);
         self.bind_texture(context.device, context.textures, context.texture);
-        context.queue.write_buffer(
-            &self.uniform,
-            0,
-            bytemuck::bytes_of(&CubeUniform {
-                model_view_projection: model_view_projection.to_cols_array_2d(),
-            }),
-        );
-        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("Sindri textured surface pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: target.0,
-                depth_slice: None,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
-                    store: wgpu::StoreOp::Store,
-                },
-            })],
-            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                view: target.1.view(),
-                depth_ops: Some(wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
-                    store: wgpu::StoreOp::Store,
-                }),
-                stencil_ops: None,
-            }),
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
-        pass.set_pipeline(&self.pipeline);
         let bind_group = self
             .bind_groups
             .get(&self.current)
             .expect("the texture is bound before encoding");
-        pass.set_bind_group(0, bind_group, &[]);
-        mesh.draw(&mut pass);
+        encode_mesh_buffers(
+            context.queue,
+            encoder,
+            target,
+            model_view_projection,
+            (&self.uniform, &self.pipeline, bind_group),
+            &mesh,
+            "Sindri textured surface pass",
+        );
+    }
+
+    /// Draws a persistent textured mesh, replacing its GPU buffers only when a
+    /// newer revision supplies geometry.
+    pub(crate) fn encode_cached_mesh(
+        &mut self,
+        context: DrawContext<'_>,
+        encoder: &mut wgpu::CommandEncoder,
+        target: (&wgpu::TextureView, &DepthTarget),
+        model_view_projection: Mat4,
+        request: CachedMeshRequest<'_>,
+    ) {
+        self.bind_texture(context.device, context.textures, context.texture);
+        let Some(mesh) = self.cached_meshes.resolve(
+            context.device,
+            request.id,
+            request.revision,
+            request.replacement,
+        ) else {
+            return;
+        };
+        let bind_group = self
+            .bind_groups
+            .get(&self.current)
+            .expect("the texture is bound before encoding");
+        encode_mesh_buffers(
+            context.queue,
+            encoder,
+            target,
+            model_view_projection,
+            (&self.uniform, &self.pipeline, bind_group),
+            mesh,
+            "Sindri cached textured mesh pass",
+        );
+    }
+
+    /// Releases one persistent mesh, normally from a residency `left` delta.
+    pub fn release_cached_mesh(&mut self, cache: CachedMeshId) -> bool {
+        self.cached_meshes.release(cache)
+    }
+
+    /// Cumulative cache counters and the current number of resident entries.
+    pub fn cached_mesh_stats(&self) -> TexturedMeshCacheStats {
+        self.cached_meshes.stats()
     }
 
     /// The texture the next encode will draw with.
     pub const fn texture(&self) -> TextureId {
         self.current
     }
+}
+
+fn encode_mesh_buffers(
+    queue: &wgpu::Queue,
+    encoder: &mut wgpu::CommandEncoder,
+    target: (&wgpu::TextureView, &DepthTarget),
+    model_view_projection: Mat4,
+    state: (&wgpu::Buffer, &wgpu::RenderPipeline, &wgpu::BindGroup),
+    mesh: &MeshBuffers,
+    label: &str,
+) {
+    let (uniform, pipeline, bind_group) = state;
+    queue.write_buffer(
+        uniform,
+        0,
+        bytemuck::bytes_of(&CubeUniform {
+            model_view_projection: model_view_projection.to_cols_array_2d(),
+        }),
+    );
+    let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some(label),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: target.0,
+            depth_slice: None,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Load,
+                store: wgpu::StoreOp::Store,
+            },
+        })],
+        depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+            view: target.1.view(),
+            depth_ops: Some(wgpu::Operations {
+                load: wgpu::LoadOp::Load,
+                store: wgpu::StoreOp::Store,
+            }),
+            stencil_ops: None,
+        }),
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+    });
+    pass.set_pipeline(pipeline);
+    pass.set_bind_group(0, bind_group, &[]);
+    mesh.draw(&mut pass);
 }

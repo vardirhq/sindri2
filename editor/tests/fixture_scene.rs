@@ -326,6 +326,7 @@ fn the_fixtures_animation_draws_a_different_frame_as_time_passes() {
                 FrameCommand::SpriteBatch { instances, .. } => Some(instances),
                 FrameCommand::TexturedCube { .. }
                 | FrameCommand::TexturedMesh { .. }
+                | FrameCommand::CachedTexturedMesh { .. }
                 | FrameCommand::Text { .. }
                 | FrameCommand::Shapes { .. } => None,
             })

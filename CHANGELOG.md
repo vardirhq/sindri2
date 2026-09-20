@@ -27,6 +27,14 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- `sindri-render` now owns persistent textured-mesh GPU buffers keyed by an
+  opaque cache identity and monotonic revision. Unchanged meshes reuse their
+  buffers, pending replacements keep the last uploaded geometry drawable, and
+  explicit release drops meshes that leave residency. Cache counters expose
+  installs, uploads, reuse, stale draws, misses, and releases for diagnostics.
+- Persistent textured meshes use 32-bit indices, so a highly fragmented 16³
+  voxel section is not limited by the 65,535-vertex ceiling of transient
+  authored meshes.
 - Voxel mesh work now carries a monotonic section revision and meshing profile,
   and a renderer-independent persistent cache keeps old compiled geometry
   available while a replacement is built. Superseded worker results cannot

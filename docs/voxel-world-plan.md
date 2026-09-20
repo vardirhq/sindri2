@@ -74,9 +74,9 @@ Exit: a solid 16³ section emits only its exterior; adjacent solid sections emit
 
 ### 4. Persistent render cache
 - Bridge compiled voxel meshes into scene/render.
-- Cache compiled/GPU representations by section coordinate + revision + mesher profile. The renderer-independent cache lifetime and revision contract now exists; the scene/render upload bridge remains.
-- Reuse unchanged buffers across frames and camera movement.
-- Keep old buffers until a replacement is uploaded.
+- Cache compiled/GPU representations by section coordinate + revision + mesher profile. The renderer-independent cache and generic textured GPU cache now exist; the voxel identity/material bridge remains.
+- Reuse unchanged buffers across frames and camera movement. The generic renderer path now does this by opaque cache identity and revision.
+- Keep old buffers until a replacement is uploaded. The generic renderer path now draws the last uploaded revision while replacement geometry is unavailable.
 - Frustum-cull cached section bounds.
 - Instrument resident sections, queued generation/mesh work, triangles, uploads, and rebuilds/frame.
 
@@ -143,6 +143,6 @@ Do not rewrite Causeway in one jump. Each phase leaves main usable. New engine A
 - **Phase 1:** complete on main. `sindri-voxel` owns coordinates, 16³ palette-backed sections, revisions, and deterministic source sampling.
 - **Phase 2:** complete. The engine has bounded 3D section residency, separate render/simulation radii, entering/staying/leaving diffs, sparse edit retention, boundary-aware dirty tracking, and deterministic deduplicated generation/mesh work queues whose contract can later be drained by workers.
 - **Phase 3:** complete. The block mesher samples neighbours through `VoxelSource`, compiles only visible faces into indexed section-local geometry, carries atlas-neutral UV corners plus material/face identity, reports world-space section bounds, and splits opaque, cutout, and transparent passes through game-provided material/occlusion policy.
-- **Phase 4:** in progress. Mesh work now carries a monotonic revision and mesher profile, including a new revision when a halo neighbour changes. `SectionMeshCache<T>` keeps the last compiled value drawable while replacement work is pending, rejects superseded results, separates block/smooth/hybrid/custom profiles, and exposes one operation to release every profile named by a leaving residency delta. The scene/render bridge, GPU uploads, culling, instrumentation, and Voxel Lab proof remain.
+- **Phase 4:** in progress. Mesh work now carries a monotonic revision and mesher profile, including a new revision when a halo neighbour changes. `SectionMeshCache<T>` keeps the last compiled value drawable while replacement work is pending, rejects superseded results, separates block/smooth/hybrid/custom profiles, and exposes one operation to release every profile named by a leaving residency delta. `sindri-render` now persistently stores textured GPU buffers behind opaque cache identities, uploads only newer replacement revisions, draws old buffers while work is pending, supports 32-bit section indices, explicitly releases departed entries, and reports cache counters. The voxel material/identity bridge, culling, Voxel Lab instrumentation, and Pages proof remain.
 
 Causeway intentionally remains on the old path until the engine can both own residency and compile correct section geometry. Moving the game sooner would merely relocate the current rendering problems.

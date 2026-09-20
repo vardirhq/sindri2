@@ -36,6 +36,7 @@ fn sprites_batch_per_texture_within_a_layer() {
             } => (*texture, instances.len()),
             FrameCommand::TexturedCube { .. }
             | FrameCommand::TexturedMesh { .. }
+            | FrameCommand::CachedTexturedMesh { .. }
             | FrameCommand::Text { .. }
             | FrameCommand::Shapes { .. } => {
                 panic!("expected sprite batches")

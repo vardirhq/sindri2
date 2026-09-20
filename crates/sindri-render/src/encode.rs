@@ -14,7 +14,7 @@ use crate::{
     Bloom, BloomSettings, DepthTarget, DrawContext, FrameCommand, FramePass, GlyphDrawError,
     GlyphRenderer, PreparedFrame, RenderStage, ShapeDrawError, ShapeRenderer, SpriteBatchError,
     SpriteBatchRenderer, SpriteBatchStats, TextError, TextRenderer, TextureRegistry,
-    TexturedCubeRenderer, encode_clear,
+    TexturedCubeRenderer, encode_clear, textured_cube::CachedMeshRequest,
 };
 use thiserror::Error;
 
@@ -257,6 +257,15 @@ fn encode_passes<'p>(
                 vertices,
                 indices,
             ),
+            command @ FrameCommand::CachedTexturedMesh { .. } => encode_cached_textured_mesh(
+                (cube_renderer, textures),
+                device,
+                queue,
+                encoder,
+                target,
+                pass,
+                command,
+            ),
             FrameCommand::SpriteBatch {
                 texture,
                 depth,
@@ -312,6 +321,44 @@ fn encode_passes<'p>(
         }
     }
     Ok(())
+}
+
+fn encode_cached_textured_mesh(
+    state: (&mut TexturedCubeRenderer, &TextureRegistry),
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    encoder: &mut wgpu::CommandEncoder,
+    target: FrameTarget<'_>,
+    pass: &FramePass,
+    command: &FrameCommand,
+) {
+    let (cube_renderer, textures) = state;
+    let FrameCommand::CachedTexturedMesh {
+        model,
+        texture,
+        cache,
+        revision,
+        replacement,
+    } = command
+    else {
+        unreachable!("cache encoder only receives cached mesh commands");
+    };
+    cube_renderer.encode_cached_mesh(
+        DrawContext {
+            device,
+            queue,
+            textures,
+            texture: *texture,
+        },
+        encoder,
+        (target.color, target.depth),
+        pass.camera.view_projection * *model,
+        CachedMeshRequest {
+            id: *cache,
+            revision: *revision,
+            replacement: replacement.as_ref(),
+        },
+    );
 }
 
 #[derive(Debug, Error)]
