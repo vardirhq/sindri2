@@ -289,7 +289,7 @@ fn smooth_corner_height(shape: WorldShape, corner_x: i32, corner_y: i32) -> f32 
         for dx in -1..=0 {
             let x = (corner_x + dx).clamp(0, shape.columns - 1);
             let y = (corner_y + dy).clamp(0, shape.rows - 1);
-            total += shape.column(x, y).ground.max(crate::worldgen::SEA) as f32 + 0.515;
+            total += shape.ground_height(x, y).max(crate::worldgen::SEA) as f32 + 0.515;
             samples += 1.0;
         }
     }
