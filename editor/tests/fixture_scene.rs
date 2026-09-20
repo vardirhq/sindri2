@@ -327,6 +327,7 @@ fn the_fixtures_animation_draws_a_different_frame_as_time_passes() {
                 FrameCommand::TexturedCube { .. }
                 | FrameCommand::TexturedMesh { .. }
                 | FrameCommand::CachedTexturedMesh { .. }
+                | FrameCommand::ReleaseCachedTexturedMesh { .. }
                 | FrameCommand::Text { .. }
                 | FrameCommand::Shapes { .. } => None,
             })

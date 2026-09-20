@@ -27,6 +27,12 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- `sindri-scene` now bridges semantic block-mesh output into deterministic
+  texture/atlas batches and revisioned persistent renderer commands. Stable GPU
+  identities survive remeshing, superseded worker results are discarded before
+  upload, and sections leaving residency explicitly release their buffers. The
+  first bridge deliberately accepts opaque block batches only; cutout and
+  transparent pipelines remain follow-up work.
 - `sindri-render` now owns persistent textured-mesh GPU buffers keyed by an
   opaque cache identity and monotonic revision. Unchanged meshes reuse their
   buffers, pending replacements keep the last uploaded geometry drawable, and

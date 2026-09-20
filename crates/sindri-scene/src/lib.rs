@@ -23,6 +23,7 @@ mod textures;
 mod tile_chunk;
 mod tile_surface;
 mod tilesets;
+mod voxel_render;
 
 pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations};
 pub use audio::AudioSourceComponent;
@@ -66,5 +67,9 @@ pub use tile_chunk::{TILE_CHUNK_SIZE, TileChunkCoord, TileChunkStore};
 pub use tile_surface::{TileSurfaceError, TileSurfaces};
 pub mod voxel;
 pub use voxel::{VoxelError, VoxelFace, VoxelHit, cube_faces, face_quad, pick};
+pub use voxel_render::{
+    CompiledVoxelBatch, CompiledVoxelSection, VoxelRenderBridge, VoxelRenderError,
+    VoxelRenderStats, VoxelTexture, VoxelTextureSource, compile_block_mesh,
+};
 
 pub use tilesets::{TileSetBindings, referenced_tile_sets, tile_set_sheets, tile_set_textures};

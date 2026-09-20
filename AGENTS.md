@@ -97,7 +97,7 @@ sindri-gpu        -> wgpu only (render is dev-only)
 sindri-render     -> wgpu + glam + bytemuck only
 sindri            -> assets + core + grid + optional gpu/render/scene
 sindri-physics    -> sindri-core (+ sindri-grid only when a real integration needs it)
-sindri-scene      -> sindri-core + sindri-grid + sindri-render + sindri-physics
+sindri-scene      -> sindri-core + sindri-grid + sindri-render + sindri-physics + sindri-voxel
 sindri-decay      -> core + grid + physics + platform + scene + decay language crates
 editor            -> assets + core + decay + physics + platform + render + scene
 sindri-causeway   -> consumer of the engine; nothing depends on it

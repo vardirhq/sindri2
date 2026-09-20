@@ -230,6 +230,12 @@ impl<S: VoxelSource> VoxelWorld<S> {
     }
 }
 
+impl<S: VoxelSource> VoxelSource for VoxelWorld<S> {
+    fn voxel(&self, coord: VoxelCoord) -> VoxelId {
+        Self::voxel(self, coord)
+    }
+}
+
 fn section_window(focus: SectionCoord, horizontal: i32, vertical: i32) -> BTreeSet<SectionCoord> {
     let mut sections = BTreeSet::new();
     for y in (focus.y - vertical)..=(focus.y + vertical) {

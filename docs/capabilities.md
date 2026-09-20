@@ -441,8 +441,12 @@ rejected; and one removal releases every profile of a leaving section.
 opaque cache identities and monotonic revisions reuse unchanged vertex/index
 buffers, retain the last buffers while replacement geometry is unavailable,
 accept 32-bit indices, release departed entries explicitly, and expose
-cumulative cache counters. The voxel-to-render identity/material bridge does
-not use that GPU cache yet.
+cumulative cache counters. `sindri-scene` is the texture-aware seam between the
+two: it maps semantic voxel/face identities to atlas regions, groups one section
+into deterministic texture batches, keeps stable GPU identities across newer
+section revisions, ignores superseded results, and releases every batch when a
+section leaves residency. This first bridge supports opaque block batches;
+cutout/transparent pipelines, frustum culling, and the Voxel Lab proof remain.
 Causeway has not migrated to this path yet, so it is engine-tested foundation
 rather than game proof.
 
