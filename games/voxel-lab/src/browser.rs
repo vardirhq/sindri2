@@ -275,11 +275,7 @@ fn atlas_rect(column: u32, width: u32) -> Result<UvRect, UvRectError> {
     )
 }
 
-fn browser_texture(
-    textures: [TextureId; 2],
-    voxel: VoxelId,
-    face: VoxelFace,
-) -> VoxelTexture {
+fn browser_texture(textures: [TextureId; 2], voxel: VoxelId, face: VoxelFace) -> VoxelTexture {
     let top = face == VoxelFace::Top;
     let column = match voxel.value() {
         1 => 0,
