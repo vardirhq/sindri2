@@ -2,7 +2,7 @@
 
 use sindri_core::World;
 use sindri_render::{
-    ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage,
+    ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage, TexturedVertex,
 };
 
 use crate::{MeshComponent, MeshPrimitive, TextureBindings};
@@ -23,11 +23,36 @@ impl SceneExtractor {
                 .get(entity)
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
+            let model = transform_matrix(transform);
             let command = match mesh.primitive {
                 MeshPrimitive::Cube => FrameCommand::TexturedCube {
-                    model: transform_matrix(transform),
+                    model,
                     texture: textures.resolve(&mesh.texture),
                 },
+                MeshPrimitive::Surface => {
+                    let Some(surface) = mesh.surface.as_ref() else {
+                        continue;
+                    };
+                    if surface.vertices.len() != surface.uvs.len()
+                        || surface.indices.iter().any(|index| {
+                            usize::from(*index) >= surface.vertices.len()
+                        })
+                    {
+                        continue;
+                    }
+                    let vertices = surface
+                        .vertices
+                        .iter()
+                        .zip(&surface.uvs)
+                        .map(|(position, uv)| TexturedVertex::new(*position, *uv))
+                        .collect();
+                    FrameCommand::TexturedMesh {
+                        model,
+                        texture: textures.resolve(&mesh.texture),
+                        vertices,
+                        indices: surface.indices.clone(),
+                    }
+                }
             };
             frame.push(FramePass::new(
                 RenderStage::Opaque3d,
