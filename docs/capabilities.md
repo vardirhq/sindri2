@@ -421,6 +421,9 @@ than allowing the runtime type to make the broader feature look complete.
 `sindri-voxel` owns signed voxel and 16³ section coordinates, palette-backed
 section storage, deterministic random-access generation, bounded 3D residency,
 sparse edits, dirty tracking, and deduplicated generation/meshing work queues.
+Mesh jobs carry a monotonic revision and meshing profile, and boundary changes
+give the neighbour a new mesh revision even when its own stored voxels did not
+change.
 The block mesher samples a one-voxel halo through `VoxelSource`, so adjacent
 solid sections omit their shared faces without requiring both to be resident.
 
@@ -429,7 +432,12 @@ It carries unit-square UV corners plus semantic voxel and face identity, splits
 opaque, cutout, and transparent passes, and reports world-space section bounds.
 Games provide `VoxelMaterialSource` policy for render class and whether a voxel
 occludes every neighbour, only a matching voxel, or none. Atlas lookup, texture
-bindings, GPU upload, and render caching deliberately remain outside this crate.
+bindings, and GPU upload deliberately remain outside this crate. A generic
+`SectionMeshCache<T>` owns the renderer-independent lifetime contract: block,
+smooth, hybrid, and custom representations are separate; current geometry
+stays available while a replacement is pending; superseded worker results are
+rejected; and one removal releases every profile of a leaving section. The
+scene/render bridge does not use that cache yet.
 Causeway has not migrated to this path yet, so it is engine-tested foundation
 rather than game proof.
 

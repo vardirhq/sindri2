@@ -3,6 +3,7 @@
 //! Games decide what a coordinate contains. This crate owns how that answer is
 //! addressed, stored in sections, revised, and eventually handed to meshers.
 
+mod cache;
 mod coord;
 mod material;
 mod mesh;
@@ -13,6 +14,9 @@ mod section;
 mod source;
 mod world;
 
+pub use cache::{
+    MeshingProfile, SectionMeshCache, SectionMeshJob, SectionMeshKey, SectionMeshRevision,
+};
 pub use coord::{LocalVoxelCoord, SECTION_EDGE, SECTION_VOLUME, SectionCoord, VoxelCoord};
 pub use material::{
     DefaultVoxelMaterials, FaceOcclusion, RenderClass, VoxelMaterial, VoxelMaterialSource,

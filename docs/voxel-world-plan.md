@@ -1,6 +1,6 @@
 # Engine-owned voxel world plan
 
-Status: Phases 1-3 complete; Phase 4 next
+Status: Phases 1-3 complete; Phase 4 in progress
 
 Causeway proved that Sindri can generate, stream, pick, edit, and render a large voxel-like world. It also proved the current ownership boundary is wrong: generation and residency live in the game, terrain is materialized as a `sindri.tile_volume`, renderer revisions can rebake too much work, and the experimental smooth patch has no persistent chunk mesh cache.
 
@@ -74,13 +74,24 @@ Exit: a solid 16³ section emits only its exterior; adjacent solid sections emit
 
 ### 4. Persistent render cache
 - Bridge compiled voxel meshes into scene/render.
-- Cache GPU buffers by section coordinate + revision + mesher profile.
+- Cache compiled/GPU representations by section coordinate + revision + mesher profile. The renderer-independent cache lifetime and revision contract now exists; the scene/render upload bridge remains.
 - Reuse unchanged buffers across frames and camera movement.
 - Keep old buffers until a replacement is uploaded.
 - Frustum-cull cached section bounds.
 - Instrument resident sections, queued generation/mesh work, triangles, uploads, and rebuilds/frame.
 
 Exit: panning without edits produces zero terrain remeshes after residency settles.
+
+#### Voxel Lab proof
+
+`games/voxel-lab` will become the Phase 4 acceptance surface and then be
+exported at `examples/voxel-lab` on GitHub Pages. Do not publish its current
+tile-volume scene as proof of `sindri-voxel`: the route becomes part of Pages
+only when the lab consumes revisioned section jobs and the persistent cache.
+The finished lab should show section bounds and live counts for resident
+sections, queued generation/meshing, triangles, cache entries, uploads, and
+remeshes per frame. A settled camera pan must visibly hold remeshes at zero;
+one edit must replace only the affected section and resident boundary neighbour.
 
 ### 5. Move Causeway onto the engine
 - Move generic chunk/streaming concepts out of `game/src/streaming.rs`.
@@ -132,6 +143,6 @@ Do not rewrite Causeway in one jump. Each phase leaves main usable. New engine A
 - **Phase 1:** complete on main. `sindri-voxel` owns coordinates, 16³ palette-backed sections, revisions, and deterministic source sampling.
 - **Phase 2:** complete. The engine has bounded 3D section residency, separate render/simulation radii, entering/staying/leaving diffs, sparse edit retention, boundary-aware dirty tracking, and deterministic deduplicated generation/mesh work queues whose contract can later be drained by workers.
 - **Phase 3:** complete. The block mesher samples neighbours through `VoxelSource`, compiles only visible faces into indexed section-local geometry, carries atlas-neutral UV corners plus material/face identity, reports world-space section bounds, and splits opaque, cutout, and transparent passes through game-provided material/occlusion policy.
-- **Next:** build the persistent render cache keyed by section coordinate, revision, and mesher profile before Causeway migration.
+- **Phase 4:** in progress. Mesh work now carries a monotonic revision and mesher profile, including a new revision when a halo neighbour changes. `SectionMeshCache<T>` keeps the last compiled value drawable while replacement work is pending, rejects superseded results, separates block/smooth/hybrid/custom profiles, and exposes one operation to release every profile named by a leaving residency delta. The scene/render bridge, GPU uploads, culling, instrumentation, and Voxel Lab proof remain.
 
 Causeway intentionally remains on the old path until the engine can both own residency and compile correct section geometry. Moving the game sooner would merely relocate the current rendering problems.

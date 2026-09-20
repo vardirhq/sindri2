@@ -27,6 +27,11 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Voxel mesh work now carries a monotonic section revision and meshing profile,
+  and a renderer-independent persistent cache keeps old compiled geometry
+  available while a replacement is built. Superseded worker results cannot
+  replace newer terrain, and one removal releases every cached profile of a
+  leaving section.
 - `sindri-voxel` now compiles neighbour-aware block sections into indexed
   CPU geometry split into opaque, cutout, and transparent passes. Material and
   face identity remain semantic so renderers can choose their own atlas or
