@@ -22,6 +22,7 @@ sindri-platform = { path = "../crates/sindri-platform" }
 sindri-render = { path = "../crates/sindri-render" }
 sindri-scene = { path = "../crates/sindri-scene" }
 sindri-weave = { path = "../crates/sindri-weave" }
+glam.workspace = true
 log.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -30,7 +31,6 @@ wgpu.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
-glam.workspace = true
 pollster.workspace = true
 sindri-gpu = { path = "../crates/sindri-gpu" }
 png = "0.18"
@@ -39,9 +39,6 @@ png = "0.18"
 console_error_panic_hook = "0.1"
 console_log = "1"
 wasm-bindgen.workspace = true
-
-[dev-dependencies]
-glam.workspace = true
 
 [lints]
 workspace = true
