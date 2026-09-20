@@ -70,9 +70,16 @@ impl<S: VoxelSource> VoxelWorld<S> {
     }
 
     pub fn move_focus(&mut self, focus: SectionCoord) -> ResidencyDelta {
-        let wanted = section_window(focus, self.config.render_horizontal, self.config.render_vertical);
-        let simulation =
-            section_window(focus, self.config.simulation_horizontal, self.config.simulation_vertical);
+        let wanted = section_window(
+            focus,
+            self.config.render_horizontal,
+            self.config.render_vertical,
+        );
+        let simulation = section_window(
+            focus,
+            self.config.simulation_horizontal,
+            self.config.simulation_vertical,
+        );
         let previous: BTreeSet<_> = self.resident.keys().copied().collect();
 
         let entered: Vec<_> = wanted.difference(&previous).copied().collect();
@@ -235,7 +242,10 @@ mod tests {
         assert_eq!(world.voxel(origin), VoxelId::new(9));
         world.move_focus(origin.section());
         assert_eq!(
-            world.resident(origin.section()).unwrap().get(origin.local()),
+            world
+                .resident(origin.section())
+                .unwrap()
+                .get(origin.local()),
             VoxelId::new(9)
         );
     }
