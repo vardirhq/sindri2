@@ -37,7 +37,12 @@ def camera():
         round(centre[1] + distance * math.sin(pitch), 4),
         round(centre[2] + distance * math.cos(pitch) * math.cos(yaw), 4),
     ]
-    return eye, look_at(eye, centre)
+    rotation = look_at(eye, centre)
+    # At large streamed-world coordinates these values are stored as f32.
+    # Keep the generated JSON on their canonical shortest representation.
+    eye[0] = round(eye[0], 2)
+    eye[2] = round(eye[2], 2)
+    return eye, rotation
 
 
 def entities():
