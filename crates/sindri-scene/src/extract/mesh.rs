@@ -34,9 +34,10 @@ impl SceneExtractor {
                         continue;
                     };
                     if surface.vertices.len() != surface.uvs.len()
-                        || surface.indices.iter().any(|index| {
-                            usize::from(*index) >= surface.vertices.len()
-                        })
+                        || surface
+                            .indices
+                            .iter()
+                            .any(|index| usize::from(*index) >= surface.vertices.len())
                     {
                         continue;
                     }
