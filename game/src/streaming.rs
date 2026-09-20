@@ -1,6 +1,8 @@
 //! Camera-driven materialization of Causeway's generated terrain.
 
-use sindri_core::{ComponentSchemaRegistry, Transform3D, World};
+use std::collections::BTreeMap;
+
+use sindri_core::{ComponentSchemaRegistry, TileCellDocument, Transform3D, World};
 use sindri_scene::{
     TILE_CHUNK_SIZE, TileChunkCoord, TileChunkStore, TileGridComponent, TileVolumeComponent,
 };
@@ -34,6 +36,11 @@ pub(crate) const fn world_shape() -> WorldShape {
 pub(crate) struct TerrainStream {
     window: Option<(TileChunkCoord, TileChunkCoord)>,
     chunks: TileChunkStore,
+    /// Chunks whose live cells differ from deterministic generation.
+    ///
+    /// Residency stays bounded to the camera while player-built paths survive
+    /// leaving and returning to a chunk.
+    edits: BTreeMap<TileChunkCoord, Vec<TileCellDocument>>,
 }
 
 impl TerrainStream {
@@ -78,15 +85,28 @@ impl TerrainStream {
             return Ok(false);
         }
 
-        // The component may have been edited since the last window change. It
-        // wins before generated chunks are added, so building is never undone
-        // by streaming.
-        self.chunks.replace_from_volume(&volume);
-        let changed = load_window(&mut self.chunks, world_shape(), window);
-        self.window = Some(window);
-        if !changed {
-            return Ok(false);
+        // Compare the live component with the last materialized residency
+        // before replacing anything. Differences are player edits, not terrain
+        // the stream is allowed to forget when a chunk leaves the viewport.
+        if self.window.is_none() {
+            self.chunks.replace_from_volume(&volume);
+        } else {
+            remember_edits(&mut self.edits, &self.chunks, &volume);
         }
+
+        // Residency is the current visible window, not every chunk the camera
+        // has ever visited. The old append-only store made a long pan steadily
+        // more expensive and forced the renderer to rebake an ever-growing
+        // volume on a phone's main thread.
+        let mut resident = TileChunkStore::default();
+        load_window(
+            &mut resident,
+            world_shape(),
+            window,
+            &self.edits,
+        );
+        self.chunks = resident;
+        self.window = Some(window);
         let materialized = self.chunks.materialize(&volume);
         let payload = serde_json::to_value(materialized)
             .map_err(|error| CausewayError::Generated(error.to_string()))?;
@@ -123,14 +143,21 @@ fn visible_chunk_window(
         if !distance.is_finite() || distance < 0.0 {
             return None;
         }
-        let hit = origin + direction * distance;
-        let column = cell_coordinate(hit.x / across);
-        let row = cell_coordinate(hit.z / into);
-        let chunk = TileChunkCoord::containing(column, row);
-        min.x = min.x.min(chunk.x);
-        min.y = min.y.min(chunk.y);
-        max.x = max.x.max(chunk.x);
-        max.y = max.y.max(chunk.y);
+        let ground = origin + direction * distance;
+
+        // A mountain is met somewhere between the near plane and the ground
+        // intersection. Loading only the latter fixed the old eye-centred bug
+        // but dropped the camera-side half of that segment, which is exactly
+        // the missing foreground visible on tall terrain.
+        for sample in [origin, ground] {
+            let column = cell_coordinate(sample.x / across);
+            let row = cell_coordinate(sample.z / into);
+            let chunk = TileChunkCoord::containing(column, row);
+            min.x = min.x.min(chunk.x);
+            min.y = min.y.min(chunk.y);
+            max.x = max.x.max(chunk.x);
+            max.y = max.y.max(chunk.y);
+        }
     }
     Some((
         TileChunkCoord::new(min.x - VIEW_MARGIN, min.y - VIEW_MARGIN),
@@ -166,6 +193,7 @@ fn load_around(chunks: &mut TileChunkStore, shape: WorldShape, focus: TileChunkC
             TileChunkCoord::new(focus.x - LOAD_RADIUS, focus.y - LOAD_RADIUS),
             TileChunkCoord::new(focus.x + LOAD_RADIUS, focus.y + LOAD_RADIUS),
         ),
+        &BTreeMap::new(),
     )
 }
 
@@ -173,6 +201,7 @@ fn load_window(
     chunks: &mut TileChunkStore,
     shape: WorldShape,
     window: (TileChunkCoord, TileChunkCoord),
+    edits: &BTreeMap<TileChunkCoord, Vec<TileCellDocument>>,
 ) -> bool {
     let mut changed = false;
     let chunk_limit = WORLD_EDGE / TILE_CHUNK_SIZE;
@@ -185,11 +214,31 @@ fn load_window(
             if chunks.contains(chunk) {
                 continue;
             }
-            chunks.insert(chunk, generate_chunk(shape, chunk));
+            let cells = edits
+                .get(&chunk)
+                .cloned()
+                .unwrap_or_else(|| generate_chunk(shape, chunk));
+            chunks.insert(chunk, cells);
             changed = true;
         }
     }
     changed
+}
+
+fn remember_edits(
+    edits: &mut BTreeMap<TileChunkCoord, Vec<TileCellDocument>>,
+    previous: &TileChunkStore,
+    live: &TileVolumeComponent,
+) {
+    let live = TileChunkStore::from_volume(live);
+    for chunk in live.chunks() {
+        let Some(cells) = live.get(chunk) else {
+            continue;
+        };
+        if previous.get(chunk) != Some(cells) {
+            edits.insert(chunk, cells.to_vec());
+        }
+    }
 }
 
 #[cfg(test)]
