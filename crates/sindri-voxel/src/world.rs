@@ -185,11 +185,8 @@ impl<S: VoxelSource> VoxelWorld<S> {
             ((0, 0, 1), local.z() == 15),
         ] {
             if edge {
-                let neighbour = SectionCoord::new(
-                    section.x + axis.0,
-                    section.y + axis.1,
-                    section.z + axis.2,
-                );
+                let neighbour =
+                    SectionCoord::new(section.x + axis.0, section.y + axis.1, section.z + axis.2);
                 self.dirty.insert(neighbour);
                 if self.resident.contains_key(&neighbour) {
                     self.work.queue_mesh(neighbour);
