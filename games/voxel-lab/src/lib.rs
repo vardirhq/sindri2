@@ -1,4 +1,4 @@
-//! A tile volume drawn as solid blocks, from four sides.
+//! Acceptance lab for Sindri's engine-owned voxel world.
 //!
 //! The question this exists to answer is whether a volume can be a *shape*
 //! rather than a picture of one. The other path arranges flat quads for one
@@ -12,6 +12,19 @@
 //! ```bash
 //! cargo run -p voxel-lab --bin voxel-lab-capture -- target/render-artifacts
 //! ```
+
+mod runtime;
+
+#[cfg(target_arch = "wasm32")]
+mod browser;
+
+pub use runtime::{LabTerrain, VoxelLabFrame, VoxelLabRuntime, VoxelLabStats};
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen(start))]
+pub fn run() {
+    #[cfg(target_arch = "wasm32")]
+    browser::run();
+}
 
 use std::{
     error::Error,
@@ -33,8 +46,10 @@ use sindri_render::{
     orthographic_projection,
 };
 use sindri_scene::{
-    TextureBindings, TileCellDocument, TileVolumeComponent, VoxelHit, cube_faces, voxel,
+    TextureBindings, TileCellDocument, TileVolumeComponent, VoxelHit, VoxelTexture, cube_faces,
+    voxel,
 };
+use sindri_voxel::{SectionCoord, VoxelFace, VoxelId};
 
 const WIDTH: u32 = 900;
 const HEIGHT: u32 = 700;
@@ -204,6 +219,30 @@ pub fn camera(turn: f32) -> FrameCamera {
     }
 }
 
+fn world_camera(turn: f32) -> FrameCamera {
+    let yaw = FRAC_PI_4 + turn;
+    let centre = Vec3::new(0.0, 3.0, 0.0);
+    let distance = 48.0;
+    let eye = centre
+        + Vec3::new(
+            yaw.cos() * PITCH.cos(),
+            PITCH.sin(),
+            yaw.sin() * PITCH.cos(),
+        ) * distance;
+    let zoom = 22.0;
+    let aspect = aspect_ratio();
+    FrameCamera {
+        view_projection: orthographic_projection(
+            -zoom * aspect,
+            zoom * aspect,
+            -zoom,
+            zoom,
+            0.1,
+            150.0,
+        ) * look_at(eye, centre, Vec3::Y),
+    }
+}
+
 /// The ray a click at this pixel sends into the scene.
 ///
 /// The pixel is where the pointer is; the ray is what the world is asked
@@ -279,6 +318,39 @@ fn frame(
     extracted
 }
 
+fn engine_frame(camera: FrameCamera, commands: Vec<FrameCommand>) -> ExtractedFrame {
+    let mut extracted = ExtractedFrame::new(
+        Viewport::new(WIDTH, HEIGHT),
+        ClearOperations {
+            color: [0.09, 0.10, 0.13, 1.0],
+            depth: 1.0,
+        },
+    );
+    for command in commands {
+        extracted.push(FramePass::new(
+            RenderStage::Opaque3d,
+            RenderLayer(0),
+            camera,
+            command,
+        ));
+    }
+    extracted
+}
+
+fn voxel_texture(textures: &TextureBindings, voxel: VoxelId, face: VoxelFace) -> VoxelTexture {
+    let texture = match (voxel.value(), face) {
+        (0, _) => unreachable!("air never produces block faces"),
+        (1, VoxelFace::Top) => "textures/user-top.png",
+        (1, _) => "textures/user-side-a.png",
+        (2, _) => "textures/user-dirt.png",
+        (_, VoxelFace::Top | VoxelFace::Bottom) => "textures/user-top.png",
+        (_, _) => "textures/user-side-b.png",
+    };
+    let reference = SpriteRef::parse(texture).expect("lab texture reference");
+    let (texture, uv) = textures.resolve_sprite(&reference);
+    VoxelTexture::new(texture, uv)
+}
+
 pub async fn capture(out: &Path) -> Result<(), Box<dyn Error>> {
     let instance = wgpu::Instance::default();
     let gpu = GpuContext::request(&instance, None, &GpuRequestOptions::default()).await?;
@@ -300,6 +372,25 @@ pub async fn capture(out: &Path) -> Result<(), Box<dyn Error>> {
         registry: &registry,
     };
     fs::create_dir_all(out)?;
+
+    // The Phase 4 proof: the engine-owned world feeds revisioned section jobs
+    // through the block mesher and persistent GPU cache. Orbiting the camera
+    // after the first frame must produce no new mesh jobs or uploads.
+    let mut engine = VoxelLabRuntime::new();
+    for (index, turn) in [0.0, FRAC_PI_2, PI, PI + FRAC_PI_2].into_iter().enumerate() {
+        let lab = engine.frame(SectionCoord::new(0, 0, 0), &|voxel, face| {
+            voxel_texture(&textures, voxel, face)
+        })?;
+        println!("engine frame {index}: {:?}", lab.stats);
+        shoot(
+            &gpu,
+            &target,
+            &depth,
+            &mut renderers,
+            engine_frame(world_camera(turn), lab.commands),
+            &out.join(format!("voxel-lab-engine-{index}.png")),
+        )?;
+    }
 
     let mut volume: TileVolumeComponent = serde_json::from_str(CELLS).expect("the volume parses");
     let view = camera(0.0);
