@@ -239,6 +239,25 @@ fn encode_passes<'p>(
                 target.depth,
                 pass.camera.view_projection * *model,
             ),
+            FrameCommand::TexturedMesh {
+                model,
+                texture,
+                vertices,
+                indices,
+            } => cube_renderer.encode_mesh(
+                DrawContext {
+                    device,
+                    queue,
+                    textures,
+                    texture: *texture,
+                },
+                encoder,
+                target.color,
+                target.depth,
+                pass.camera.view_projection * *model,
+                vertices,
+                indices,
+            ),
             FrameCommand::SpriteBatch {
                 texture,
                 depth,
