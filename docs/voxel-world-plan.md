@@ -1,6 +1,6 @@
 # Engine-owned voxel world plan
 
-Status: Phase 1 complete; Phase 2 in progress
+Status: Phases 1-2 complete; Phase 3 in progress
 
 Causeway proved that Sindri can generate, stream, pick, edit, and render a large voxel-like world. It also proved the current ownership boundary is wrong: generation and residency live in the game, terrain is materialized as a `sindri.tile_volume`, renderer revisions can rebake too much work, and the experimental smooth patch has no persistent chunk mesh cache.
 
@@ -130,7 +130,8 @@ Do not rewrite Causeway in one jump. Each phase leaves main usable. New engine A
 ## Implementation progress
 
 - **Phase 1:** complete on main. `sindri-voxel` owns coordinates, 16³ palette-backed sections, revisions, and deterministic source sampling.
-- **Phase 2:** in progress. The engine now has bounded 3D section residency, separate render/simulation radii, entering/staying/leaving diffs, sparse edit retention across unload/reload, and boundary-aware dirty tracking.
-- **Next:** finish the Phase 2 queue/scheduling contract, then implement the neighbour-aware block mesher before Causeway migration.
+- **Phase 2:** complete. The engine has bounded 3D section residency, separate render/simulation radii, entering/staying/leaving diffs, sparse edit retention, boundary-aware dirty tracking, and deterministic deduplicated generation/mesh work queues whose contract can later be drained by workers.
+- **Phase 3:** in progress. The first block mesher emits only exposed semantic faces and samples neighbours through `VoxelSource`, including across section boundaries without requiring neighbour residency. Opaque/cutout/transparent classification and render material mapping remain before this phase is complete.
+- **Next:** add material/render-class contracts and compiled vertex/index geometry, then build the persistent render cache before Causeway migration.
 
 Causeway intentionally remains on the old path until the engine can both own residency and compile correct section geometry. Moving the game sooner would merely relocate the current rendering problems.
