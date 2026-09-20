@@ -6,7 +6,7 @@ use crate::SectionCoord;
 ///
 /// The queue is deliberately CPU/GPU agnostic. A later worker pool may drain
 /// generation and meshing jobs asynchronously without changing world residency
-/// semantics. BTreeSet also deduplicates repeated dirty notifications.
+/// semantics. `BTreeSet` also deduplicates repeated dirty notifications.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct VoxelWorkQueue {
     generation: BTreeSet<SectionCoord>,
