@@ -13,11 +13,11 @@
 use glam::{Mat4, Vec3};
 use sindri_causeway::{
     Session, extractor, world,
-    worldgen::{SEA, WorldShape},
+    worldgen::SEA,
 };
 use sindri_core::World;
 use sindri_platform::{InputEvent, InputState, Key, MouseButton};
-use sindri_scene::{SceneExtractor, TileVolumeComponent, UiTextComponent};
+use sindri_scene::{SceneExtractor, TileChunkCoord, TileVolumeComponent, UiTextComponent};
 
 const VIEWPORT: (f32, f32) = (1000.0, 720.0);
 const STEP: f32 = 1.0 / 60.0;
@@ -200,6 +200,17 @@ fn block_at(world: &World, scene: &SceneExtractor, cell: [i32; 3]) -> Option<Str
         .map(|held| held.tile.clone())
 }
 
+fn loaded_chunks(
+    world: &World,
+    scene: &SceneExtractor,
+) -> std::collections::BTreeSet<TileChunkCoord> {
+    volume(world, scene)
+        .cells
+        .iter()
+        .map(|cell| TileChunkCoord::containing(cell.position[0], cell.position[1]))
+        .collect()
+}
+
 /// A block the camera can actually see, and where on the picture it is.
 ///
 /// Asked of the picker rather than worked out from the world, and the
@@ -341,6 +352,57 @@ fn what_you_laid_comes_back_but_the_world_is_not_yours_to_carry_away() {
 }
 
 #[test]
+fn build_camera_materializes_the_chunks_it_moves_toward() {
+    let (mut world, scene, mut session) = session();
+    settle(&mut world, &mut session, 2);
+    let before = loaded_chunks(&world, &scene);
+    let camera_before = entity_position(&world, "World Camera");
+
+    let mut drag = InputState::default();
+    drag.apply(InputEvent::TouchStarted {
+        id: 11,
+        x: 900.0,
+        y: VIEWPORT.1 * 0.5,
+    });
+    session
+        .step(&mut world, &drag, VIEWPORT, STEP)
+        .expect("the drag starts");
+    drag.begin_frame(std::time::Duration::from_secs_f32(STEP));
+    drag.apply(InputEvent::TouchMoved {
+        id: 11,
+        x: 100.0,
+        y: VIEWPORT.1 * 0.5,
+    });
+    session
+        .step(&mut world, &drag, VIEWPORT, STEP)
+        .expect("the build camera pans");
+
+    let camera_after = entity_position(&world, "World Camera");
+    assert_ne!(camera_after, camera_before, "the regression must pan the camera");
+    let after = loaded_chunks(&world, &scene);
+    assert!(
+        after.len() > before.len(),
+        "crossing a chunk boundary must materialize new terrain: {} before, {} after",
+        before.len(),
+        after.len()
+    );
+    let camera_cell =
+        sindri_scene::nearest_cell(f64::from(camera_after[0]), f64::from(camera_after[2]));
+    let focus = TileChunkCoord::containing(camera_cell.x, camera_cell.y);
+    assert!(after.contains(&focus), "the camera's own chunk must be loaded");
+    assert!(
+        sindri_scene::voxel::aim_at(
+            &world,
+            scene.components(),
+            view_projection(&world, &scene),
+            [0.5, 0.5],
+        )
+        .is_some(),
+        "the newly framed world must be pickable, not empty space"
+    );
+}
+
+#[test]
 fn the_sea_is_something_to_build_across_rather_than_to_walk_on() {
     // The whole game in one assertion: water is not a floor, and a block laid
     // on it is. Nothing here says where the water is -- the world decides, and
@@ -348,12 +410,13 @@ fn the_sea_is_something_to_build_across_rather_than_to_walk_on() {
     let (mut world, scene, mut session) = session();
     settle(&mut world, &mut session, 2);
     let camera = view_projection(&world, &scene);
-    let shape = WorldShape::default();
-    let start = shape.landfall().start;
+    let position = entity_position(&world, "Wanderer");
+    let start = sindri_scene::nearest_cell(f64::from(position[0]), f64::from(position[2]));
+    let start = [start.x, start.y];
 
     // A shore: land with water immediately to its east, which is the side this
     // camera can see and so the side a player can click.
-    let shore = (0..shape.columns - start[0] - 2)
+    let shore = (0..80)
         .map(|step| [start[0] + step, start[1]])
         .find(|at| {
             let here = volume(&world, &scene)
@@ -412,11 +475,18 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
     let target_before = entity_position(&world, "Target");
     let wanderer_before = entity_position(&world, "Wanderer");
     let camera_before = entity_position(&world, "World Camera");
+    let floor = world
+        .entities()
+        .find(|(_, data)| data.name.as_deref() == Some("Floor"))
+        .map(|(_, data)| &data.components["sindri.tile_grid"])
+        .expect("the world has a floor");
+    let columns = floor["columns"].as_f64().expect("columns are numeric") as f32;
+    let rows = floor["rows"].as_f64().expect("rows are numeric") as f32;
     assert!(
         wanderer_before[0] >= 16.0
-            && wanderer_before[0] < 144.0
+            && wanderer_before[0] < columns - 16.0
             && wanderer_before[2] >= 16.0
-            && wanderer_before[2] < 144.0,
+            && wanderer_before[2] < rows - 16.0,
         "the game must start at least one render chunk inside every world edge"
     );
     let initial_cell =

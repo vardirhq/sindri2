@@ -11,6 +11,11 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Changed
 
+- Causeway now materializes deterministic 16×16 terrain chunks around its
+  camera instead of generating a complete 160×160 island up front. Its sparse
+  navigation work follows loaded ground rather than the declared world bounds,
+  so Build panning can reveal new biomed terrain inside a 65,536-cell envelope
+  without scanning that envelope.
 - A tile volume is resolved into the faces it draws once and kept, rather than
   rebuilt every frame. Extracting Gather's farm cost 6.7 ms a frame and now
   costs 1.2 ms; the volume's own share of that fell from 5.7 ms to about 0.2 ms.
@@ -22,6 +27,9 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Tile volumes expose one shared engine chunk coordinate and sparse runtime
+  chunk store. Scene serialization remains the readable sparse cell list; the
+  runtime store is the unit generators, renderers, and future persistence use.
 - `Grid.walkable(floor, x, y)` tells a script whether a walker can stand where a
   point falls, read from the same walkable surface the pathfinder uses. A script
   could previously ask only about a route between two entities, so a game moving

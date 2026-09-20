@@ -532,6 +532,17 @@ renderer resolves each occupied cell into only the faces nothing covers, so a
 column two blocks taller than its neighbour exposes two side faces without a
 cliff case and removing a lower block opens a real hole.
 
+**Runtime tile volumes have one engine-owned chunk unit.** A chunk is 16×16
+columns, addressed with Euclidean coordinates and held sparsely by
+`TileChunkStore`; materializing it produces the existing scene component rather
+than introducing a second cell format. Causeway proves the first vertical slice:
+the initial world contains only a bounded window, moving either the free Build
+camera or the Play follow camera generates adjacent chunks from the same seed,
+and biome and tree decisions meet identically across their seams. Navigation
+derives walls from loaded walkable columns, so a 65,536×65,536 coordinate
+envelope does not mean visiting four billion empty cells. Loaded chunks are not
+evicted or persisted separately yet, and generation is synchronous.
+
 **A tile can be shorter than its cell.** `height` is a fraction of a cell
 measured from its floor, defaulting to one, so every tile written before heights
 existed means what it always did. A half is a slab. The value is logical: it

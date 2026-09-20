@@ -1,11 +1,10 @@
 //! The world, built from a seed rather than authored.
 //!
-//! A world worth walking across is a hundred and sixty cells on a side, which
-//! is twenty-five thousand columns and rather more cells. Written out as a
-//! scene that is tens of megabytes of JSON compiled into the binary, and it
-//! would still be one fixed island. So the scene authors the *grid* -- how big
-//! a cell is, where the floor stands -- and this fills it in before the first
-//! frame.
+//! Even a 160-cell-square world was twenty-five thousand columns and rather
+//! more cells. Written out as a scene it was tens of megabytes of JSON and was
+//! still one fixed island. Causeway now declares a large sparse coordinate
+//! envelope and asks this deterministic generator for engine-sized chunks as
+//! the camera moves; only the opening neighbourhood exists before frame one.
 //!
 //! Three fields decide everything: how high the ground is, how wet it is, and
 //! how cold. Height alone gives mountains and sea; wetness turns low flat
@@ -21,6 +20,10 @@
 //! mountain, marsh ending along a contour. Near each threshold the answer comes
 //! instead from a field sampled at a few cells' scale, so the two terrains
 //! interlock in tongues and bays. See `past`.
+
+mod chunk;
+
+pub use chunk::generate_chunk;
 
 use sindri_scene::{TileCellDocument, TileVolumeComponent};
 
@@ -142,12 +145,18 @@ fn fbm(seed: u64, x: f32, y: f32, octaves: u32, scale: f32) -> f32 {
     total / sum
 }
 
-/// How big a world is, in cells.
+/// A generated world's coordinate envelope and sampling frame.
 #[derive(Clone, Copy, Debug)]
 pub struct WorldShape {
     pub columns: i32,
     pub rows: i32,
     pub seed: u64,
+    /// Runtime coordinates subtracted before sampling the terrain fields.
+    /// A streamed world can begin far from its finite integer envelope's edge
+    /// without changing the authored seed's opening landscape.
+    pub sample_offset: [i32; 2],
+    /// North-to-south distance used by the temperature gradient.
+    pub climate_rows: i32,
 }
 
 impl Default for WorldShape {
@@ -156,6 +165,8 @@ impl Default for WorldShape {
             columns: 160,
             rows: 160,
             seed: 0x5E11_A1D2_0C4F_1907,
+            sample_offset: [0, 0],
+            climate_rows: 160,
         }
     }
 }
@@ -169,9 +180,14 @@ struct Column {
 }
 
 impl WorldShape {
+    fn sample(self, x: i32, y: i32) -> (i32, i32) {
+        (x - self.sample_offset[0], y - self.sample_offset[1])
+    }
+
     fn column(self, x: i32, y: i32) -> Column {
+        let (sample_x, sample_y) = self.sample(x, y);
         #[allow(clippy::cast_precision_loss)]
-        let (fx, fy) = (x as f32, y as f32);
+        let (fx, fy) = (sample_x as f32, sample_y as f32);
         // Three things make a landscape: where the land is, where it rises
         // into mountains, and the roughness on both.
         let land = fbm(self.seed, fx, fy, 5, 64.0);
@@ -193,7 +209,7 @@ impl WorldShape {
         // Latitude plus weather: one end of the map is cold whatever the
         // ground does, and height takes the rest down.
         #[allow(clippy::cast_precision_loss)]
-        let latitude = 1.0 - (fy / self.rows.max(1) as f32);
+        let latitude = 1.0 - (fy / self.climate_rows.max(1) as f32);
         let warmth =
             (latitude * 0.7 + fbm(self.seed ^ 0xB3, fx, fy, 3, 63.0) * 0.3).clamp(0.0, 1.0);
         Column {
@@ -209,6 +225,7 @@ impl WorldShape {
     /// from its own salt so that two of them meeting do not fray in step and
     /// draw the same ragged line twice.
     fn surface(self, x: i32, y: i32, column: Column) -> &'static str {
+        let (x, y) = self.sample(x, y);
         let Column {
             ground,
             moisture,
@@ -273,6 +290,7 @@ impl WorldShape {
 
     /// The bed under water, which is what a shallow shows.
     fn bed(self, x: i32, y: i32, column: Column) -> &'static str {
+        let (x, y) = self.sample(x, y);
         #[allow(clippy::cast_precision_loss)]
         let (level, sea) = (column.ground as f32, SEA as f32);
         if past(self.seed ^ 0xE1, x, y, 0.2, column.warmth, 0.04) {
@@ -411,14 +429,15 @@ impl WorldShape {
 fn grow_trees(shape: WorldShape, cells: &mut Vec<TileCellDocument>) {
     for row in (3..shape.rows - 3).step_by(6) {
         for column in (3..shape.columns - 3).step_by(6) {
+            let (sample_column, sample_row) = shape.sample(column, row);
             let x = column
-                + if hashed(shape.seed ^ 0xF1, column, row) > 0.5 {
+                + if hashed(shape.seed ^ 0xF1, sample_column, sample_row) > 0.5 {
                     1
                 } else {
                     -1
                 };
             let y = row
-                + if hashed(shape.seed ^ 0xF2, column, row) > 0.5 {
+                + if hashed(shape.seed ^ 0xF2, sample_column, sample_row) > 0.5 {
                     1
                 } else {
                     -1
@@ -427,7 +446,10 @@ fn grow_trees(shape: WorldShape, cells: &mut Vec<TileCellDocument>) {
             let surface = shape.surface(x, y, described);
             if described.ground <= SEA
                 || !matches!(surface, "ground" | "moss")
-                || hashed(shape.seed ^ 0xF3, x, y) < 0.58
+                || {
+                    let (sample_x, sample_y) = shape.sample(x, y);
+                    hashed(shape.seed ^ 0xF3, sample_x, sample_y) < 0.58
+                }
             {
                 continue;
             }

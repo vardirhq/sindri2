@@ -21,6 +21,7 @@ use sindri_scene::{
 #[cfg(not(target_arch = "wasm32"))]
 use crate::assets::sources;
 use crate::error::CausewayError;
+use crate::streaming::TerrainStream;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) type CausewayAudio = NativeAudioBackend;
@@ -85,6 +86,8 @@ pub struct Session {
     /// a generated landscape has enough of them that doing it per frame costs
     /// more than everything else in a frame put together.
     surfaces: sindri_scene::GridSurfaces,
+    /// Generated terrain materialized around the camera.
+    terrain: TerrainStream,
     since_written: f32,
     /// Where the save actually goes.
     ///
@@ -135,6 +138,7 @@ impl Session {
             effects: sindri_scene::Effects2d::default(),
             gestures: sindri_core::Gestures::new(sindri_core::GestureLimits::default()),
             surfaces: sindri_scene::GridSurfaces::default(),
+            terrain: TerrainStream::default(),
             since_written: 0.0,
             save_backend: Box::new(sindri_platform::MemorySaves::new()),
             pending_audio: Vec::new(),
@@ -366,6 +370,10 @@ impl Session {
         }
         self.animations
             .advance(world, &self.components, delta_seconds)?;
+        // The camera may have moved in Build or Play this frame. Materialize
+        // its new neighbourhood before placement/navigation and rendering ask
+        // about it; the renderer itself remains mode-agnostic.
+        self.terrain.update(world)?;
         // After the scripts, because a walker's depth is a consequence of where
         // this step left it, and before anything draws. Props settle on the
         // first pass and never move again; only what moved costs anything.

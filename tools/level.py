@@ -8,11 +8,12 @@ import json, math, pathlib, sys
 sys.path.insert(0, '/tmp')
 from look import look_at
 
-COLUMNS, ROWS, CELL = 160, 160, 1.0
-# Where the game starts, in cells. Near the middle, because the world around
-# it is generated and every direction is somewhere.
-WANDERER = (78, 84)
-BEACON = (82, 76)
+COLUMNS, ROWS, CELL = 65_536, 65_536, 1.0
+# The finite coordinate envelope is deliberately enormous while runtime cells
+# stay sparse. Starting in its middle leaves thousands of chunks in every
+# direction without paying to generate or store them.
+WANDERER = (32_766, 32_772)
+BEACON = (32_770, 32_764)
 
 
 def transform(position, rotation=None, scale=(1.0, 1.0, 1.0)):

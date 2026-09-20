@@ -30,7 +30,7 @@ use sindri_render::{
 #[cfg(not(target_arch = "wasm32"))]
 use sindri_scene::{
     CameraView, SceneExtractor, SceneRuntime, TextureBindings, TileSetBindings,
-    resolve_grid_placements,
+    TileVolumeComponent, resolve_grid_placements,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -77,17 +77,46 @@ fn bind_textures(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-/// Pulls the authored camera back until the whole world is in the picture.
+/// Pulls the authored camera back until every loaded chunk is in the picture.
 ///
 /// The game's camera is framed on the walker, which is right for playing and
-/// useless for judging a generated world: a hundred and sixty cells of coast
-/// and mountain cannot be reviewed through a window twenty cells wide.
+/// useless for judging a generated world. A streamed world has no finite whole
+/// to frame, so the overview judges the bounded opening window.
 #[cfg(not(target_arch = "wasm32"))]
 fn frame_the_whole_world(world: &mut sindri_core::World) {
-    let span = sindri_causeway::worldgen::WorldShape::default();
+    let Some(volume) = world
+        .entities()
+        .find_map(|(_, data)| data.components.get("sindri.tile_volume"))
+        .and_then(|payload| serde_json::from_value::<TileVolumeComponent>(payload.clone()).ok())
+    else {
+        return;
+    };
+    let Some(min_x) = volume.cells.iter().map(|cell| cell.position[0]).min() else {
+        return;
+    };
+    let Some(max_x) = volume.cells.iter().map(|cell| cell.position[0]).max() else {
+        return;
+    };
+    let min_y = volume
+        .cells
+        .iter()
+        .map(|cell| cell.position[1])
+        .min()
+        .expect("a volume with an X extent has a Y extent");
+    let max_y = volume
+        .cells
+        .iter()
+        .map(|cell| cell.position[1])
+        .max()
+        .expect("a volume with an X extent has a Y extent");
     #[allow(clippy::cast_precision_loss)]
-    let (columns, rows) = (span.columns as f32, span.rows as f32);
-    let centre = Vec3::new(columns * 0.5, 0.0, rows * 0.5);
+    let (columns, rows) = ((max_x - min_x + 1) as f32, (max_y - min_y + 1) as f32);
+    #[allow(clippy::cast_precision_loss)]
+    let centre = Vec3::new(
+        (min_x + max_x) as f32 * 0.5,
+        0.0,
+        (min_y + max_y) as f32 * 0.5,
+    );
     let pitch = 33.0_f32.to_radians();
     let yaw = 45.0_f32.to_radians();
     let eye = centre

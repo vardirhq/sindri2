@@ -116,17 +116,14 @@ impl TileChunkStore {
 
     /// Materializes the loaded set in the existing scene component format.
     #[must_use]
-    pub fn volume(&self, tileset: &str, variant_seed: u64) -> TileVolumeComponent {
-        TileVolumeComponent {
-            tileset: tileset.to_owned(),
-            cells: self
-                .chunks
-                .values()
-                .flat_map(|cells| cells.iter().cloned())
-                .collect(),
-            variant_seed,
-            ..TileVolumeComponent::default()
-        }
+    pub fn materialize(&self, template: &TileVolumeComponent) -> TileVolumeComponent {
+        let mut volume = template.clone();
+        volume.cells = self
+            .chunks
+            .values()
+            .flat_map(|cells| cells.iter().cloned())
+            .collect();
+        volume
     }
 }
 
