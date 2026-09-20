@@ -78,11 +78,17 @@ impl LocalVoxelCoord {
     }
 
     #[must_use]
-    pub const fn x(self) -> u8 { self.x }
+    pub const fn x(self) -> u8 {
+        self.x
+    }
     #[must_use]
-    pub const fn y(self) -> u8 { self.y }
+    pub const fn y(self) -> u8 {
+        self.y
+    }
     #[must_use]
-    pub const fn z(self) -> u8 { self.z }
+    pub const fn z(self) -> u8 {
+        self.z
+    }
 
     #[must_use]
     pub const fn index(self) -> usize {
