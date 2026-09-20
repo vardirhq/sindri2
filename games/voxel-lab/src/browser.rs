@@ -76,8 +76,18 @@ impl DesktopApp for VoxelLabApp {
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let mut textures = TextureRegistry::new(context.device(), context.queue());
         let material_textures = [
-            causeway_atlas(context, &mut textures, "textures/blocks-top.png", CAUSEWAY_TOPS)?,
-            causeway_atlas(context, &mut textures, "textures/blocks-side.png", CAUSEWAY_SIDES)?,
+            causeway_atlas(
+                context,
+                &mut textures,
+                "textures/blocks-top.png",
+                CAUSEWAY_TOPS,
+            )?,
+            causeway_atlas(
+                context,
+                &mut textures,
+                "textures/blocks-side.png",
+                CAUSEWAY_SIDES,
+            )?,
         ];
         Ok(Self {
             lab: VoxelLabRuntime::new(),
