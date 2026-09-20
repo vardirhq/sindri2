@@ -1,6 +1,6 @@
 # Engine-owned voxel world plan
 
-Status: Phases 1-2 complete; Phase 3 in progress
+Status: Phases 1-3 complete; Phase 4 next
 
 Causeway proved that Sindri can generate, stream, pick, edit, and render a large voxel-like world. It also proved the current ownership boundary is wrong: generation and residency live in the game, terrain is materialized as a `sindri.tile_volume`, renderer revisions can rebake too much work, and the experimental smooth patch has no persistent chunk mesh cache.
 
@@ -131,7 +131,7 @@ Do not rewrite Causeway in one jump. Each phase leaves main usable. New engine A
 
 - **Phase 1:** complete on main. `sindri-voxel` owns coordinates, 16³ palette-backed sections, revisions, and deterministic source sampling.
 - **Phase 2:** complete. The engine has bounded 3D section residency, separate render/simulation radii, entering/staying/leaving diffs, sparse edit retention, boundary-aware dirty tracking, and deterministic deduplicated generation/mesh work queues whose contract can later be drained by workers.
-- **Phase 3:** in progress. The first block mesher emits only exposed semantic faces and samples neighbours through `VoxelSource`, including across section boundaries without requiring neighbour residency. Opaque/cutout/transparent classification and render material mapping remain before this phase is complete.
-- **Next:** add material/render-class contracts and compiled vertex/index geometry, then build the persistent render cache before Causeway migration.
+- **Phase 3:** complete. The block mesher samples neighbours through `VoxelSource`, compiles only visible faces into indexed section-local geometry, carries atlas-neutral UV corners plus material/face identity, reports world-space section bounds, and splits opaque, cutout, and transparent passes through game-provided material/occlusion policy.
+- **Next:** build the persistent render cache keyed by section coordinate, revision, and mesher profile before Causeway migration.
 
 Causeway intentionally remains on the old path until the engine can both own residency and compile correct section geometry. Moving the game sooner would merely relocate the current rendering problems.

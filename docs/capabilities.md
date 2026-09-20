@@ -416,6 +416,23 @@ access remain missing.
 `docs/parity.md` tracks those counterparts explicitly rather
 than allowing the runtime type to make the broader feature look complete.
 
+### Voxel world foundation
+
+`sindri-voxel` owns signed voxel and 16³ section coordinates, palette-backed
+section storage, deterministic random-access generation, bounded 3D residency,
+sparse edits, dirty tracking, and deduplicated generation/meshing work queues.
+The block mesher samples a one-voxel halo through `VoxelSource`, so adjacent
+solid sections omit their shared faces without requiring both to be resident.
+
+Compiled block output is CPU-side indexed geometry in section-local coordinates.
+It carries unit-square UV corners plus semantic voxel and face identity, splits
+opaque, cutout, and transparent passes, and reports world-space section bounds.
+Games provide `VoxelMaterialSource` policy for render class and whether a voxel
+occludes every neighbour, only a matching voxel, or none. Atlas lookup, texture
+bindings, GPU upload, and render caching deliberately remain outside this crate.
+Causeway has not migrated to this path yet, so it is engine-tested foundation
+rather than game proof.
+
 ### Hosts and platforms
 
 `Game` receives `start`, `fixed_update`, `update`, and `stop`, each with a
