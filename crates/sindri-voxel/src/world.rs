@@ -1,6 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{SectionCoord, VoxelCoord, VoxelId, VoxelSection, VoxelSource, VoxelWorkQueue};
+use crate::{
+    MeshingProfile, SectionCoord, SectionMeshJob, SectionMeshKey, SectionMeshRevision, VoxelCoord,
+    VoxelId, VoxelSection, VoxelSource, VoxelWorkQueue,
+};
 
 /// Distances around a focus section that the engine keeps for rendering and
 /// simulation. Simulation may never exceed render residency.
@@ -54,6 +57,8 @@ pub struct VoxelWorld<S> {
     edits: BTreeMap<VoxelCoord, VoxelId>,
     dirty: BTreeSet<SectionCoord>,
     work: VoxelWorkQueue,
+    mesh_revisions: BTreeMap<SectionCoord, SectionMeshRevision>,
+    next_mesh_revision: u64,
 }
 
 impl<S: VoxelSource> VoxelWorld<S> {
@@ -68,6 +73,8 @@ impl<S: VoxelSource> VoxelWorld<S> {
             edits: BTreeMap::new(),
             dirty: BTreeSet::new(),
             work: VoxelWorkQueue::default(),
+            mesh_revisions: BTreeMap::new(),
+            next_mesh_revision: 0,
         }
     }
 
@@ -91,6 +98,7 @@ impl<S: VoxelSource> VoxelWorld<S> {
         for coord in &left {
             self.resident.remove(coord);
             self.work.forget(*coord);
+            self.mesh_revisions.remove(coord);
         }
         for coord in &entered {
             self.work.queue_generation(*coord);
@@ -148,8 +156,22 @@ impl<S: VoxelSource> VoxelWorld<S> {
         std::mem::take(&mut self.dirty).into_iter().collect()
     }
 
-    pub fn take_mesh_work(&mut self) -> Vec<SectionCoord> {
-        self.work.take_meshes()
+    pub fn take_mesh_work(&mut self) -> Vec<SectionMeshJob> {
+        self.work
+            .take_meshes()
+            .into_iter()
+            .map(|section| {
+                let revision = self
+                    .mesh_revisions
+                    .get(&section)
+                    .copied()
+                    .expect("queued mesh work has a revision");
+                SectionMeshJob::new(
+                    SectionMeshKey::new(section, MeshingProfile::Block),
+                    revision,
+                )
+            })
+            .collect()
     }
 
     fn drain_generation(&mut self) {
@@ -157,7 +179,7 @@ impl<S: VoxelSource> VoxelWorld<S> {
             let mut section = self.source.generate_section(coord);
             self.apply_edits(coord, &mut section);
             self.resident.insert(coord, section);
-            self.work.queue_mesh(coord);
+            self.queue_mesh(coord);
         }
     }
 
@@ -175,7 +197,9 @@ impl<S: VoxelSource> VoxelWorld<S> {
         let section = coord.section();
         let local = coord.local();
         self.dirty.insert(section);
-        self.work.queue_mesh(section);
+        if self.resident.contains_key(&section) {
+            self.queue_mesh(section);
+        }
         for (axis, edge) in [
             ((-1, 0, 0), local.x() == 0),
             ((1, 0, 0), local.x() == 15),
@@ -189,10 +213,20 @@ impl<S: VoxelSource> VoxelWorld<S> {
                     SectionCoord::new(section.x + axis.0, section.y + axis.1, section.z + axis.2);
                 self.dirty.insert(neighbour);
                 if self.resident.contains_key(&neighbour) {
-                    self.work.queue_mesh(neighbour);
+                    self.queue_mesh(neighbour);
                 }
             }
         }
+    }
+
+    fn queue_mesh(&mut self, coord: SectionCoord) {
+        self.next_mesh_revision = self.next_mesh_revision.wrapping_add(1);
+        if self.next_mesh_revision == 0 {
+            self.next_mesh_revision = 1;
+        }
+        self.mesh_revisions
+            .insert(coord, SectionMeshRevision::new(self.next_mesh_revision));
+        self.work.queue_mesh(coord);
     }
 }
 
@@ -218,6 +252,10 @@ mod tests {
         fn voxel(&self, _coord: VoxelCoord) -> VoxelId {
             VoxelId::AIR
         }
+    }
+
+    fn job_sections(jobs: &[SectionMeshJob]) -> Vec<SectionCoord> {
+        jobs.iter().map(|job| job.key.section).collect()
     }
 
     #[test]
@@ -289,10 +327,45 @@ mod tests {
         world.take_mesh_work();
 
         world.set_voxel(VoxelCoord::new(15, 4, 5), VoxelId::new(1));
+        let jobs = world.take_mesh_work();
         assert_eq!(
-            world.take_mesh_work(),
+            job_sections(&jobs),
             vec![SectionCoord::new(0, 0, 0), SectionCoord::new(1, 0, 0)]
         );
+        assert!(
+            jobs.iter()
+                .all(|job| job.key.profile == MeshingProfile::Block)
+        );
+    }
+
+    #[test]
+    fn remesh_jobs_receive_new_revisions() {
+        let config = ResidencyConfig::new(0, 0, 0, 0);
+        let mut world = VoxelWorld::new(Empty, config);
+        let section = SectionCoord::new(0, 0, 0);
+        world.move_focus(section);
+        let first = world.take_mesh_work()[0];
+
+        world.set_voxel(VoxelCoord::new(4, 5, 6), VoxelId::new(1));
+        let replacement = world.take_mesh_work()[0];
+        assert_eq!(replacement.key, first.key);
+        assert!(replacement.revision > first.revision);
+    }
+
+    #[test]
+    fn reentering_a_section_cannot_reuse_its_old_job_revision() {
+        let config = ResidencyConfig::new(0, 0, 0, 0);
+        let mut world = VoxelWorld::new(Empty, config);
+        let origin = SectionCoord::new(0, 0, 0);
+        world.move_focus(origin);
+        let old = world.take_mesh_work()[0];
+
+        world.move_focus(SectionCoord::new(5, 0, 0));
+        world.take_mesh_work();
+        world.move_focus(origin);
+        let reentered = world.take_mesh_work()[0];
+        assert_eq!(reentered.key, old.key);
+        assert!(reentered.revision > old.revision);
     }
 
     #[test]
