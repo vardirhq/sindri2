@@ -5,9 +5,9 @@ use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{InputEvent, Key};
 use sindri_render::{
     ClearOperations, DepthTarget, ExtractedFrame, FrameCamera, FrameEncodeError, FramePass,
-    FrameRenderers, FrameTarget, GlyphRenderer, RenderLayer, RenderStage, ShapeRenderer,
-    SpriteBatchRenderer, TextRenderer, Texture2D, TextureError, TextureId, TextureRegistry,
-    TexturedCubeRenderer, UvRect, Viewport, encode_prepared_frame, look_at,
+    FramePlanError, FrameRenderers, FrameTarget, GlyphRenderer, RenderLayer, RenderStage,
+    ShapeRenderer, SpriteBatchRenderer, TextRenderer, Texture2D, TextureError, TextureId,
+    TextureRegistry, TexturedCubeRenderer, UvRect, Viewport, encode_prepared_frame, look_at,
     orthographic_projection,
 };
 use sindri_scene::{VoxelRenderError, VoxelTexture};
@@ -32,6 +32,8 @@ enum VoxelLabError {
     Voxel(#[from] VoxelRenderError),
     #[error(transparent)]
     Frame(#[from] FrameEncodeError),
+    #[error(transparent)]
+    FramePlan(#[from] FramePlanError),
 }
 
 struct VoxelLabApp {
