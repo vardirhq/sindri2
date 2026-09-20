@@ -1,4 +1,4 @@
-//! A tile volume drawn as solid blocks, from four sides.
+//! Acceptance lab for Sindri's engine-owned voxel world.
 //!
 //! The question this exists to answer is whether a volume can be a *shape*
 //! rather than a picture of one. The other path arranges flat quads for one
@@ -12,6 +12,10 @@
 //! ```bash
 //! cargo run -p voxel-lab --bin voxel-lab-capture -- target/render-artifacts
 //! ```
+
+mod runtime;
+
+pub use runtime::{LabTerrain, VoxelLabFrame, VoxelLabRuntime, VoxelLabStats};
 
 use std::{
     error::Error,

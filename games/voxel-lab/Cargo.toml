@@ -1,6 +1,6 @@
 [package]
 name = "voxel-lab"
-description = "A tile volume drawn as solid blocks, to see whether it survives being walked round"
+description = "Acceptance lab for Sindri's engine-owned voxel world and persistent section cache"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -20,6 +20,7 @@ sindri-core = { path = "../../crates/sindri-core" }
 sindri-gpu = { path = "../../crates/sindri-gpu" }
 sindri-render = { path = "../../crates/sindri-render" }
 sindri-scene = { path = "../../crates/sindri-scene" }
+sindri-voxel = { path = "../../crates/sindri-voxel" }
 glam.workspace = true
 sindri-grid = { path = "../../crates/sindri-grid" }
 png = "0.18"
