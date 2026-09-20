@@ -64,7 +64,7 @@ impl VoxelMaterialSource for TestMaterials {
         match voxel.value() {
             1 => VoxelMaterial::opaque(),
             2 => VoxelMaterial::cutout(),
-            3 | 4 | 5 => VoxelMaterial::transparent(),
+            3..=5 => VoxelMaterial::transparent(),
             _ => VoxelMaterial::new(RenderClass::Opaque, FaceOcclusion::Solid),
         }
     }
