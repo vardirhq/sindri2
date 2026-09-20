@@ -88,6 +88,12 @@ impl TileChunkStore {
         self.chunks.contains_key(&chunk)
     }
 
+    /// The cells currently materialized for one chunk.
+    #[must_use]
+    pub fn get(&self, chunk: TileChunkCoord) -> Option<&[TileCellDocument]> {
+        self.chunks.get(&chunk).map(Vec::as_slice)
+    }
+
     pub fn insert(
         &mut self,
         chunk: TileChunkCoord,
