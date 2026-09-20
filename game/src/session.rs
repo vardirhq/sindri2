@@ -373,7 +373,7 @@ impl Session {
         // The camera may have moved in Build or Play this frame. Materialize
         // its new neighbourhood before placement/navigation and rendering ask
         // about it; the renderer itself remains mode-agnostic.
-        self.terrain.update(world)?;
+        self.terrain.update(world, &self.components, viewport)?;
         // After the scripts, because a walker's depth is a consequence of where
         // this step left it, and before anything draws. Props settle on the
         // first pass and never move again; only what moved costs anything.
