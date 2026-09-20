@@ -271,6 +271,34 @@ mod tests {
     }
 
     #[test]
+    fn entering_sections_queue_mesh_work_once() {
+        let config = ResidencyConfig::new(1, 0, 0, 0);
+        let mut world = VoxelWorld::new(Empty, config);
+        world.move_focus(SectionCoord::new(0, 0, 0));
+        assert_eq!(world.take_mesh_work().len(), 9);
+
+        world.move_focus(SectionCoord::new(0, 0, 0));
+        assert!(world.take_mesh_work().is_empty());
+
+        world.move_focus(SectionCoord::new(1, 0, 0));
+        assert_eq!(world.take_mesh_work().len(), 3);
+    }
+
+    #[test]
+    fn boundary_edit_queues_resident_neighbour_for_remesh() {
+        let config = ResidencyConfig::new(1, 0, 0, 0);
+        let mut world = VoxelWorld::new(Empty, config);
+        world.move_focus(SectionCoord::new(0, 0, 0));
+        world.take_mesh_work();
+
+        world.set_voxel(VoxelCoord::new(15, 4, 5), VoxelId::new(1));
+        assert_eq!(
+            world.take_mesh_work(),
+            vec![SectionCoord::new(0, 0, 0), SectionCoord::new(1, 0, 0)]
+        );
+    }
+
+    #[test]
     fn boundary_edits_dirty_the_neighbouring_section() {
         let config = ResidencyConfig::new(0, 0, 0, 0);
         let mut world = VoxelWorld::new(Empty, config);
