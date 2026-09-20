@@ -238,6 +238,7 @@ fn centre_chunk(window: (TileChunkCoord, TileChunkCoord)) -> TileChunkCoord {
 /// this patch exists to prove that their generated surface can drive a second
 /// visual representation before that idea is promoted into the engine's voxel
 /// subsystem.
+#[allow(clippy::cast_precision_loss)]
 fn surface_mesh_payload(shape: WorldShape, chunk: TileChunkCoord) -> serde_json::Value {
     let min_x = chunk.min_column();
     let min_y = chunk.min_row();
@@ -327,6 +328,19 @@ mod tests {
         );
         assert!(volume.cells.iter().any(|cell| cell.tile == "water"));
         assert!(volume.cells.iter().any(|cell| cell.tile != "water"));
+    }
+
+    #[test]
+    fn meshy_patch_is_one_chunk_of_smoothed_quads() {
+        let payload = surface_mesh_payload(
+            world_shape(),
+            TileChunkCoord::containing(WORLD_CENTRE, WORLD_CENTRE),
+        );
+        let surface = &payload["surface"];
+        assert_eq!(surface["vertices"].as_array().unwrap().len(), 16 * 16 * 4);
+        assert_eq!(surface["indices"].as_array().unwrap().len(), 16 * 16 * 6);
+        assert_eq!(payload["primitive"], "surface");
+        assert_eq!(payload["texture"], "textures/blocks-top.png#ground-0");
     }
 
     #[test]
