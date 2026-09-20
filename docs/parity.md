@@ -143,6 +143,30 @@ is why it earns a section rather than a footnote.
 | **Build-time atlas packing** | ❌ | 🟡 | — | — | **Behind** | The slicer authors sheets by hand; nothing packs loose sprites automatically |
 | `referenced_audio` gather | ❌ | — | — | — | **Behind** | Hosts cannot infer every clip a scene needs, unlike `referenced_textures` |
 
+## Voxel worlds and terrain
+
+| Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |
+| --- | :-: | :-: | :-: | :-: | --- | --- |
+| Engine-owned voxel coordinates and 16³ sections | 🟡 | ❌ | ❌ | ❌ | **Behind** | `sindri-voxel` owns signed world/section/local coordinates, palette-backed sections, air/material IDs, revisions, and deterministic random-access generation. Causeway still uses its game-owned terrain path, so this remains foundation rather than a game-proven capability. |
+| Bounded voxel residency | 🟡 | ❌ | ❌ | ❌ | **Behind** | Engine world tracks entering/staying/leaving 3D sections, keeps render and simulation radii distinct, and preserves sparse edits across unload/reload. Scheduling is synchronous and Causeway has not migrated to it yet. |
+| Voxel dirty-region tracking | 🟡 | ❌ | ❌ | ❌ | **Behind** | A voxel edit dirties its section plus a neighbouring section when the edit touches that boundary. There is no compiled section-mesh cache consuming those revisions yet. |
+| Neighbour-aware block meshing | ❌ | ❌ | ❌ | ❌ | **Absent** | Planned next: emit only exposed faces while sampling a one-voxel halo across section boundaries. Current tile-volume rendering is not the engine voxel mesher. |
+| Persistent voxel GPU mesh cache | ❌ | ❌ | ❌ | ❌ | **Absent** | No section-coordinate + revision mesh cache yet; unchanged terrain can still be rebuilt through the existing Causeway/tile-volume path. |
+| Voxel persistence and digging | ❌ | ❌ | ❌ | ❌ | **Absent** | Sparse overrides now survive engine residency changes in memory, but there is no save format, real vertical Causeway volume, caves, or persisted tunnel proof. |
+| Smooth / hybrid voxel meshing | 🟡 | ❌ | ❌ | 🟡 | **Behind** | Causeway proved an inline textured surface mesh can be derived from voxel terrain, but it is a one-centre-chunk experimental overlay. A seam-safe density mesher and Block/Smooth/Hybrid engine profiles remain unbuilt. |
+
+## Voxel worlds and terrain
+
+| Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |
+| --- | :-: | :-: | :-: | :-: | --- | --- |
+| Engine-owned voxel coordinates and 16³ sections | 🟡 | ❌ | ❌ | ❌ | **Behind** | `sindri-voxel` owns signed world/section/local coordinates, palette-backed sections, air/material IDs, revisions, and deterministic random-access generation. Causeway still uses its game-owned terrain path, so this remains foundation rather than a game-proven capability. |
+| Bounded voxel residency | 🟡 | ❌ | ❌ | ❌ | **Behind** | Engine world tracks entering/staying/leaving 3D sections, keeps render and simulation radii distinct, and preserves sparse edits across unload/reload. Scheduling is synchronous and Causeway has not migrated to it yet. |
+| Voxel dirty-region tracking | 🟡 | ❌ | ❌ | ❌ | **Behind** | A voxel edit dirties its section plus a neighbouring section when the edit touches that boundary. There is no compiled section-mesh cache consuming those revisions yet. |
+| Neighbour-aware block meshing | ❌ | ❌ | ❌ | ❌ | **Absent** | Planned next: emit only exposed faces while sampling a one-voxel halo across section boundaries. Current tile-volume rendering is not the engine voxel mesher. |
+| Persistent voxel GPU mesh cache | ❌ | ❌ | ❌ | ❌ | **Absent** | No section-coordinate + revision mesh cache yet; unchanged terrain can still be rebuilt through the existing Causeway/tile-volume path. |
+| Voxel persistence and digging | ❌ | ❌ | ❌ | ❌ | **Absent** | Sparse overrides now survive engine residency changes in memory, but there is no save format, real vertical Causeway volume, caves, or persisted tunnel proof. |
+| Smooth / hybrid voxel meshing | 🟡 | ❌ | ❌ | 🟡 | **Behind** | Causeway proved an inline textured surface mesh can be derived from voxel terrain, but it is a one-centre-chunk experimental overlay. A seam-safe density mesher and Block/Smooth/Hybrid engine profiles remain unbuilt. |
+
 ## 2D rendering
 
 | Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |

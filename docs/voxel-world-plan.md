@@ -1,6 +1,6 @@
 # Engine-owned voxel world plan
 
-Status: implementation started
+Status: Phase 1 complete; Phase 2 in progress
 
 Causeway proved that Sindri can generate, stream, pick, edit, and render a large voxel-like world. It also proved the current ownership boundary is wrong: generation and residency live in the game, terrain is materialized as a `sindri.tile_volume`, renderer revisions can rebake too much work, and the experimental smooth patch has no persistent chunk mesh cache.
 
@@ -127,6 +127,10 @@ Start in Causeway, cross many chunk boundaries, dig through a mountain, build a 
 
 Do not rewrite Causeway in one jump. Each phase leaves main usable. New engine APIs are proven with engine tests first, then Causeway adopts them. Temporary compatibility code is acceptable only when its deletion phase is named here.
 
-## Immediate implementation slice
+## Implementation progress
 
-This branch starts Phase 1 only. It creates the engine crate and coordinate/storage/generation contracts. It intentionally does not move Causeway generation yet. Moving the game before the storage boundary is tested would merely relocate the current design mistakes into a nicer folder.
+- **Phase 1:** complete on main. `sindri-voxel` owns coordinates, 16³ palette-backed sections, revisions, and deterministic source sampling.
+- **Phase 2:** in progress. The engine now has bounded 3D section residency, separate render/simulation radii, entering/staying/leaving diffs, sparse edit retention across unload/reload, and boundary-aware dirty tracking.
+- **Next:** finish the Phase 2 queue/scheduling contract, then implement the neighbour-aware block mesher before Causeway migration.
+
+Causeway intentionally remains on the old path until the engine can both own residency and compile correct section geometry. Moving the game sooner would merely relocate the current rendering problems.
