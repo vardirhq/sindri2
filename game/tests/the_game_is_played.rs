@@ -375,8 +375,8 @@ fn build_camera_materializes_the_chunks_it_moves_toward() {
         .expect("the build camera pans");
 
     let camera_after = entity_position(&world, "World Camera");
-    assert_ne!(
-        camera_after, camera_before,
+    assert!(
+        planar_distance(camera_before, camera_after) > 0.0,
         "the regression must pan the camera"
     );
     let after = loaded_chunks(&world, &scene);
@@ -452,7 +452,7 @@ fn the_sea_is_something_to_build_across_rather_than_to_walk_on() {
 }
 
 #[test]
-#[allow(clippy::cast_precision_loss, clippy::float_cmp)]
+#[allow(clippy::cast_precision_loss, clippy::float_cmp, clippy::too_many_lines)]
 fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
     let (mut world, scene, mut session) = session();
     settle(&mut world, &mut session, 2);
@@ -481,13 +481,13 @@ fn a_phone_tap_in_play_moves_the_target_and_the_wanderer() {
         .find(|(_, data)| data.name.as_deref() == Some("Floor"))
         .map(|(_, data)| &data.components["sindri.tile_grid"])
         .expect("the world has a floor");
-    let columns = floor["columns"].as_f64().expect("columns are numeric") as f32;
-    let rows = floor["rows"].as_f64().expect("rows are numeric") as f32;
+    let columns = floor["columns"].as_f64().expect("columns are numeric");
+    let rows = floor["rows"].as_f64().expect("rows are numeric");
     assert!(
-        wanderer_before[0] >= 16.0
-            && wanderer_before[0] < columns - 16.0
-            && wanderer_before[2] >= 16.0
-            && wanderer_before[2] < rows - 16.0,
+        f64::from(wanderer_before[0]) >= 16.0
+            && f64::from(wanderer_before[0]) < columns - 16.0
+            && f64::from(wanderer_before[2]) >= 16.0
+            && f64::from(wanderer_before[2]) < rows - 16.0,
         "the game must start at least one render chunk inside every world edge"
     );
     let initial_cell =
