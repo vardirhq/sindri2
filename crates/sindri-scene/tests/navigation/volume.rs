@@ -209,8 +209,12 @@ fn sparse_navigation_cost_follows_loaded_ground_not_declared_bounds() {
         volume_world(r#"[{ "position": [0, 0, 0], "tile": "block" }]"#, 1.0);
     let floor_id = loaded.entity_map[&id("floor")];
     let floor = loaded.world.get_mut(floor_id).expect("the floor remains");
-    floor.components["sindri.tile_grid"]["columns"] = json!(65_536);
-    floor.components["sindri.tile_grid"]["rows"] = json!(65_536);
+    let grid = floor
+        .components
+        .get_mut("sindri.tile_grid")
+        .expect("the grid component remains");
+    grid["columns"] = json!(65_536);
+    grid["rows"] = json!(65_536);
 
     let navigation =
         WorldGridNavigation::from_world_with_tile_sets(&loaded.world, floor_id, &tile_sets)
