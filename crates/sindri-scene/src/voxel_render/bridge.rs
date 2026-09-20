@@ -75,9 +75,8 @@ impl VoxelRenderBridge {
         let (resident, uploads) = self.prepare(job.key, compiled);
         let new_keys: BTreeSet<_> = resident.batches.iter().map(|batch| batch.key).collect();
         let new_triangles = resident.triangles;
-        let previous = match self.sections.finish(job, resident) {
-            Ok(previous) => previous,
-            Err(_) => return Ok(false),
+        let Ok(previous) = self.sections.finish(job, resident) else {
+            return Ok(false);
         };
         if let Some(previous) = previous {
             self.triangles = self.triangles.saturating_sub(previous.triangles);
