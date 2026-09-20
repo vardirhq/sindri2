@@ -27,6 +27,15 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Causeway can derive a smoothed textured triangle surface from the same
+  deterministic voxel terrain that still owns picking, building and navigation.
+  The first slice intentionally meshes only one 16×16 camera-centre chunk so
+  the visual approach can be judged before voxel generation and chunk meshing
+  are promoted into a general engine subsystem.
+- `sindri.mesh` can carry explicit textured surface triangles, including a
+  sprite-sheet region, through the opaque 3D render path.
+
+
 - Tile volumes expose one shared engine chunk coordinate and sparse runtime
   chunk store. Scene serialization remains the readable sparse cell list; the
   runtime store is the unit generators, renderers, and future persistence use.

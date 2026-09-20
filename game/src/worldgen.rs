@@ -184,6 +184,14 @@ impl WorldShape {
         (x - self.sample_offset[0], y - self.sample_offset[1])
     }
 
+    /// Samples only the generated surface height.
+    ///
+    /// Rendering experiments need the shape of the terrain without coupling
+    /// themselves to the generator's private biome/material bookkeeping.
+    pub(crate) fn ground_height(self, x: i32, y: i32) -> i32 {
+        self.column(x, y).ground
+    }
+
     fn column(self, x: i32, y: i32) -> Column {
         let (sample_x, sample_y) = self.sample(x, y);
         #[allow(clippy::cast_precision_loss)]

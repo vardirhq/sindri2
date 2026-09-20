@@ -112,7 +112,8 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
         serde_json::json!({
             "primitive": "cube",
             "texture": PROCEDURAL_TEXTURES[0].reference,
-            "layer": 0
+            "layer": 0,
+            "surface": null
         }),
     )?;
     components.register_with_default::<SpriteComponent>(

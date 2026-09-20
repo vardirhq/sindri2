@@ -1,4 +1,4 @@
-//! `sindri.mesh`: a built-in primitive to draw.
+//! `sindri.mesh`: built-in and authored geometry to draw.
 
 use serde::Deserialize;
 use sindri_core::SceneComponent;
@@ -8,6 +8,23 @@ use sindri_core::SceneComponent;
 #[non_exhaustive]
 pub enum MeshPrimitive {
     Cube,
+    Surface,
+}
+
+/// Explicit textured geometry.
+///
+/// This is deliberately small: it is enough for generated terrain and imported
+/// geometry to cross the scene/render boundary without teaching the renderer
+/// what a terrain chunk is. Larger asset-backed meshes can replace the inline
+/// representation later without changing that boundary.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
+pub struct SurfaceMesh {
+    #[serde(default)]
+    pub vertices: Vec<[f32; 3]>,
+    #[serde(default)]
+    pub uvs: Vec<[f32; 2]>,
+    #[serde(default)]
+    pub indices: Vec<u16>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -16,6 +33,8 @@ pub struct MeshComponent {
     pub texture: String,
     #[serde(default)]
     pub layer: i32,
+    #[serde(default)]
+    pub surface: Option<SurfaceMesh>,
 }
 
 impl SceneComponent for MeshComponent {

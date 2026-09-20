@@ -173,7 +173,7 @@ the gap is legible, not because it is scheduled.
 
 | Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |
 | --- | :-: | :-: | :-: | :-: | --- | --- |
-| Cameras, depth, cube primitive, textured mesh | 🟡 | 🟡 | ❌ | ❌ | **Behind** | Foundation only |
+| Cameras, depth, cube primitive, inline textured surface mesh | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | Causeway derives one smoothed terrain chunk from its voxel generator as a prototype; meshes are inline, rebuilt into GPU buffers per draw, and have no asset/import pipeline yet |
 | **glTF / model import** | ❌ | ❌ | ❌ | ❌ | **Absent** | `tools/isometric-baker` renders models to 2D sprites offline, in three views; that is not runtime 3D |
 | **Materials** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | **Lighting** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |

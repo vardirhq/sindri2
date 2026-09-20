@@ -260,6 +260,65 @@ impl TexturedCubeRenderer {
         self.mesh.draw(&mut pass);
     }
 
+    /// Draws caller-provided textured triangles through the same opaque 3D
+    /// pipeline as cubes.
+    ///
+    /// The inline buffers are intentionally a prototype boundary. Generated
+    /// terrain proves the geometry contract first; persistent GPU mesh caches
+    /// belong with chunk residency once that contract has survived a game.
+    pub fn encode_mesh(
+        &mut self,
+        context: DrawContext<'_>,
+        encoder: &mut wgpu::CommandEncoder,
+        target: (&wgpu::TextureView, &DepthTarget),
+        model_view_projection: Mat4,
+        vertices: &[TexturedVertex],
+        indices: &[u16],
+    ) {
+        if vertices.is_empty() || indices.is_empty() {
+            return;
+        }
+        let mesh = MeshBuffers::new(context.device, "Sindri textured surface", vertices, indices);
+        self.bind_texture(context.device, context.textures, context.texture);
+        context.queue.write_buffer(
+            &self.uniform,
+            0,
+            bytemuck::bytes_of(&CubeUniform {
+                model_view_projection: model_view_projection.to_cols_array_2d(),
+            }),
+        );
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("Sindri textured surface pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: target.0,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Load,
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                view: target.1.view(),
+                depth_ops: Some(wgpu::Operations {
+                    load: wgpu::LoadOp::Load,
+                    store: wgpu::StoreOp::Store,
+                }),
+                stencil_ops: None,
+            }),
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+        pass.set_pipeline(&self.pipeline);
+        let bind_group = self
+            .bind_groups
+            .get(&self.current)
+            .expect("the texture is bound before encoding");
+        pass.set_bind_group(0, bind_group, &[]);
+        mesh.draw(&mut pass);
+    }
+
     /// The texture the next encode will draw with.
     pub const fn texture(&self) -> TextureId {
         self.current

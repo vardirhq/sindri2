@@ -198,12 +198,14 @@
       "default_payload": {
         "layer": 0,
         "primitive": "cube",
+        "surface": null,
         "texture": "procedural:checkerboard"
       },
       "display_name": "Mesh",
       "fields": {
         "layer": 0,
         "primitive": "cube",
+        "surface": null,
         "texture": "procedural:checkerboard"
       },
       "meanings": {

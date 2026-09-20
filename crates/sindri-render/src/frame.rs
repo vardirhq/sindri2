@@ -1,7 +1,9 @@
 use glam::Mat4;
 use thiserror::Error;
 
-use crate::{ShapeBlend, ShapeInstance, SpriteDepth, SpriteInstance, TextInstance, TextureId};
+use crate::{
+    ShapeBlend, ShapeInstance, SpriteDepth, SpriteInstance, TextInstance, TextureId, TexturedVertex,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Viewport {
@@ -71,6 +73,13 @@ pub enum FrameCommand {
     TexturedCube {
         model: Mat4,
         texture: TextureId,
+    },
+    /// Explicit textured triangles in model space.
+    TexturedMesh {
+        model: Mat4,
+        texture: TextureId,
+        vertices: Vec<TexturedVertex>,
+        indices: Vec<u16>,
     },
     /// One batch per texture: instances sharing a texture draw in a single call.
     SpriteBatch {
