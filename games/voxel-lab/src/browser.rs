@@ -18,8 +18,6 @@ use thiserror::Error;
 
 use crate::{VoxelLabRuntime, VoxelLabStats};
 
-const TOP_LABEL: &str = "textures/blocks-top.png";
-const SIDE_LABEL: &str = "textures/blocks-side.png";
 const CAUSEWAY_TOPS: &[u8] = include_bytes!("../../../game/assets/textures/blocks-top.png");
 const CAUSEWAY_SIDES: &[u8] = include_bytes!("../../../game/assets/textures/blocks-side.png");
 
@@ -77,9 +75,7 @@ impl DesktopApp for VoxelLabApp {
 
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let mut textures = TextureRegistry::new(context.device(), context.queue());
-        let top_texture = causeway_atlas(context, &mut textures, TOP_LABEL, CAUSEWAY_TOPS)?;
-        let side_texture = causeway_atlas(context, &mut textures, SIDE_LABEL, CAUSEWAY_SIDES)?;
-        let material_textures = [top_texture, side_texture];
+        let material_textures = load_causeway_atlases(context, &mut textures)?;
         Ok(Self {
             lab: VoxelLabRuntime::new(),
             textures,
@@ -234,6 +230,20 @@ impl VoxelLabApp {
         let (x, z) = (self.centre.x.round() as i32, self.centre.z.round() as i32);
         self.lab.dig_surface(x, z);
     }
+}
+
+fn load_causeway_atlases(
+    context: &AppContext<'_>,
+    textures: &mut TextureRegistry,
+) -> Result<[TextureId; 2], VoxelLabError> {
+    let top = causeway_atlas(context, textures, "textures/blocks-top.png", CAUSEWAY_TOPS)?;
+    let side = causeway_atlas(
+        context,
+        textures,
+        "textures/blocks-side.png",
+        CAUSEWAY_SIDES,
+    )?;
+    Ok([top, side])
 }
 
 fn causeway_atlas(
