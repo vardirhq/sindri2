@@ -266,6 +266,9 @@ fn encode_passes<'p>(
                 pass,
                 command,
             ),
+            FrameCommand::ReleaseCachedTexturedMesh { cache } => {
+                cube_renderer.release_cached_mesh(*cache);
+            }
             FrameCommand::SpriteBatch {
                 texture,
                 depth,

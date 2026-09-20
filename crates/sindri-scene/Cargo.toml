@@ -15,6 +15,7 @@ sindri-core = { path = "../sindri-core", version = "0.1.0" }
 sindri-grid = { path = "../sindri-grid", version = "0.1.0" }
 sindri-physics = { path = "../sindri-physics", version = "0.1.0" }
 sindri-render = { path = "../sindri-render", version = "0.1.0" }
+sindri-voxel = { path = "../sindri-voxel", version = "0.1.0" }
 thiserror.workspace = true
 
 [lints]

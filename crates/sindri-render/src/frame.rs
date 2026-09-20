@@ -93,6 +93,10 @@ pub enum FrameCommand {
         revision: u64,
         replacement: Option<CachedTexturedMeshUpload>,
     },
+    /// Releases persistent GPU geometry that has left residency.
+    ReleaseCachedTexturedMesh {
+        cache: CachedMeshId,
+    },
     /// One batch per texture: instances sharing a texture draw in a single call.
     SpriteBatch {
         texture: TextureId,
