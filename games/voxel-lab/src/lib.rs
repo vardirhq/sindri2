@@ -15,7 +15,16 @@
 
 mod runtime;
 
+#[cfg(target_arch = "wasm32")]
+mod browser;
+
 pub use runtime::{LabTerrain, VoxelLabFrame, VoxelLabRuntime, VoxelLabStats};
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen(start))]
+pub fn run() {
+    #[cfg(target_arch = "wasm32")]
+    browser::run();
+}
 
 use std::{
     error::Error,

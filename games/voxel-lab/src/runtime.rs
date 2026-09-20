@@ -82,6 +82,11 @@ impl VoxelLabRuntime {
         self.world.set_voxel(coord, voxel)
     }
 
+    /// Removes the generated surface voxel at a world column.
+    pub fn dig_surface(&mut self, x: i32, z: i32) -> bool {
+        self.set_voxel(VoxelCoord::new(x, terrain_height(x, z), z), VoxelId::AIR)
+    }
+
     /// Moves residency to the camera section and drains the current CPU work.
     pub fn frame(
         &mut self,
