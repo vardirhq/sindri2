@@ -1,0 +1,10 @@
+[package]
+name = "sindri-voxel"
+description = "Sparse chunked voxel world data and meshing foundations for Sindri"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
