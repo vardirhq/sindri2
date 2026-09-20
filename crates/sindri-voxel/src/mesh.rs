@@ -119,7 +119,14 @@ mod tests {
 
     impl VoxelSource for TwoSections {
         fn voxel(&self, coord: VoxelCoord) -> VoxelId {
-            if matches!(coord.section(), SectionCoord { x: 0 | 1, y: 0, z: 0 }) {
+            if matches!(
+                coord.section(),
+                SectionCoord {
+                    x: 0 | 1,
+                    y: 0,
+                    z: 0
+                }
+            ) {
                 VoxelId::new(3)
             } else {
                 VoxelId::AIR
