@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{LocalVoxelCoord, SectionCoord, VoxelCoord, VoxelId, VoxelSection, VoxelSource};
+use crate::{SectionCoord, VoxelCoord, VoxelId, VoxelSection, VoxelSource};
 
 /// Distances around a focus section that the engine keeps for rendering and
 /// simulation. Simulation may never exceed render residency.
