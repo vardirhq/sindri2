@@ -2,7 +2,8 @@
 
 use std::collections::BTreeMap;
 
-use sindri_core::{ComponentSchemaRegistry, TileCellDocument, Transform3D, World};
+use sindri_core::{ComponentSchemaRegistry, Transform3D, World};
+use sindri_scene::TileCellDocument;
 use sindri_scene::{
     TILE_CHUNK_SIZE, TileChunkCoord, TileChunkStore, TileGridComponent, TileVolumeComponent,
 };
