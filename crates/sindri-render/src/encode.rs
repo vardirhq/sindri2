@@ -235,8 +235,7 @@ fn encode_passes<'p>(
                     texture: *texture,
                 },
                 encoder,
-                target.color,
-                target.depth,
+                target,
                 pass.camera.view_projection * *model,
             ),
             FrameCommand::TexturedMesh {
