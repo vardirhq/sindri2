@@ -1,6 +1,6 @@
 //! Mesh components, and the pass that draws them.
 
-use sindri_core::World;
+use sindri_core::{SpriteRef, World};
 use sindri_render::{
     ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage, TexturedVertex,
 };
@@ -40,15 +40,25 @@ impl SceneExtractor {
                     {
                         continue;
                     }
+                    let reference = SpriteRef::parse(&mesh.texture)?;
+                    let (texture, rect) = textures.resolve_sprite(&reference);
                     let vertices = surface
                         .vertices
                         .iter()
                         .zip(&surface.uvs)
-                        .map(|(position, uv)| TexturedVertex::new(*position, *uv))
+                        .map(|(position, uv)| {
+                            TexturedVertex::new(
+                                *position,
+                                [
+                                    rect.width().mul_add(uv[0], rect.x()),
+                                    rect.height().mul_add(uv[1], rect.y()),
+                                ],
+                            )
+                        })
                         .collect();
                     FrameCommand::TexturedMesh {
                         model,
-                        texture: textures.resolve(&mesh.texture),
+                        texture,
                         vertices,
                         indices: surface.indices.clone(),
                     }
