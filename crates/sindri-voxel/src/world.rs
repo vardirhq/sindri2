@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{SectionCoord, VoxelCoord, VoxelId, VoxelSection, VoxelSource};
+use crate::{SectionCoord, VoxelCoord, VoxelId, VoxelSection, VoxelSource, VoxelWorkQueue};
 
 /// Distances around a focus section that the engine keeps for rendering and
 /// simulation. Simulation may never exceed render residency.
@@ -53,6 +53,7 @@ pub struct VoxelWorld<S> {
     simulation: BTreeSet<SectionCoord>,
     edits: BTreeMap<VoxelCoord, VoxelId>,
     dirty: BTreeSet<SectionCoord>,
+    work: VoxelWorkQueue,
 }
 
 impl<S: VoxelSource> VoxelWorld<S> {
@@ -66,6 +67,7 @@ impl<S: VoxelSource> VoxelWorld<S> {
             simulation: BTreeSet::new(),
             edits: BTreeMap::new(),
             dirty: BTreeSet::new(),
+            work: VoxelWorkQueue::default(),
         }
     }
 
@@ -88,12 +90,12 @@ impl<S: VoxelSource> VoxelWorld<S> {
 
         for coord in &left {
             self.resident.remove(coord);
+            self.work.forget(*coord);
         }
         for coord in &entered {
-            let mut section = self.source.generate_section(*coord);
-            self.apply_edits(*coord, &mut section);
-            self.resident.insert(*coord, section);
+            self.work.queue_generation(*coord);
         }
+        self.drain_generation();
 
         self.focus = Some(focus);
         self.simulation = simulation;
@@ -146,6 +148,19 @@ impl<S: VoxelSource> VoxelWorld<S> {
         std::mem::take(&mut self.dirty).into_iter().collect()
     }
 
+    pub fn take_mesh_work(&mut self) -> Vec<SectionCoord> {
+        self.work.take_meshes()
+    }
+
+    fn drain_generation(&mut self) {
+        for coord in self.work.take_generation() {
+            let mut section = self.source.generate_section(coord);
+            self.apply_edits(coord, &mut section);
+            self.resident.insert(coord, section);
+            self.work.queue_mesh(coord);
+        }
+    }
+
     fn apply_edits(&self, section_coord: SectionCoord, section: &mut VoxelSection) {
         let min = section_coord.min_voxel();
         let max = VoxelCoord::new(min.x + 15, min.y + 15, min.z + 15);
@@ -160,6 +175,7 @@ impl<S: VoxelSource> VoxelWorld<S> {
         let section = coord.section();
         let local = coord.local();
         self.dirty.insert(section);
+        self.work.queue_mesh(section);
         for (axis, edge) in [
             ((-1, 0, 0), local.x() == 0),
             ((1, 0, 0), local.x() == 15),
@@ -169,11 +185,12 @@ impl<S: VoxelSource> VoxelWorld<S> {
             ((0, 0, 1), local.z() == 15),
         ] {
             if edge {
-                self.dirty.insert(SectionCoord::new(
-                    section.x + axis.0,
-                    section.y + axis.1,
-                    section.z + axis.2,
-                ));
+                let neighbour =
+                    SectionCoord::new(section.x + axis.0, section.y + axis.1, section.z + axis.2);
+                self.dirty.insert(neighbour);
+                if self.resident.contains_key(&neighbour) {
+                    self.work.queue_mesh(neighbour);
+                }
             }
         }
     }
@@ -247,6 +264,34 @@ mod tests {
                 .unwrap()
                 .get(origin.local()),
             VoxelId::new(9)
+        );
+    }
+
+    #[test]
+    fn entering_sections_queue_mesh_work_once() {
+        let config = ResidencyConfig::new(1, 0, 0, 0);
+        let mut world = VoxelWorld::new(Empty, config);
+        world.move_focus(SectionCoord::new(0, 0, 0));
+        assert_eq!(world.take_mesh_work().len(), 9);
+
+        world.move_focus(SectionCoord::new(0, 0, 0));
+        assert!(world.take_mesh_work().is_empty());
+
+        world.move_focus(SectionCoord::new(1, 0, 0));
+        assert_eq!(world.take_mesh_work().len(), 3);
+    }
+
+    #[test]
+    fn boundary_edit_queues_resident_neighbour_for_remesh() {
+        let config = ResidencyConfig::new(1, 0, 0, 0);
+        let mut world = VoxelWorld::new(Empty, config);
+        world.move_focus(SectionCoord::new(0, 0, 0));
+        world.take_mesh_work();
+
+        world.set_voxel(VoxelCoord::new(15, 4, 5), VoxelId::new(1));
+        assert_eq!(
+            world.take_mesh_work(),
+            vec![SectionCoord::new(0, 0, 0), SectionCoord::new(1, 0, 0)]
         );
     }
 
