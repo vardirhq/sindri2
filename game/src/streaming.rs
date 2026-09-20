@@ -19,6 +19,7 @@ const LOAD_RADIUS: i32 = 3;
 const VIEW_MARGIN: i32 = 1;
 const FLOOR: &str = "sindri.tile_grid";
 const VOLUME: &str = "sindri.tile_volume";
+const MESH: &str = "sindri.mesh";
 pub(crate) const TILE_SET: &str = "causeway.tileset.json";
 
 #[must_use]
@@ -108,6 +109,10 @@ impl TerrainStream {
             .map_err(|error| CausewayError::Generated(error.to_string()))?;
         if let Some(data) = world.get_mut(floor_entity) {
             data.components.insert(VOLUME.to_owned(), payload);
+            data.components.insert(
+                MESH.to_owned(),
+                surface_mesh_payload(world_shape(), centre_chunk(window)),
+            );
         }
         Ok(true)
     }
@@ -219,6 +224,78 @@ fn load_window(
         }
     }
     changed
+}
+
+fn centre_chunk(window: (TileChunkCoord, TileChunkCoord)) -> TileChunkCoord {
+    TileChunkCoord::new(
+        (window.0.x + window.1.x) / 2,
+        (window.0.y + window.1.y) / 2,
+    )
+}
+
+/// Builds one deliberately small meshy patch over the authoritative voxel
+/// terrain. Causeway keeps collision, picking and construction on the voxels;
+/// this patch exists to prove that their generated surface can drive a second
+/// visual representation before that idea is promoted into the engine's voxel
+/// subsystem.
+fn surface_mesh_payload(shape: WorldShape, chunk: TileChunkCoord) -> serde_json::Value {
+    let min_x = chunk.min_column();
+    let min_y = chunk.min_row();
+    let mut vertices = Vec::with_capacity(usize::try_from(TILE_CHUNK_SIZE.pow(2) * 4).unwrap());
+    let mut uvs = Vec::with_capacity(vertices.capacity());
+    let mut indices = Vec::with_capacity(usize::try_from(TILE_CHUNK_SIZE.pow(2) * 6).unwrap());
+
+    for row in 0..TILE_CHUNK_SIZE {
+        for column in 0..TILE_CHUNK_SIZE {
+            let x = min_x + column;
+            let y = min_y + row;
+            let corners = [
+                smooth_corner_height(shape, x, y),
+                smooth_corner_height(shape, x + 1, y),
+                smooth_corner_height(shape, x, y + 1),
+                smooth_corner_height(shape, x + 1, y + 1),
+            ];
+            let left = x as f32 - 0.5;
+            let near = y as f32 - 0.5;
+            vertices.extend([
+                [left, corners[0], near],
+                [left + 1.0, corners[1], near],
+                [left, corners[2], near + 1.0],
+                [left + 1.0, corners[3], near + 1.0],
+            ]);
+            uvs.extend([[0.0, 1.0], [1.0, 1.0], [0.0, 0.0], [1.0, 0.0]]);
+            let base = u16::try_from(vertices.len() - 4)
+                .expect("one Causeway surface patch stays below u16 vertex capacity");
+            // Winding faces upward in Sindri's Y-up world.
+            indices.extend([base, base + 2, base + 1, base + 1, base + 2, base + 3]);
+        }
+    }
+
+    serde_json::json!({
+        "primitive": "surface",
+        "texture": "textures/blocks-top.png#ground-0",
+        "layer": 1,
+        "surface": {
+            "vertices": vertices,
+            "uvs": uvs,
+            "indices": indices
+        }
+    })
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn smooth_corner_height(shape: WorldShape, corner_x: i32, corner_y: i32) -> f32 {
+    let mut total = 0.0;
+    let mut samples = 0.0;
+    for dy in -1..=0 {
+        for dx in -1..=0 {
+            let x = (corner_x + dx).clamp(0, shape.columns - 1);
+            let y = (corner_y + dy).clamp(0, shape.rows - 1);
+            total += shape.column(x, y).ground.max(crate::worldgen::SEA) as f32 + 0.515;
+            samples += 1.0;
+        }
+    }
+    total / samples
 }
 
 fn remember_edits(
