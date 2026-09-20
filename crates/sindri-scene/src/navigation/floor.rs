@@ -10,7 +10,7 @@
 //! how a stack of cells becomes a wall.
 
 use sindri_core::{EntityData, EntityId, SceneComponent};
-use sindri_grid::{GridBounds, GridCoord, GridSpace, GridWalls};
+use sindri_grid::{GridBounds, GridSpace, GridWalls};
 
 use crate::{
     TileGridComponent, TileSetBindings, TileSurfaces, TileVolumeComponent, TilemapComponent,
