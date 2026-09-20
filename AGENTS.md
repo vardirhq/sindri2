@@ -88,6 +88,7 @@ Do not casually change the crate graph. The intended in-workspace direction is:
 ```text
 sindri-core       -> (nothing in-workspace)
 sindri-grid       -> (nothing in-workspace)
+sindri-voxel      -> (nothing in-workspace initially)
 sindri-export     -> sindri-assets + sindri-core + sindri-decay + sindri-scene
 sindri-platform   -> sindri-core
 sindri-desktop    -> sindri-platform + sindri-gpu
@@ -106,6 +107,10 @@ Important constraints:
 
 - `sindri-core` has no window, GPU, browser, editor, physics, scripting, or async
   executor dependency.
+- `sindri-voxel` owns voxel coordinates, section/chunk storage, residency, dirty
+  tracking, generation contracts, and CPU-side meshing policy. It must not
+  depend on Causeway, scene JSON, the editor, Decay, wgpu, or renderer-specific
+  GPU types.
 - `sindri-render` does not depend on `sindri-core`; `sindri-scene` is the seam.
 - Engine crates never depend on the editor or the companion game.
 - `decay/` is a separate Cargo workspace and may not depend on `sindri-*` crates.
@@ -152,6 +157,63 @@ Do not use CI as the primary debugger. Before pushing code, run every relevant
 check that can reasonably be reproduced locally. When a check fails, inspect the
 whole affected path rather than patching only the first diagnostic and pushing
 again.
+
+### Mandatory pre-push gate
+
+Do not push a code change merely because the edited code looks correct. Before
+every push, including a small CI-fix commit, perform the cheapest applicable
+checks first and inspect the changed files for warning-level problems.
+
+For Rust changes, the minimum pre-push sequence is:
+
+1. Run or reproduce `cargo fmt --all --check`.
+2. Compile/check every changed crate with warnings denied:
+   `RUSTFLAGS="-D warnings" cargo check -p <changed-crate> --all-targets --all-features`.
+3. Run the changed crate's tests:
+   `cargo test -p <changed-crate> --all-features`.
+4. If the crate is part of the WASM graph, check it for
+   `wasm32-unknown-unknown`.
+5. Before pushing, inspect the final diff for:
+   - unused imports, variables, functions, and dependencies;
+   - formatting changes still required;
+   - exhaustive matches affected by new enum variants;
+   - generated artifacts that need regeneration;
+   - documentation/parity changes required by the capability rules;
+   - files approaching repository size limits.
+
+When local command execution is unavailable, do not silently substitute CI for
+this gate. Perform the strongest static review available, explicitly checking
+the items above, and treat the subsequent CI run as unverified until it
+completes.
+
+A CI-fix commit must pass the same gate. "Only one line changed" is not an
+exemption.
+
+### CI failure triage
+
+When CI fails, inspect every failed job on the current PR head before changing
+code.
+
+Determine whether failures:
+
+- share one root cause;
+- expose independent problems;
+- are downstream or skipped consequences of an earlier gate.
+
+Do not patch the first visible diagnostic and push without checking the other
+failed jobs.
+
+After fixing a CI failure, search the affected crate or file for the same class
+of problem before pushing. For example:
+
+- one unused import -> inspect all changed imports and warnings;
+- one formatting failure -> format/check all changed Rust files;
+- one non-exhaustive match -> search all matches of that enum;
+- one stale generated file -> identify every generated artifact affected by the
+  source change.
+
+Never describe a PR as fixed or ready until the final head has passed the
+required checks.
 
 Before editing a `.decay` file, a scripted prefab, or the Decay host surface,
 read `docs/decay-agent-guide.md`. Run the typed batch preflight for every changed
