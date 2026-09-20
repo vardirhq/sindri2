@@ -55,12 +55,7 @@ impl TerrainStream {
                     serde_json::from_value::<TileGridComponent>(data.components[FLOOR].clone());
                 let volume =
                     serde_json::from_value::<TileVolumeComponent>(data.components[VOLUME].clone());
-                (
-                    entity,
-                    grid,
-                    data.transform_3d.unwrap_or_default(),
-                    volume,
-                )
+                (entity, grid, data.transform_3d.unwrap_or_default(), volume)
             })
         else {
             return Ok(false);
@@ -75,8 +70,7 @@ impl TerrainStream {
         let Some(camera) = camera else {
             return Ok(false);
         };
-        let Some(window) =
-            visible_chunk_window(transform, camera.view_projection, across, into)
+        let Some(window) = visible_chunk_window(transform, camera.view_projection, across, into)
         else {
             return Ok(false);
         };
