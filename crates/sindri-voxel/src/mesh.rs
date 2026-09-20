@@ -1,4 +1,4 @@
-use crate::{SectionCoord, VoxelCoord, VoxelId, VoxelSource, SECTION_EDGE};
+use crate::{SECTION_EDGE, SectionCoord, VoxelCoord, VoxelId, VoxelSource};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum VoxelFace {
@@ -147,11 +147,17 @@ mod tests {
         let right = mesh_block_section(&TwoSections, SectionCoord::new(1, 0, 0));
         assert_eq!(left.face_count(), 5 * 16 * 16);
         assert_eq!(right.face_count(), 5 * 16 * 16);
-        assert!(!left.faces.iter().any(|face| {
-            face.voxel.x == 15 && face.face == VoxelFace::Right
-        }));
-        assert!(!right.faces.iter().any(|face| {
-            face.voxel.x == 16 && face.face == VoxelFace::Left
-        }));
+        assert!(
+            !left
+                .faces
+                .iter()
+                .any(|face| face.voxel.x == 15 && face.face == VoxelFace::Right)
+        );
+        assert!(
+            !right
+                .faces
+                .iter()
+                .any(|face| face.voxel.x == 16 && face.face == VoxelFace::Left)
+        );
     }
 }
