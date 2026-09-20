@@ -263,7 +263,8 @@ fn causeway_atlas(
     )?))
 }
 
-#[allow(clippy::cast_precision_loss)]\nfn atlas_rect(column: u32, width: u32) -> Result<UvRect, UvRectError> {
+#[allow(clippy::cast_precision_loss)]
+fn atlas_rect(column: u32, width: u32) -> Result<UvRect, UvRectError> {
     let x = 2 + column * 52;
     UvRect::new(
         x as f32 / width as f32,
