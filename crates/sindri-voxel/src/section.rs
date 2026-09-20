@@ -63,14 +63,16 @@ impl VoxelSection {
         if self.get(coord) == voxel {
             return false;
         }
-        let palette_index = if let Some(index) = self.palette.iter().position(|entry| *entry == voxel)
-        {
-            index
-        } else {
-            self.palette.push(voxel);
-            self.palette.len() - 1
-        };
-        let indices = self.indices.get_or_insert_with(|| Box::new([0; SECTION_VOLUME]));
+        let palette_index =
+            if let Some(index) = self.palette.iter().position(|entry| *entry == voxel) {
+                index
+            } else {
+                self.palette.push(voxel);
+                self.palette.len() - 1
+            };
+        let indices = self
+            .indices
+            .get_or_insert_with(|| Box::new([0; SECTION_VOLUME]));
         indices[coord.index()] =
             u16::try_from(palette_index).expect("u16 voxel ids bound the section palette");
         self.revision = self.revision.wrapping_add(1);
