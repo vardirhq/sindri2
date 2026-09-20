@@ -59,7 +59,7 @@ impl BlockMesh {
 
 /// Baseline block mesher. Only exposed faces are emitted.
 ///
-/// Neighbours are queried through VoxelSource, including coordinates outside
+/// Neighbours are queried through `VoxelSource`, including coordinates outside
 /// the target section. This is the one-voxel halo contract: correctness at a
 /// boundary does not depend on the neighbouring section being resident.
 #[must_use]
