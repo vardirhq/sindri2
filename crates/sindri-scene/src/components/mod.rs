@@ -24,7 +24,7 @@ pub use camera::{CameraComponent, CameraFit};
 pub use grid::{
     GridNavigationComponent, GridOccupantComponent, GridPlacementComponent, GridWallDocument,
 };
-pub use mesh::{MeshComponent, MeshPrimitive};
+pub use mesh::{MeshComponent, MeshPrimitive, SurfaceMesh};
 pub use sprite::{SpriteColorTransform, SpriteComponent};
 pub use tile_volume::{
     TileCellDocument, TileGridComponent, TileGridError, TileSpace, TileVolumeComponent,
