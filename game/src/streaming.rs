@@ -227,7 +227,7 @@ fn load_window(
 }
 
 fn centre_chunk(window: (TileChunkCoord, TileChunkCoord)) -> TileChunkCoord {
-    TileChunkCoord::new((window.0.x + window.1.x) / 2, (window.0.y + window.1.y) / 2)
+    TileChunkCoord::new(i32::midpoint(window.0.x, window.1.x), i32::midpoint(window.0.y, window.1.y))
 }
 
 /// Builds one deliberately small meshy patch over the authoritative voxel
