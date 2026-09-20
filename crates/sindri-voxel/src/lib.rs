@@ -6,6 +6,8 @@
 mod coord;
 mod material;
 mod mesh;
+#[cfg(test)]
+mod mesh_tests;
 mod queue;
 mod section;
 mod source;
