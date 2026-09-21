@@ -29,7 +29,7 @@ pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, Spr
 pub use audio::AudioSourceComponent;
 pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
-    CameraComponent, CameraFit, GridNavigationComponent, GridOccupantComponent,
+    CameraBehaviorComponent, CameraBounds, CameraComponent, CameraFit, CameraFollow, CameraShake, GridNavigationComponent, GridOccupantComponent,
     GridPlacementComponent, GridWallDocument, MeshComponent, MeshPrimitive, ShapeComponent,
     ShapeGeometry, SpriteColorTransform, SpriteComponent, TileCellDocument, TileDraw,
     TileGridComponent, TileGridError, TileProjection, TileSpace, TileVolumeComponent,
