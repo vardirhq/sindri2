@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-import preflight
+from scripts import preflight
 
 
 class PreflightTests(unittest.TestCase):
