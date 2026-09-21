@@ -7,8 +7,8 @@ use std::{
 };
 
 use sindri_diagnostics::{
-    DiagnosticReport, GithubAnnotation, fingerprint_failure, parse_decay_report,
-    parse_file_size_violations, parse_rustfmt_diff, render_terminal_report,
+    DiagnosticReport, GithubAnnotation, fingerprint_failure, parse_cargo_messages,
+    parse_decay_report, parse_file_size_violations, parse_rustfmt_diff, render_terminal_report,
 };
 
 fn main() -> ExitCode {
@@ -24,9 +24,10 @@ fn main() -> ExitCode {
 fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
-        return Err("expected command: rustfmt, decay, file-size, or fingerprint".into());
+        return Err("expected command: rustfmt, cargo, decay, file-size, or fingerprint".into());
     };
     if command != "rustfmt"
+        && command != "cargo"
         && command != "decay"
         && command != "file-size"
         && command != "fingerprint"
@@ -61,6 +62,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     }
 
     let report = match command.as_str() {
+        "cargo" => DiagnosticReport::new(parse_cargo_messages(&input)?),
         "decay" => parse_decay_report(&input)?,
         "file-size" => DiagnosticReport::new(parse_file_size_violations(&input)),
         _ => DiagnosticReport::new(parse_rustfmt_diff(&input)),
@@ -101,6 +103,9 @@ fn github_summary(report: &DiagnosticReport, command: &str) -> String {
     }
     if command == "rustfmt" && errors > 0 {
         output.push_str("\nRun `cargo fmt --all` locally before pushing.\n");
+    }
+    if command == "cargo" && errors > 0 {
+        output.push_str("\nFix the annotated Rust diagnostics before pushing.\n");
     }
     output
 }

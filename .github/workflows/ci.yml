@@ -206,7 +206,21 @@ jobs:
       - uses: ./.github/actions/linux-deps
         with:
           packages: libasound2-dev
-      - run: cargo clippy --workspace --all-targets --all-features
+      - name: Clippy with structured diagnostics
+        shell: bash
+        run: |
+          output="$(mktemp)"
+          set +e
+          cargo clippy --workspace --all-targets --all-features --message-format=json >"$output"
+          status=$?
+          set -e
+
+          if [[ $status -ne 0 ]]; then
+            cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              cargo --github <"$output" || true
+          fi
+          rm -f "$output"
+          exit "$status"
 
   test:
     needs: [quick, decay_preflight]
