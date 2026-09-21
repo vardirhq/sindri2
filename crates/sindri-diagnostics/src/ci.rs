@@ -103,7 +103,11 @@ fn failed_test_name(output: &str) -> Option<&str> {
         trimmed
             .strip_prefix("test ")
             .and_then(|rest| rest.strip_suffix(" ... FAILED"))
-            .or_else(|| trimmed.strip_prefix("---- ").and_then(|rest| rest.strip_suffix(" stdout ----")))
+            .or_else(|| {
+                trimmed
+                    .strip_prefix("---- ")
+                    .and_then(|rest| rest.strip_suffix(" stdout ----"))
+            })
     })
 }
 
