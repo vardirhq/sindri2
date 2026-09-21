@@ -308,6 +308,7 @@ jobs:
       # turns the total into roughly the slowest single test rather than the
       # sum of the slowest per binary.
       - name: Test
+        id: native_tests
         env:
           WGPU_BACKEND: vulkan
           SINDRI_REQUIRE_GPU: 1
@@ -317,6 +318,7 @@ jobs:
       # switch above would have quietly dropped every example in the public
       # API's documentation from CI, so they are run here instead.
       - name: Test the documented examples
+        id: doctests
         run: cargo test --workspace --all-features --doc
       # The captures stay in this job rather than a parallel one of their own:
       # they run the same crates the tests just built, and a separate job would
@@ -337,22 +339,27 @@ jobs:
       # its own -- the artifacts then do not match what the run wants and it
       # compiles them again, which is the whole of what this avoids.
       - name: Build the editor the capture runs
+        id: editor_build
         run: cargo build --package sindri-editor
       - name: Capture native editor runtime viewport
+        id: editor_capture
         env:
           WGPU_BACKEND: vulkan
         run: |
           timeout 60s xvfb-run --auto-servernum --server-args="-screen 0 1600x1200x24" ./scripts/capture-editor.sh target/render-artifacts/editor-runtime-viewport.png
           timeout 60s xvfb-run --auto-servernum --server-args="-screen 0 1600x1200x24" ./scripts/capture-editor.sh target/render-artifacts/editor-tile-volume.png game/assets/tile-volume-editor.scene.json Blocks
       - name: Capture scene-driven frame pipeline
+        id: scene_capture
         env:
           WGPU_BACKEND: vulkan
         run: cargo run --package sindri-cube --bin capture -- target/render-artifacts/scene-frame-pipeline.png
       - name: Capture the companion game mid-run
+        id: causeway_capture
         env:
           WGPU_BACKEND: vulkan
         run: cargo run --package sindri-causeway --bin causeway-capture -- target/render-artifacts/causeway.png
       - name: Capture Last Stand spectacle on desktop and phone
+        id: orbital_capture
         env:
           WGPU_BACKEND: vulkan
         run: |
@@ -364,10 +371,12 @@ jobs:
       # sampled through a view that decoded a second time: everything else
       # passed and only the picture was wrong.
       - name: Verify captured colours
+        id: verify_captures
         run: |
           cargo run --package sindri-cube --bin verify -- target/render-artifacts/editor-runtime-viewport.png
           cargo run --package sindri-cube --bin verify -- target/render-artifacts/scene-frame-pipeline.png
       - name: Upload visual test captures
+        id: visual_artifact
         uses: actions/upload-artifact@v7
         with:
           name: visual-test-captures
@@ -387,9 +396,19 @@ jobs:
         if: ${{ failure() }}
         shell: bash
         run: |
+          failed_step="Test and render captures"
+          [[ "${{ steps.native_tests.outcome }}" == "failure" ]] && failed_step="Test"
+          [[ "${{ steps.doctests.outcome }}" == "failure" ]] && failed_step="Test the documented examples"
+          [[ "${{ steps.editor_build.outcome }}" == "failure" ]] && failed_step="Build the editor the capture runs"
+          [[ "${{ steps.editor_capture.outcome }}" == "failure" ]] && failed_step="Capture native editor runtime viewport"
+          [[ "${{ steps.scene_capture.outcome }}" == "failure" ]] && failed_step="Capture scene-driven frame pipeline"
+          [[ "${{ steps.causeway_capture.outcome }}" == "failure" ]] && failed_step="Capture the companion game mid-run"
+          [[ "${{ steps.orbital_capture.outcome }}" == "failure" ]] && failed_step="Capture Last Stand spectacle on desktop and phone"
+          [[ "${{ steps.verify_captures.outcome }}" == "failure" ]] && failed_step="Verify captured colours"
+          [[ "${{ steps.visual_artifact.outcome }}" == "failure" ]] && failed_step="Upload visual test captures"
           {
             echo "Test and render captures"
-            echo "failed: Test and render captures"
+            echo "failed: $failed_step"
           } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
             check-result >failure.json || true
           if [[ -s failure.json ]]; then
@@ -426,11 +445,13 @@ jobs:
         with:
           tool: wasm-bindgen-cli@0.2.128
       - name: Check browser workspace
+        id: wasm_check
         run: cargo check --workspace --all-features --target wasm32-unknown-unknown
       # A texture that decodes natively and not in the browser build is the
       # failure the asset system's whole promise rests on, so the decode corpus
       # is run on the browser target too, in Node through wasm-bindgen's runner.
       - name: Test image decoding in the browser build
+        id: wasm_decode
         run: |
           cargo test --package sindri-assets --target wasm32-unknown-unknown \
             --test decode_compatibility
@@ -440,9 +461,12 @@ jobs:
         if: ${{ failure() }}
         shell: bash
         run: |
+          failed_step="Browser target"
+          [[ "${{ steps.wasm_check.outcome }}" == "failure" ]] && failed_step="Check browser workspace"
+          [[ "${{ steps.wasm_decode.outcome }}" == "failure" ]] && failed_step="Test image decoding in the browser build"
           {
             echo "Browser target"
-            echo "failed: Browser target"
+            echo "failed: $failed_step"
           } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
             check-result >failure.json || true
           if [[ -s failure.json ]]; then
@@ -500,11 +524,13 @@ jobs:
             scripts/browser/node_modules
           key: playwright-${{ runner.os }}-${{ hashFiles('scripts/browser/package.json') }}
       - name: Install browser tooling
+        id: browser_tooling
         run: |
           npm install --prefix scripts/browser
           npx --prefix scripts/browser playwright install-deps chromium
           npx --prefix scripts/browser playwright install chromium
       - name: Build the browser bundles
+        id: browser_build
         run: |
           wasm-pack build examples/cube --target web --out-dir pkg
           wasm-pack build game --target web --out-dir pkg
@@ -512,6 +538,7 @@ jobs:
       # source tree. That is the point: what CI proves is what a deployment
       # would serve, page and manifest and hashed assets and all.
       - name: Export the browser projects
+        id: browser_export
         run: |
           cargo run --quiet --package sindri-export --bin sindri-export -- \
             game target/dist/causeway --base /sindri2/
@@ -536,6 +563,7 @@ jobs:
             games/orbital-baked target/dist/orbital-baked --base /sindri2/
           cp -R game/pkg/. target/dist/orbital-baked/pkg/
       - name: Smoke the rendered games
+        id: browser_smoke
         run: |
           node scripts/browser/smoke.mjs examples/cube target/render-artifacts/browser-cube.png
           SINDRI_EXPECT_ASSETS=1 SINDRI_BASE_PATH=/sindri2/ \
@@ -550,6 +578,7 @@ jobs:
             SINDRI_VIEWPORT_WIDTH=390 SINDRI_VIEWPORT_HEIGHT=844 \
             node scripts/browser/smoke.mjs target/dist/orbital-baked target/render-artifacts/browser-orbital-baked-phone.png
       - name: Smoke the startup failure paths
+        id: browser_failures
         run: |
           SINDRI_EXPECT_FAILURE=canvas SINDRI_BASE_PATH=/sindri2/ \
             node scripts/browser/smoke.mjs target/dist/causeway target/render-artifacts/browser-no-canvas.png
@@ -581,16 +610,22 @@ jobs:
         if: ${{ failure() || steps.browser_artifact.outcome == 'failure' }}
         shell: bash
         run: |
-          if [[ "${{ steps.browser_artifact.outcome }}" == "failure" ]]; then
+          failed_step=""
+          [[ "${{ steps.browser_tooling.outcome }}" == "failure" ]] && failed_step="Install browser tooling"
+          [[ "${{ steps.browser_build.outcome }}" == "failure" ]] && failed_step="Build the browser bundles"
+          [[ "${{ steps.browser_export.outcome }}" == "failure" ]] && failed_step="Export the browser projects"
+          [[ "${{ steps.browser_smoke.outcome }}" == "failure" ]] && failed_step="Smoke the rendered games"
+          [[ "${{ steps.browser_failures.outcome }}" == "failure" ]] && failed_step="Smoke the startup failure paths"
+          if [[ -n "$failed_step" ]]; then
+            {
+              echo "Run the engine in a browser"
+              echo "failed: $failed_step"
+            } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              check-result >failure.json || true
+          elif [[ "${{ steps.browser_artifact.outcome }}" == "failure" ]]; then
             {
               echo "Run the engine in a browser"
               echo "HTTP 403 while finalizing browser-captures artifact"
-            } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
-              check-result >failure.json || true
-          else
-            {
-              echo "Run the engine in a browser"
-              echo "failed: Run the engine in a browser"
             } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
               check-result >failure.json || true
           fi
