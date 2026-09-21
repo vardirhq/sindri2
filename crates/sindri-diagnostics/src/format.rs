@@ -38,19 +38,25 @@ fn parse_rust_errors(input: &str) -> Vec<Diagnostic> {
     let lines: Vec<_> = input.lines().collect();
     let mut diagnostics = Vec::new();
     for (index, line) in lines.iter().enumerate() {
-        let Some(message) = line.strip_prefix("error: ") else {\n            continue;\n        };
-        let Some(location_line) = lines.get(index + 1) else {\n            continue;\n        };
-        let Some(location) = parse_arrow_location(location_line.trim()) else {\n            continue;\n        };
+        let Some(message) = line.strip_prefix("error: ") else {
+            continue;
+        };
+        let Some(location_line) = lines.get(index + 1) else {
+            continue;
+        };
+        let Some(location) = parse_arrow_location(location_line.trim()) else {
+            continue;
+        };
         diagnostics.push(Diagnostic {
             severity: Severity::Error,
             source: DiagnosticSource::Rust,
             code: Some(DiagnosticCode("RUST_PARSE_ERROR".into())),
             message: message.to_owned(),
             location: Some(location),
-        notes: Vec::new(),
+            notes: Vec::new(),
             suggestion: None,
-        rendered: None,
-        relation: Some(DiagnosticRelation::Primary),
+            rendered: None,
+            relation: Some(DiagnosticRelation::Primary),
         });
     }
     diagnostics
