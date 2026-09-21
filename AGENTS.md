@@ -72,6 +72,8 @@ These documents govern the work:
 - `docs/scripting.md` and `decay/LANGUAGE.md` — scripting contracts.
 - `docs/decay-agent-guide.md` — mandatory preflight and runtime-contract checklist
   before changing Decay scripts or their host APIs.
+- `docs/decay-lsp-modernization.md` — mandatory checklist for Decay language-server,
+  editor tooling, batch preflight, structured diagnostics, and agent-tooling work.
 - `docs/capabilities.md` — detailed evidence for what actually works.
 - `docs/parity.md` — what an engine is expected to do, what Sindri does, and the
   distance between them; carries the Engine / Editor / Decay / proof status that
@@ -216,7 +218,10 @@ Never describe a PR as fixed or ready until the final head has passed the
 required checks.
 
 Before editing a `.decay` file, a scripted prefab, or the Decay host surface,
-read `docs/decay-agent-guide.md`. Run the typed batch preflight for every changed
+read `docs/decay-agent-guide.md`. Before changing `decay-lsp`, Decay editor
+integration, batch-preflight diagnostics, or their semantic tooling contracts,
+read `docs/decay-lsp-modernization.md` and update its checklist in the same
+change when an item moves. Run the typed batch preflight for every changed
 script before pushing; its runtime-contract reminders must be reviewed even
 though only syntax and semantic diagnostics make the command fail.
 
