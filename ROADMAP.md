@@ -735,6 +735,9 @@ leave any finite generated island, and deep editable terrain cannot be generated
 or rebuilt as one volume. This track is engine work found by making Causeway a
 better game; Causeway is its vertical proof.
 
+The detailed ordered remainder is maintained in
+[`docs/voxel-system-completion-checklist.md`](docs/voxel-system-completion-checklist.md).
+
 - [x] Establish one engine-owned 16×16 tile-chunk coordinate and sparse runtime
   store, use the same size for solid-volume culling, and prove deterministic
   Causeway biome/tree generation reassembles without seams.
