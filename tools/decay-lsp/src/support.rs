@@ -13,6 +13,8 @@ pub(crate) const KEYWORDS: &[&str] = &[
     "if",
     "else",
     "while",
+    "for",
+    "in",
     "break",
     "continue",
     "return",
@@ -104,7 +106,7 @@ pub(crate) fn symbol_completion(name: &str, symbol: &ExternalSymbol) -> Value {
             "label":name,
             "kind":3,
             "detail":signature(name, function),
-            "insertText":format!("{name}($1)"),
+            "insertText":function_snippet(name, function),
             "insertTextFormat":2
         }),
     }
@@ -120,6 +122,17 @@ pub(crate) fn hover_symbol(name: &str, symbol: &ExternalSymbol) -> Value {
         }
     };
     json!({"contents":{"kind":"markdown","value":value}})
+}
+
+fn function_snippet(name: &str, function: &FunctionType) -> String {
+    if function.params.is_empty() {
+        return format!("{name}()");
+    }
+    let params = (1..=function.params.len())
+        .map(|placeholder| format!("${placeholder}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("{name}({params})")
 }
 
 fn signature(name: &str, function: &FunctionType) -> String {
@@ -219,4 +232,32 @@ pub(crate) fn word_at(source: &str, offset: usize) -> Option<&str> {
         .find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
         .map_or(source.len(), |index| offset + index);
     (start < end).then(|| &source[start..end])
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn current_loop_keywords_are_exposed() {
+        assert!(KEYWORDS.contains(&"for"));
+        assert!(KEYWORDS.contains(&"in"));
+    }
+
+    #[test]
+    fn function_snippets_follow_arity() {
+        let zero = FunctionType { params: vec![], return_type: Type::Unit };
+        let three = FunctionType { params: vec![Type::Number, Type::Bool, Type::String], return_type: Type::Unit };
+        assert_eq!(function_snippet("tick", &zero), "tick()");
+        assert_eq!(function_snippet("mix", &three), "mix($1, $2, $3)");
+    }
+
+    #[test]
+    fn utf16_positions_round_trip() {
+        let source = "script Cafe {\n  fn tick() { let label = \"🚀\"; }\n}";
+        let rocket = source.find('🚀').expect("rocket exists");
+        let (line, character) = position_at(source, rocket);
+        assert_eq!(offset_at(source, line, character), rocket);
+    }
 }
