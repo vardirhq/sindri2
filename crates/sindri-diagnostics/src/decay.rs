@@ -41,7 +41,10 @@ impl std::fmt::Display for DecayReportError {
         match self {
             Self::Json(error) => write!(formatter, "invalid Decay diagnostic JSON: {error}"),
             Self::UnsupportedSchema(version) => {
-                write!(formatter, "unsupported Decay diagnostic schema version {version}")
+                write!(
+                    formatter,
+                    "unsupported Decay diagnostic schema version {version}"
+                )
             }
         }
     }
