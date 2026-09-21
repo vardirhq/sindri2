@@ -748,6 +748,15 @@ better game; Causeway is its vertical proof.
   climate fields, biome rules, strata, caves, deposits, structures, and
   decoration. Causeway's current generator is the proving implementation, not
   yet the general authoring surface.
+- [ ] Finish voxel world authoring in the Scene view: camera-driven residency,
+  face picking, project-material painting, place/remove strokes, undo/redo,
+  sparse saved edit deltas, and later slice/cutaway controls for deep terrain.
+- [ ] Add a dedicated reusable voxel asset format and editor for bounded props
+  such as trees, rocks, buildings, furniture, machines, and item-like models.
+  It needs an orbitable workspace, material palette, place/remove/paint,
+  undo/redo, explicit pivot, canonical save/load, preview, and direct placement
+  from the project browser into scenes/worlds. This is distinct from terrain
+  editing and must not be implemented as a disguised streamed chunk.
 - [ ] Support multiple terrain representations behind the same chunk lifecycle:
   block cells first, height/mesh terrain next, then density-field meshing where
   caves and smooth terrain justify marching cubes or dual contouring.
