@@ -45,16 +45,19 @@ jobs:
       - name: Check formatting with structured diagnostics
         shell: bash
         run: |
+          output="$(mktemp)"
           set +e
-          cargo fmt --all --check >target/rustfmt-diff.txt 2>&1
+          cargo fmt --all --check >"$output" 2>&1
           status=$?
           set -e
           if [[ $status -ne 0 ]]; then
-            cat target/rustfmt-diff.txt
+            cat "$output"
             cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
-              rustfmt --github <target/rustfmt-diff.txt
-            exit $status
+              rustfmt --github <"$output" || true
+            rm -f "$output"
+            exit "$status"
           fi
+          rm -f "$output"
       - name: Check file sizes
         run: scripts/check-file-size.py
 
