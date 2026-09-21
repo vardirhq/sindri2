@@ -189,6 +189,8 @@ jobs:
     needs: [quick, decay_preflight]
     name: Clippy
     runs-on: ubuntu-latest
+    outputs:
+      failure: ${{ steps.clippy.outputs.failure }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.95.0
@@ -207,6 +209,7 @@ jobs:
         with:
           packages: libasound2-dev
       - name: Clippy with structured diagnostics
+        id: clippy
         shell: bash
         run: |
           output="$(mktemp)"
@@ -218,6 +221,14 @@ jobs:
           if [[ $status -ne 0 ]]; then
             cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
               cargo --github <"$output" || true
+            {
+              echo "Clippy"
+              cat "$output"
+            } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              check-result >failure.json || true
+            if [[ -s failure.json ]]; then
+              echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
+            fi
           fi
           rm -f "$output"
           exit "$status"
@@ -481,3 +492,24 @@ jobs:
             target/render-artifacts/browser-no-device.png
           if-no-files-found: warn
           retention-days: 14
+
+  diagnostics_summary:
+    name: CI failure summary
+    if: ${{ always() && needs.clippy.result == 'failure' }}
+    needs: [clippy]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+      - name: Correlate structured failures
+        env:
+          CLIPPY_FAILURE: ${{ needs.clippy.outputs.failure }}
+        shell: bash
+        run: |
+          if [[ -z "$CLIPPY_FAILURE" ]]; then
+            echo "Clippy failed before a structured fingerprint could be emitted." >>"$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          printf '[%s]\n' "$CLIPPY_FAILURE" | \
+            cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- correlate \
+            >>"$GITHUB_STEP_SUMMARY"
