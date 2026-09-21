@@ -21,7 +21,7 @@ mod ui_text_options;
 pub mod ui_text_template;
 mod voxel_world;
 
-pub use camera::{CameraComponent, CameraFit};
+pub use camera::{CameraBehaviorComponent, CameraBounds, CameraComponent, CameraFit, CameraFollow, CameraShake, update_camera_behaviors};
 pub use grid::{
     GridNavigationComponent, GridOccupantComponent, GridPlacementComponent, GridWallDocument,
 };
