@@ -1,4 +1,6 @@
-use crate::{Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity, SourceLocation};
+use crate::{
+    Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity, SourceLocation,
+};
 use std::collections::BTreeSet;
 
 /// Parses the stable file headers emitted by `cargo fmt --all --check`.
@@ -42,6 +44,9 @@ mod tests {
         let diagnostics = parse_rustfmt_diff(input);
         assert_eq!(diagnostics.len(), 2);
         assert_eq!(diagnostics[0].code.as_ref().unwrap().0, "RUSTFMT_REQUIRED");
-        assert_eq!(diagnostics[0].suggestion.as_deref(), Some("run cargo fmt --all"));
+        assert_eq!(
+            diagnostics[0].suggestion.as_deref(),
+            Some("run cargo fmt --all")
+        );
     }
 }
