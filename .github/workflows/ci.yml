@@ -58,8 +58,20 @@ jobs:
             exit "$status"
           fi
           rm -f "$output"
-      - name: Check file sizes
-        run: scripts/check-file-size.py
+      - name: Check file sizes with structured diagnostics
+        shell: bash
+        run: |
+          output="$(mktemp)"
+          set +e
+          scripts/check-file-size.py >"$output" 2>&1
+          status=$?
+          set -e
+          cat "$output"
+          if [[ $status -ne 0 ]]; then
+            cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- file-size --github <"$output" || true
+          fi
+          rm -f "$output"
+          exit "$status"
 
   # Compile changed gameplay scripts against the same typed Sindri host surface
   # the editor uses. This gate stays ahead of the expensive native, WASM, and

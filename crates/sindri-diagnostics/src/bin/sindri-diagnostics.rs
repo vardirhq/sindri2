@@ -7,8 +7,8 @@ use std::{
 };
 
 use sindri_diagnostics::{
-    DiagnosticReport, GithubAnnotation, parse_decay_report, parse_rustfmt_diff,
-    render_terminal_report,
+    DiagnosticReport, GithubAnnotation, parse_decay_report, parse_file_size_violations,
+    parse_rustfmt_diff, render_terminal_report,
 };
 
 fn main() -> ExitCode {
@@ -24,9 +24,9 @@ fn main() -> ExitCode {
 fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
-        return Err("expected command: rustfmt or decay".into());
+        return Err("expected command: rustfmt, decay, or file-size".into());
     };
-    if command != "rustfmt" && command != "decay" {
+    if command != "rustfmt" && command != "decay" && command != "file-size" {
         return Err(format!("unknown command: {command}").into());
     }
 
@@ -45,10 +45,10 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
 
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
-    let report = if command == "decay" {
-        parse_decay_report(&input)?
-    } else {
-        DiagnosticReport::new(parse_rustfmt_diff(&input))
+    let report = match command.as_str() {
+        "decay" => parse_decay_report(&input)?,
+        "file-size" => DiagnosticReport::new(parse_file_size_violations(&input)),
+        _ => DiagnosticReport::new(parse_rustfmt_diff(&input)),
     };
 
     if github {

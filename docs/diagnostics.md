@@ -41,7 +41,7 @@ fingerprint are downstream, and infrastructure failures stay independent. This
 models real failures seen while building this crate, where one Rust compiler
 error failed several jobs while an artifact-finalization 403 was unrelated.
 
-## GitHub Actions
+## File sizes\n\n`scripts/check-file-size.py` remains the authority for the 600-line cap. Failed\noutput is adapted into `FILE_SIZE_LIMIT` diagnostics with the offending Rust\nfile and line count, so the quick CI gate can annotate the file and point to\n`docs/module-layout.md` without changing the script's exit contract.\n\n## GitHub Actions
 
 `GithubAnnotation::from_diagnostic` renders the common model as a GitHub
 workflow annotation. The quick CI gate now feeds a failed rustfmt check through
@@ -67,7 +67,7 @@ changing existing CI while PR #339 owns scene/editor/voxel integration. Follow-u
 slices should add:
 
 1. extend the runner beyond the now-integrated rustfmt path so repository checks can emit one summary;
-2. file-size adapter and richer CI failure fingerprint extraction;
+2. richer CI failure fingerprint extraction and cross-job correlation;
 3. Decay diagnostics raised directly from the typed checker rather than the current CI summary of checker prose;
 4. Cargo/Clippy GitHub summary and annotation emission;
 5. editor Problems-panel consumption once the editor work is free to move.
