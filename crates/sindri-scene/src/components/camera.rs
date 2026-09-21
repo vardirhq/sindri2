@@ -119,7 +119,9 @@ pub struct CameraFollow {
     pub max_speed: f32,
 }
 
-const fn default_follow_smoothing() -> f32 { 8.0 }
+const fn default_follow_smoothing() -> f32 {
+    8.0
+}
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CameraBounds {
@@ -141,23 +143,35 @@ pub struct CameraShake {
     pub phase: f32,
 }
 
-const fn default_shake_strength() -> f32 { 0.12 }
-const fn default_shake_decay() -> f32 { 2.8 }
-const fn default_shake_frequency() -> f32 { 57.0 }
+const fn default_shake_strength() -> f32 {
+    0.12
+}
+const fn default_shake_decay() -> f32 {
+    2.8
+}
+const fn default_shake_frequency() -> f32 {
+    57.0
+}
 
 impl SceneComponent for CameraBehaviorComponent {
     const TYPE_NAME: &'static str = "sindri.camera.behavior";
 }
 
 pub fn update_camera_behaviors(world: &mut World, dt: f32) {
-    if !dt.is_finite() || dt <= 0.0 { return; }
+    if !dt.is_finite() || dt <= 0.0 {
+        return;
+    }
     let cameras: Vec<_> = world.entities().filter_map(|(entity, data)| {
         let behavior = data.components.get(CameraBehaviorComponent::TYPE_NAME)?;
-        serde_json::from_value::<CameraBehaviorComponent>(behavior.clone()).ok().map(|b| (entity, b))
+        serde_json::from_value::<CameraBehaviorComponent>(behavior.clone())
+            .ok()
+            .map(|behavior| (entity, behavior))
     }).collect();
 
     for (entity, mut behavior) in cameras {
-        let Some(current) = world.get(entity).and_then(|data| data.transform_3d) else { continue; };
+        let Some(current) = world.get(entity).and_then(|data| data.transform_3d) else {
+            continue;
+        };
         let mut position = current.position;
 
         if let Some(follow) = behavior.follow {
@@ -198,7 +212,8 @@ pub fn update_camera_behaviors(world: &mut World, dt: f32) {
         if let Some(data) = world.get_mut(entity) {
             data.transform_3d = Some(Transform3D { position, ..current });
             if let Ok(value) = serde_json::to_value(behavior) {
-                data.components.insert(CameraBehaviorComponent::TYPE_NAME.into(), value);
+                data.components
+                    .insert(CameraBehaviorComponent::TYPE_NAME.into(), value);
             }
         }
     }
@@ -207,11 +222,17 @@ pub fn update_camera_behaviors(world: &mut World, dt: f32) {
 #[cfg(test)]
 mod behavior_tests {
     use super::*;
-    use sindri_core::EntityData;
     use serde_json::json;
+    use sindri_core::EntityData;
 
     fn entity(position: [f32; 3]) -> EntityData {
-        EntityData { transform_3d: Some(Transform3D { position, ..Transform3D::default() }), ..EntityData::default() }
+        EntityData {
+            transform_3d: Some(Transform3D {
+                position,
+                ..Transform3D::default()
+            }),
+            ..EntityData::default()
+        }
     }
 
     #[test]
