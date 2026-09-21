@@ -72,7 +72,7 @@
       "patterns": [
         {
           "name": "keyword.control.decay",
-          "match": "\\b(if|else|while|break|continue|return)\\b"
+          "match": "\\b(if|else|while|for|in|break|continue|return)\\b"
         },
         {
           "name": "storage.type.decay",

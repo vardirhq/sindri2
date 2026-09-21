@@ -20,8 +20,14 @@ use support::{
     word_at,
 };
 
+#[derive(Clone)]
+struct Document {
+    text: String,
+    version: i64,
+}
+
 struct Server {
-    documents: HashMap<String, String>,
+    documents: HashMap<String, Document>,
     environment: Environment,
     root: Option<PathBuf>,
     project: ProjectIndex,
@@ -60,6 +66,8 @@ impl Server {
             "textDocument/didOpen" => self.did_open(&params, output)?,
             "textDocument/didChange" => self.did_change(&params, output)?,
             "textDocument/didSave" => self.did_save(&params, output)?,
+            "textDocument/didClose" => self.did_close(&params, output)?,
+            "workspace/didChangeWatchedFiles" => self.did_change_watched_files(),
             "textDocument/completion" => {
                 Self::respond(id, self.completion(&params), output)?;
             }
@@ -87,7 +95,11 @@ impl Server {
             json!({
                 "serverInfo": { "name": "decay-lsp", "version": env!("CARGO_PKG_VERSION") },
                 "capabilities": {
-                    "textDocumentSync": 1,
+                    "textDocumentSync": {
+                        "openClose": true,
+                        "change": 1,
+                        "save": true
+                    },
                     "completionProvider": { "triggerCharacters": [".", "\""] },
                     "hoverProvider": true,
                     "documentSymbolProvider": true
@@ -113,7 +125,17 @@ impl Server {
             params.pointer("/textDocument/uri").and_then(Value::as_str),
             params.pointer("/textDocument/text").and_then(Value::as_str),
         ) {
-            self.documents.insert(uri.to_owned(), text.to_owned());
+            let version = params
+                .pointer("/textDocument/version")
+                .and_then(Value::as_i64)
+                .unwrap_or(0);
+            self.documents.insert(
+                uri.to_owned(),
+                Document {
+                    text: text.to_owned(),
+                    version,
+                },
+            );
             self.publish_diagnostics(uri, text, output)?;
         }
         Ok(())
@@ -125,20 +147,54 @@ impl Server {
                 .pointer("/contentChanges/0/text")
                 .and_then(Value::as_str)
         {
-            self.documents.insert(uri.to_owned(), text.to_owned());
-            self.publish_diagnostics(uri, text, output)?;
+            let version = params
+                .pointer("/textDocument/version")
+                .and_then(Value::as_i64)
+                .unwrap_or(0);
+            let stale = self
+                .documents
+                .get(uri)
+                .is_some_and(|document| version <= document.version);
+            if !stale {
+                self.documents.insert(
+                    uri.to_owned(),
+                    Document {
+                        text: text.to_owned(),
+                        version,
+                    },
+                );
+                self.publish_diagnostics(uri, text, output)?;
+            }
         }
         Ok(())
     }
 
     fn did_save(&mut self, params: &Value, output: &mut impl Write) -> io::Result<()> {
-        self.project = ProjectIndex::scan(self.root.as_deref());
         if let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str)
-            && let Some(text) = self.documents.get(uri).cloned()
+            && let Some(document) = self.documents.get(uri)
         {
-            self.publish_diagnostics(uri, &text, output)?;
+            self.publish_diagnostics(uri, &document.text, output)?;
         }
         Ok(())
+    }
+
+    fn did_close(&mut self, params: &Value, output: &mut impl Write) -> io::Result<()> {
+        if let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str) {
+            self.documents.remove(uri);
+            write_message(
+                output,
+                &json!({
+                    "jsonrpc":"2.0",
+                    "method":"textDocument/publishDiagnostics",
+                    "params":{"uri":uri,"diagnostics":[]}
+                }),
+            )?;
+        }
+        Ok(())
+    }
+
+    fn did_change_watched_files(&mut self) {
+        self.project = ProjectIndex::scan(self.root.as_deref());
     }
 
     fn publish_diagnostics(
@@ -257,9 +313,10 @@ impl Server {
         let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str) else {
             return json!([]);
         };
-        let Some(source) = self.documents.get(uri) else {
+        let Some(document) = self.documents.get(uri) else {
             return json!([]);
         };
+        let source = &document.text;
         let parsed = parse(source);
         let mut symbols = Vec::new();
         for item in parsed.program.items {
@@ -297,7 +354,7 @@ impl Server {
 
     fn source_and_offset(&self, params: &Value) -> Option<(String, usize)> {
         let uri = params.pointer("/textDocument/uri")?.as_str()?;
-        let source = self.documents.get(uri)?.clone();
+        let source = self.documents.get(uri)?.text.clone();
         let line = usize::try_from(params.pointer("/position/line")?.as_u64()?).ok()?;
         let character = usize::try_from(params.pointer("/position/character")?.as_u64()?).ok()?;
         let offset = offset_at(&source, line, character);
