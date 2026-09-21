@@ -33,39 +33,39 @@ language model.
 These are defects or sources of actively misleading tooling.
 
 - [ ] Make language keyword knowledge authoritative instead of manually copied.
-  - [ ] Add current `for` and `in` support to completion/hover immediately.
+  - [x] Add current `for` and `in` support to completion/hover immediately.
   - [ ] Remove or generate the hard-coded keyword list once the language crate
         exposes authoritative keyword metadata.
   - [ ] Add a test that fails when parser keywords and tooling keywords drift.
 - [ ] Bring the VS Code TextMate grammar up to the current Decay language.
-  - [ ] Highlight `for` and `in`.
+  - [x] Highlight `for` and `in`.
   - [ ] Audit every implemented keyword, literal, declaration, primitive type,
         attribute, and operator against `decay/LANGUAGE.md`.
   - [ ] Stop hard-coding Sindri host globals in the grammar where generated
         semantic highlighting can replace them.
 - [ ] Correct LSP document synchronization.
-  - [ ] Advertise explicit `TextDocumentSyncOptions` rather than numeric
+  - [x] Advertise explicit `TextDocumentSyncOptions` rather than numeric
         `textDocumentSync: 1`.
-  - [ ] Request save notifications if save remains part of refresh behavior.
-  - [ ] Implement `textDocument/didClose`.
-  - [ ] Remove closed documents from memory.
-  - [ ] Clear diagnostics when a document closes where the client requires it.
-  - [ ] Track document versions and reject/ignore stale changes.
+  - [x] Request save notifications if save remains part of refresh behavior.
+  - [x] Implement `textDocument/didClose`.
+  - [x] Remove closed documents from memory.
+  - [x] Clear diagnostics when a document closes where the client requires it.
+  - [x] Track document versions and reject/ignore stale changes.
 - [ ] Make workspace/project refresh real.
-  - [ ] Implement `workspace/didChangeWatchedFiles` or remove the VS Code
+  - [x] Implement `workspace/didChangeWatchedFiles` or remove the VS Code
         watcher until the server consumes it.
-  - [ ] Refresh scene/entity/audio data when relevant files change, not only
+  - [x] Refresh scene/entity/audio data when relevant files change, not only
         when an unrelated Decay document is saved.
-  - [ ] Handle created, changed, and deleted project files.
-  - [ ] Avoid a full recursive project scan on every ordinary script save.
+  - [x] Handle created, changed, and deleted project files.
+  - [x] Avoid a full recursive project scan on every ordinary script save.
   - [ ] Keep project-index results deterministic.
 - [ ] Fix completion insertion for functions.
-  - [ ] Generate zero placeholders for zero-argument functions.
-  - [ ] Generate one placeholder per required parameter.
-  - [ ] Preserve useful signature/detail text.
+  - [x] Generate zero placeholders for zero-argument functions.
+  - [x] Generate one placeholder per required parameter.
+  - [x] Preserve useful signature/detail text.
   - [ ] Test host and user-defined functions with 0, 1, and multiple arguments.
 - [ ] Audit LSP position handling against the protocol's negotiated encoding.
-  - [ ] Prove non-ASCII text before the cursor maps to the correct Decay byte
+  - [x] Prove non-ASCII text before the cursor maps to the correct Decay byte
         offset and diagnostic range.
   - [ ] Either negotiate UTF-8 positions or correctly translate the client's
         UTF-16 positions.
