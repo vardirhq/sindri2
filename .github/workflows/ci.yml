@@ -58,6 +58,8 @@ jobs:
             exit "$status"
           fi
           rm -f "$output"
+      - name: Test agent preflight discovery
+        run: python3 -m unittest scripts/test_preflight.py
       - name: Check file sizes with structured diagnostics
         shell: bash
         run: |

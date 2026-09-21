@@ -298,7 +298,7 @@ Decay syntax and host APIs.
       guarantees.
 - [ ] Add machine-readable symbol/project queries only where they reuse the
       semantic/project model rather than inventing an agent-only API.
-- [ ] Document the shortest preflight workflow in `docs/decay-agent-guide.md`.
+- [x] Document the shortest preflight workflow in `docs/decay-agent-guide.md`.
 - [ ] Make diagnostics identify exact file/span/code/fix where known.
 - [ ] Keep human output concise; machines should consume structured output.
 - [ ] Add fixtures specifically for syntax patterns agents have repeatedly

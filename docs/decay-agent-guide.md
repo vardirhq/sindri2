@@ -9,7 +9,10 @@ or the Sindri host surface. The full language and host contracts remain in
 ## Before writing code
 
 1. Read the existing script, its scene or prefab, and the host API entry it uses.
-2. Compile the changed scripts against Sindri's real typed environment:
+2. For repository work, run `scripts/preflight.py`; it automatically includes every
+   changed `.decay` file in the typed batch check alongside applicable Rust gates.
+   To run only the Decay checker, compile the changed scripts against Sindri's real
+   typed environment:
 
    ```bash
    cargo run --quiet --package decay-lsp -- --check path/to/changed.decay
