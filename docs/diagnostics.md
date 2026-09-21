@@ -73,7 +73,8 @@ scraping its human output.
 development. It diffs the merge base with `origin/main` through the current
 working tree, including untracked files, maps changed files to Cargo workspace packages, then runs global
 rustfmt/file-size checks, typed checking for changed `.decay` scripts, and
-`cargo check` plus tests for affected packages. Root workspace/toolchain changes
+`cargo check` plus tests for affected packages. Changes inside the separate Decay
+workspace run its fmt, Clippy, and test gates too. Root workspace/toolchain changes
 expand Rust checking to the whole workspace. `--list` exposes the discovered
 scope without executing it.
 
