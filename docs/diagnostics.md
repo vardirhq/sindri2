@@ -84,3 +84,10 @@ cargo run --quiet --package decay-lsp -- --check --json path/to/script.decay
 It emits one JSON object with `schemaVersion: 1`, overall success, file/error/reminder counts, and a `diagnostics` array. Each diagnostic carries `path`, one-based `line` and `column`, `severity`, stable category `code`, `source`, `message`, and the original Decay byte `span`. The command keeps the same exit contract as human `--check`: compiler errors fail; runtime-contract reminders do not.
 
 The LSP and both checker renderers now adapt from the same structured diagnostic model inside `decay-lsp`. A later slice will move/strengthen the neutral diagnostic contract at the language-tooling seam and feed it into `sindri-diagnostics` and CI annotations without parsing prose.
+
+
+### Decay CI annotations
+
+The Decay preflight now runs the checker in JSON mode and pipes that structured report into `sindri-diagnostics decay --github`. Syntax and semantic errors, plus runtime-contract reminders, therefore become GitHub file annotations with their Decay diagnostic code instead of requiring a reader to scrape the checker log.
+
+The workflow captures the checker exit status before rendering diagnostics and exits with that original status. The diagnostics renderer is deliberately non-authoritative in CI, so a renderer failure cannot turn a rejected Decay preflight green.
