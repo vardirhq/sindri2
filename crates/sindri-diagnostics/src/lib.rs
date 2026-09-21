@@ -5,8 +5,8 @@
 
 mod cargo;
 mod ci;
-mod diagnostic;
 mod decay;
+mod diagnostic;
 mod format;
 mod github;
 mod report;
