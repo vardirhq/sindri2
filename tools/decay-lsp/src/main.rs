@@ -1,4 +1,5 @@
 mod check;
+mod diagnostics;
 mod project;
 mod protocol;
 mod support;
@@ -9,8 +10,9 @@ use std::{
     path::PathBuf,
 };
 
-use decay_semantic::{DiagnosticPhase, Environment, ExternalSymbol};
+use decay_semantic::{Environment, ExternalSymbol};
 use decay_syntax::{Item, Member, parse};
+use diagnostics::StructuredDiagnostic;
 use project::ProjectIndex;
 use protocol::{read_message, write_message};
 use serde_json::{Value, json};
@@ -207,18 +209,8 @@ impl Server {
         let diagnostics = analysis
             .diagnostics
             .into_iter()
-            .map(|diagnostic| {
-                let source_name = match diagnostic.phase {
-                    DiagnosticPhase::Syntax => "decay-syntax",
-                    DiagnosticPhase::Semantic => "decay-semantic",
-                };
-                json!({
-                    "range": span_range(source, diagnostic.span),
-                    "severity": 1,
-                    "source": source_name,
-                    "message": diagnostic.message
-                })
-            })
+            .map(StructuredDiagnostic::from_compiler)
+            .map(|diagnostic| diagnostic.lsp_json(source))
             .collect::<Vec<_>>();
         write_message(
             output,
@@ -441,13 +433,23 @@ fn main() -> io::Result<()> {
     let mut arguments = std::env::args().skip(1);
     match arguments.next().as_deref() {
         Some("--check") => {
-            let paths = arguments.map(PathBuf::from).collect::<Vec<_>>();
+            let mut json_output = false;
+            let paths = arguments
+                .filter_map(|argument| {
+                    if argument == "--json" {
+                        json_output = true;
+                        None
+                    } else {
+                        Some(PathBuf::from(argument))
+                    }
+                })
+                .collect::<Vec<_>>();
             let paths = if paths.is_empty() {
                 vec![PathBuf::from(".")]
             } else {
                 paths
             };
-            if !check::run(&paths)? {
+            if !check::run(&paths, json_output)? {
                 std::process::exit(1);
             }
             Ok(())
@@ -455,7 +457,7 @@ fn main() -> io::Result<()> {
         Some(argument) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!(
-                "unknown argument {argument:?}; usage: decay-lsp [--check <file-or-directory> ...]"
+                "unknown argument {argument:?}; usage: decay-lsp [--check [--json] <file-or-directory> ...]"
             ),
         )),
         None => run_server(),
