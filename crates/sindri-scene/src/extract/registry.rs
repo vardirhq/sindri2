@@ -24,9 +24,9 @@ use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
     CameraBehaviorComponent, CameraComponent, GridNavigationComponent, GridOccupantComponent,
-    GridPlacementComponent, MeshComponent, ShapeComponent, SpriteComponent, TileGridComponent, TileVolumeComponent,
-    TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind,
-    UiTextComponent, VoxelWorldComponent,
+    GridPlacementComponent, MeshComponent, ShapeComponent, SpriteComponent, TileGridComponent,
+    TileVolumeComponent, TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent,
+    UiShapeKind, UiTextComponent, VoxelWorldComponent,
 };
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
