@@ -78,24 +78,7 @@ impl BakedChunk {
     /// wrong in the other direction takes bites out of the world as the camera
     /// turns, which is far worse than drawing a little too much.
     fn in_view(&self, view_projection: Mat4) -> bool {
-        let corners = [
-            Vec3::new(self.min.x, self.min.y, self.min.z),
-            Vec3::new(self.max.x, self.min.y, self.min.z),
-            Vec3::new(self.min.x, self.max.y, self.min.z),
-            Vec3::new(self.max.x, self.max.y, self.min.z),
-            Vec3::new(self.min.x, self.min.y, self.max.z),
-            Vec3::new(self.max.x, self.min.y, self.max.z),
-            Vec3::new(self.min.x, self.max.y, self.max.z),
-            Vec3::new(self.max.x, self.max.y, self.max.z),
-        ];
-        let clip = corners.map(|corner| view_projection * corner.extend(1.0));
-        // Six planes, each rejected only if every corner is beyond it.
-        !(clip.iter().all(|point| point.x < -point.w)
-            || clip.iter().all(|point| point.x > point.w)
-            || clip.iter().all(|point| point.y < -point.w)
-            || clip.iter().all(|point| point.y > point.w)
-            || clip.iter().all(|point| point.z < 0.0)
-            || clip.iter().all(|point| point.z > point.w))
+        super::frustum::aabb_in_view(self.min, self.max, view_projection)
     }
 }
 

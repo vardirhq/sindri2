@@ -35,6 +35,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Cached voxel sections outside the current camera frustum are no longer
+  submitted for drawing or uploaded merely because they remain resident. Their
+  compiled CPU geometry stays cached and becomes drawable when the camera can
+  see it again.
 - `sindri-scene` now bridges semantic block-mesh output into deterministic
   texture/atlas batches and revisioned persistent renderer commands. Stable GPU
   identities survive remeshing, superseded worker results are discarded before

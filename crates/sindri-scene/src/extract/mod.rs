@@ -7,6 +7,7 @@
 
 mod camera;
 mod effects;
+mod frustum;
 mod meanings;
 mod mesh;
 pub(crate) mod registry;

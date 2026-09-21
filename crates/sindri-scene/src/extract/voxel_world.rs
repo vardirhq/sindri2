@@ -19,6 +19,7 @@ use crate::{
 };
 
 use super::camera::ResolvedCameras;
+use super::frustum::aabb_in_view;
 use super::{SceneExtractError, SceneExtractor, transform_matrix};
 
 const MAX_RESIDENCY_RADIUS: u32 = 8;
@@ -187,6 +188,7 @@ impl ResidentVoxelWorld {
         &mut self,
         focus: SectionCoord,
         textures: &TextureBindings,
+        local_view_projection: glam::Mat4,
     ) -> Result<Vec<FrameCommand>, SceneExtractError> {
         let resolved = resolve_materials(&self.definition.materials, textures)?;
         let delta = self.world.move_focus(focus);
@@ -208,10 +210,14 @@ impl ResidentVoxelWorld {
 
         let mut commands = self.render.take_release_commands();
         for section in &self.resident {
-            commands.extend(
-                self.render
-                    .draw_commands(SectionMeshKey::new(*section, MeshingProfile::Block)),
-            );
+            let key = SectionMeshKey::new(*section, MeshingProfile::Block);
+            if self
+                .render
+                .bounds(key)
+                .is_some_and(|bounds| section_in_view(bounds, local_view_projection))
+            {
+                commands.extend(self.render.draw_commands(key));
+            }
         }
         Ok(commands)
     }
@@ -280,7 +286,7 @@ impl SceneExtractor {
             let mut commands = runtimes
                 .get_mut(&entity)
                 .expect("the voxel runtime was inserted above")
-                .commands(focus, textures)?;
+                .commands(focus, textures, camera.view_projection * root)?;
             for command in &mut commands {
                 if let FrameCommand::CachedTexturedMesh { model, .. } = command {
                     *model = root * *model;
@@ -290,6 +296,17 @@ impl SceneExtractor {
         }
         Ok(())
     }
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn section_in_view(bounds: sindri_voxel::SectionBounds, view_projection: glam::Mat4) -> bool {
+    let min = bounds.min;
+    let max = bounds.max_exclusive;
+    aabb_in_view(
+        glam::Vec3::new(min.x as f32, min.y as f32, min.z as f32),
+        glam::Vec3::new(max.x as f32, max.y as f32, max.z as f32),
+        view_projection,
+    )
 }
 
 fn push_commands(

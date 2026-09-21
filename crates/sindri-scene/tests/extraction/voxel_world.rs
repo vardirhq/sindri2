@@ -1,14 +1,18 @@
 //! Engine voxel worlds are extracted through the same scene path as games and
 //! the editor, while their compiled sections persist between frames.
 
+use glam::Mat4;
 use sindri_render::{FrameCommand, TextureId};
-use sindri_scene::{CameraView, SceneExtractor, TextureBindings};
+use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings, ViewCamera};
 
 use crate::support::{VIEWPORT, scene, world_from};
 
 fn voxel_world() -> sindri_core::World {
-    world_from(&scene(
-        r#",
+    voxel_world_with_radius(0)
+}
+
+fn voxel_world_with_radius(render_radius: u32) -> sindri_core::World {
+    let entity = r#",
         { "id": "terrain", "transform_3d": {}, "components": {
           "sindri.voxel_world": {
             "generator": {
@@ -25,11 +29,44 @@ fn voxel_world() -> sindri_core::World {
               { "voxel": 3, "top": "stone.png", "side": "stone.png",
                 "bottom": "stone.png" }
             ],
-            "focus": [0, 0, 0], "render_radius": 0,
+            "focus": [0, 0, 0], "render_radius": __RENDER_RADIUS__,
             "vertical_radius": 0, "layer": 0
           }
-        } }"#,
-    ))
+        } }"#
+        .replace("__RENDER_RADIUS__", &render_radius.to_string());
+    world_from(&scene(&entity))
+}
+
+#[test]
+fn resident_sections_outside_the_camera_frustum_are_not_submitted() {
+    let extractor = SceneExtractor::new().unwrap();
+    let world = voxel_world_with_radius(1);
+    let frame = extractor
+        .extract_animated_with_world_camera(
+            &world,
+            VIEWPORT,
+            ViewCamera {
+                view: Mat4::IDENTITY,
+                view_projection: Mat4::IDENTITY,
+                framed_half_height: 1.0,
+            },
+            &textures(),
+            SceneRuntime::default(),
+        )
+        .expect("the voxel world extracts through the test camera");
+    let submitted = frame
+        .passes()
+        .iter()
+        .filter(|pass| matches!(&pass.command, FrameCommand::CachedTexturedMesh { .. }))
+        .count();
+    assert!(
+        submitted > 0,
+        "sections intersecting the frustum remain visible"
+    );
+    assert!(
+        submitted < 9,
+        "the 3x3 resident window should not all be submitted through a unit clip volume"
+    );
 }
 
 fn textures() -> TextureBindings {
