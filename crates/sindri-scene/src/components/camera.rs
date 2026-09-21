@@ -206,10 +206,7 @@ fn apply_follow(world: &World, follow: Option<CameraFollow>, position: &mut [f32
     let Some(follow) = follow else {
         return;
     };
-    let Some(target) = world
-        .get(follow.target)
-        .and_then(|data| data.transform_3d)
-    else {
+    let Some(target) = world.get(follow.target).and_then(|data| data.transform_3d) else {
         return;
     };
     let desired = [
@@ -253,7 +250,6 @@ fn apply_shake(shake: &mut CameraShake, position: &mut [f32; 3], dt: f32) {
 impl SceneComponent for CameraComponent {
     const TYPE_NAME: &'static str = "sindri.camera";
 }
-
 
 #[cfg(test)]
 mod behavior_tests {
@@ -304,4 +300,3 @@ mod behavior_tests {
         assert!((behavior.shake.trauma - 0.75).abs() < f32::EPSILON);
     }
 }
-
