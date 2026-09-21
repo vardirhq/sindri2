@@ -251,7 +251,7 @@ mod tests {
             return_type: Type::Unit,
         };
         let three = FunctionType {
-            params: vec![Type::Number, Type::Bool, Type::String],
+            params: vec![Type::F32, Type::Bool, Type::String],
             return_type: Type::Unit,
         };
         assert_eq!(function_snippet("tick", &zero), "tick()");
