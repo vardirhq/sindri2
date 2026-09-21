@@ -2,7 +2,9 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 
-use crate::{Diagnostic, DiagnosticCode, DiagnosticReport, DiagnosticSource, Severity, SourceLocation};
+use crate::{
+    Diagnostic, DiagnosticCode, DiagnosticReport, DiagnosticSource, Severity, SourceLocation,
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -55,6 +57,9 @@ impl From<serde_json::Error> for DecayReportError {
 
 /// Convert the versioned Decay checker JSON contract into Sindri's
 /// tool-neutral diagnostic report.
+///
+/// # Errors
+/// Returns an error when the input is not valid JSON or uses an unsupported schema version.
 pub fn parse_decay_report(input: &str) -> Result<DiagnosticReport, DecayReportError> {
     let report: DecayReport = serde_json::from_str(input)?;
     if report.schema_version != 1 {
