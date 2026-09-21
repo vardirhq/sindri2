@@ -1,0 +1,60 @@
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+
+/// Stable severity shared by every Sindri diagnostic producer.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Severity {
+    Error,
+    Warning,
+    Note,
+    Help,
+}
+
+/// Broad subsystem that raised a diagnostic.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DiagnosticSource {
+    Rust,
+    Decay,
+    Asset,
+    Scene,
+    Project,
+    Build,
+    Other(String),
+}
+
+/// Stable machine-readable identifier, for example `RUST_E0308`.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(transparent)]
+pub struct DiagnosticCode(pub String);
+
+/// Source range attached to a diagnostic when the producer can identify one.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct SourceLocation {
+    pub path: PathBuf,
+    pub line: u32,
+    pub column: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_line: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_column: Option<u32>,
+}
+
+/// One actionable problem, independent of how it will be displayed.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct Diagnostic {
+    pub severity: Severity,
+    pub source: DiagnosticSource,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<DiagnosticCode>,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub location: Option<SourceLocation>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub suggestion: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rendered: Option<String>,
+}
