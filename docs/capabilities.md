@@ -450,10 +450,13 @@ a deterministic layered generator, per-face voxel material textures, bounded
 horizontal/vertical residency, and a section focus. The same scene path renders
 in games and in the editor Scene view. Voxel Lab now uses that component rather
 than a tile volume, while its browser route exposes the persistent-cache and
-settled-remesh counters. This first bridge supports opaque block batches;
-cutout/transparent pipelines, frustum culling, editor voxel picking/painting,
-and camera-driven scene residency remain. Causeway has not migrated to this path
-yet, so the proof is still narrower than a production game migration.
+settled-remesh counters. Cached section bounds are tested conservatively against
+the current camera after the voxel world's entity transform, so offscreen
+resident sections retain their CPU cache without submitting draws or consuming
+their pending GPU upload. This first bridge supports opaque block batches;
+cutout/transparent pipelines, editor voxel picking/painting, and camera-driven
+scene residency remain. Causeway has not migrated to this path yet, so the proof
+is still narrower than a production game migration.
 
 ### Hosts and platforms
 
