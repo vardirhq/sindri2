@@ -161,12 +161,15 @@ pub fn update_camera_behaviors(world: &mut World, dt: f32) {
     if !dt.is_finite() || dt <= 0.0 {
         return;
     }
-    let cameras: Vec<_> = world.entities().filter_map(|(entity, data)| {
-        let behavior = data.components.get(CameraBehaviorComponent::TYPE_NAME)?;
-        serde_json::from_value::<CameraBehaviorComponent>(behavior.clone())
-            .ok()
-            .map(|behavior| (entity, behavior))
-    }).collect();
+    let cameras: Vec<_> = world
+        .entities()
+        .filter_map(|(entity, data)| {
+            let behavior = data.components.get(CameraBehaviorComponent::TYPE_NAME)?;
+            serde_json::from_value::<CameraBehaviorComponent>(behavior.clone())
+                .ok()
+                .map(|behavior| (entity, behavior))
+        })
+        .collect();
 
     for (entity, mut behavior) in cameras {
         let Some(current) = world.get(entity).and_then(|data| data.transform_3d) else {
@@ -210,7 +213,10 @@ pub fn update_camera_behaviors(world: &mut World, dt: f32) {
         behavior.shake.trauma = (trauma - behavior.shake.decay.max(0.0) * dt).max(0.0);
 
         if let Some(data) = world.get_mut(entity) {
-            data.transform_3d = Some(Transform3D { position, ..current });
+            data.transform_3d = Some(Transform3D {
+                position,
+                ..current
+            });
             if let Ok(value) = serde_json::to_value(behavior) {
                 data.components
                     .insert(CameraBehaviorComponent::TYPE_NAME.into(), value);
@@ -247,7 +253,10 @@ mod behavior_tests {
         }));
         let camera = world.spawn(camera);
         update_camera_behaviors(&mut world, 1.0);
-        assert_eq!(world.get(camera).unwrap().transform_3d.unwrap().position[0], 4.0);
+        assert_eq!(
+            world.get(camera).unwrap().transform_3d.unwrap().position[0],
+            4.0
+        );
     }
 
     #[test]
@@ -261,9 +270,9 @@ mod behavior_tests {
         update_camera_behaviors(&mut world, 0.25);
         let data = world.get(camera).unwrap();
         assert_ne!(data.transform_3d.unwrap().position[0], 0.0);
-        let behavior: CameraBehaviorComponent = serde_json::from_value(
-            data.components[CameraBehaviorComponent::TYPE_NAME].clone()
-        ).unwrap();
+        let behavior: CameraBehaviorComponent =
+            serde_json::from_value(data.components[CameraBehaviorComponent::TYPE_NAME].clone())
+                .unwrap();
         assert_eq!(behavior.shake.trauma, 0.75);
     }
 }
