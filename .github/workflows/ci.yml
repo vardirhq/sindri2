@@ -93,7 +93,40 @@ jobs:
             exit 0
           fi
 
-          cargo run --quiet --package decay-lsp -- --check "${scripts[@]}"
+          output="$(mktemp)"
+          set +e
+          cargo run --quiet --package decay-lsp -- --check "${scripts[@]}" >"$output" 2>&1
+          status=$?
+          set -e
+
+          cat "$output"
+          if [[ $status -ne 0 ]]; then
+            {
+              echo "## Decay preflight failed"
+              echo
+              echo "The typed Decay checker rejected the changed scripts:"
+              echo
+              for script in "${scripts[@]}"; do
+                echo "- `$script`"
+              done
+              echo
+              echo "### Checker output"
+              echo
+              echo '~~~text'
+              cat "$output"
+              echo '~~~'
+              echo
+              echo "Run locally:"
+              echo
+              echo '~~~bash'
+              printf 'cargo run --quiet --package decay-lsp -- --check'
+              printf ' %q' "${scripts[@]}"
+              echo
+              echo '~~~'
+            } >>"$GITHUB_STEP_SUMMARY"
+          fi
+          rm -f "$output"
+          exit "$status"
 
   # The isometric baker is a Node tool with no dependencies, so this is the
   # whole of its build: run its tests, then re-bake its fixture and check that

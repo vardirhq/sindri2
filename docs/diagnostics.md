@@ -47,6 +47,16 @@ file and writes a concise step summary while preserving rustfmt's original exit
 status. This is the first live consumer of the shared diagnostic model; the
 producer remains independent of GitHub.
 
+## Decay preflight
+
+The Decay CI gate now preserves the typed checker's full output and, when a
+changed script fails, mirrors that output into the GitHub step summary together
+with the exact changed-script set and a reproducible local command. This keeps
+the checker authoritative while making its failure visible without digging
+through the complete job log. A later slice should expose structured Decay
+diagnostics directly from the checker so CI can add source annotations without
+scraping its human output.
+
 ## Next integrations
 
 The first crate establishes the contract and Cargo/Clippy adapter without
@@ -55,7 +65,7 @@ slices should add:
 
 1. extend the runner beyond the now-integrated rustfmt path so repository checks can emit one summary;
 2. file-size adapter and richer CI failure fingerprint extraction;
-3. Decay diagnostics raised from the typed checker rather than parsed from prose;
+3. Decay diagnostics raised directly from the typed checker rather than the current CI summary of checker prose;
 4. Cargo/Clippy GitHub summary and annotation emission;
 5. editor Problems-panel consumption once the editor work is free to move.
 
