@@ -46,8 +46,7 @@ The CLI exposes the same extractor as `sindri-diagnostics fingerprint` for log
 collectors and workflow aggregation. When a producer already has a
 `DiagnosticReport`, `fingerprint_report` instead derives identity directly from
 the diagnostic source, stable code, file, and line. `report-check-result` exposes
-that path to workflows, avoiding the rather silly cycle of structuring an error,
-rendering it to prose, and then asking another parser what the prose meant.
+that path to workflows, so structured producers do not need to render an error to prose and then parse that prose again.
 
 `correlate_checks` groups check failures by a caller-supplied failure
 fingerprint. The first manifestation is primary, later checks with the same
@@ -104,6 +103,40 @@ Preflight deliberately does not guess WASM, render, browser, or dependency
 impact. Those checks remain explicit requirements in `AGENTS.md`; pretending a
 cheap heuristic proves a platform is exactly how automation becomes decorative.
 
+## Command reference
+
+Run the cheap changed-scope preflight before pushing ordinary changes:
+
+```bash
+python3 scripts/preflight.py
+python3 scripts/preflight.py --list
+```
+
+The diagnostics binary is primarily an adapter and renderer used by CI. Each
+subcommand reads its producer format from standard input, which keeps producers
+independent of GitHub Actions and lets the same data feed terminal, JSON, or
+annotation consumers.
+
+| Command | Input | Purpose |
+| --- | --- | --- |
+| `rustfmt` | `cargo fmt --all --check` output | Distinguish formatting diffs from Rust parse errors and report affected files. |
+| `file-size` | `scripts/check-file-size.py` output | Convert line-cap failures into `FILE_SIZE_LIMIT` diagnostics. |
+| `cargo` | Cargo/Clippy `--message-format=json` stream | Preserve compiler codes, primary spans, notes, and suggestions. |
+| `decay` | `decay-lsp --check --json` report | Adapt typed Decay diagnostics without scraping human prose. |
+| `fingerprint` | Unstructured failure log | Derive a compact failure identity when no structured report exists. |
+| `report-check-result` | Check name followed by a `DiagnosticReport` JSON document | Produce a serialized CI check result directly from structured diagnostics. |
+| `correlate` | JSON array of serialized check results | Classify primary, downstream, and independent failures and render the CI summary. |
+
+Renderers that support `--github` emit workflow annotations. Structured
+renderers also support `--json` where CI needs the common report rather than
+human output. The producer's exit status remains authoritative: rendering a
+diagnostic must never turn a failed compiler, checker, or formatter invocation
+into a successful gate.
+
+For exact workflow composition, inspect `.github/workflows/ci.yml`. For the
+required local and CI validation matrix, follow `AGENTS.md`; preflight is a
+cheap first gate, not a replacement for platform-specific checks.
+
 ## Foundation status
 
 The CI diagnostics foundation is complete enough to stop growing as a separate
@@ -129,7 +162,7 @@ cargo run --quiet --package decay-lsp -- --check --json path/to/script.decay
 
 It emits one JSON object with `schemaVersion: 1`, overall success, file/error/reminder counts, and a `diagnostics` array. Each diagnostic carries `path`, one-based `line` and `column`, `severity`, stable category `code`, `source`, `message`, and the original Decay byte `span`. The command keeps the same exit contract as human `--check`: compiler errors fail; runtime-contract reminders do not.
 
-The LSP and both checker renderers now adapt from the same structured diagnostic model inside `decay-lsp`. A later slice will move/strengthen the neutral diagnostic contract at the language-tooling seam and feed it into `sindri-diagnostics` and CI annotations without parsing prose.
+The LSP and both checker renderers adapt from the same structured diagnostic model inside `decay-lsp`. CI passes the checker JSON through `sindri-diagnostics decay`, preserving the language tool as the authority while sharing Sindri's annotation and fingerprinting pipeline.
 
 
 ### Decay CI annotations
