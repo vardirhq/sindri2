@@ -5,7 +5,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use decay_semantic::DiagnosticPhase;
+use serde_json::json;
+
+use crate::diagnostics::StructuredDiagnostic;
 
 const SKIPPED_DIRECTORIES: &[&str] = &[".git", "node_modules", "target"];
 
@@ -15,7 +17,7 @@ struct ContractReminder {
     message: &'static str,
 }
 
-pub(crate) fn run(paths: &[PathBuf]) -> io::Result<bool> {
+pub(crate) fn run(paths: &[PathBuf], json_output: bool) -> io::Result<bool> {
     let mut files = BTreeSet::new();
     for path in paths {
         collect_decay_files(path, &mut files)?;
@@ -30,40 +32,57 @@ pub(crate) fn run(paths: &[PathBuf]) -> io::Result<bool> {
     let environment = sindri_decay::environment();
     let mut errors = 0;
     let mut reminders = 0;
+    let mut output_diagnostics = Vec::new();
 
     for path in &files {
         let source = fs::read_to_string(path)?;
         let analysis = decay_semantic::analyze_with_environment(&source, &environment);
         for diagnostic in analysis.diagnostics {
-            let phase = match diagnostic.phase {
-                DiagnosticPhase::Syntax => "syntax",
-                DiagnosticPhase::Semantic => "semantic",
-            };
+            let diagnostic = StructuredDiagnostic::from_compiler(diagnostic);
             let (line, column) = line_column(&source, diagnostic.span.start);
-            eprintln!(
-                "{}:{line}:{column}: error[decay-{phase}]: {}",
-                path.display(),
-                diagnostic.message
-            );
+            if !json_output {
+                eprintln!(
+                    "{}",
+                    diagnostic.human(&path.display().to_string(), line, column)
+                );
+            }
+            output_diagnostics.push(diagnostic.json(&path.display().to_string(), line, column));
             errors += 1;
         }
 
         for reminder in contract_reminders(&source) {
-            let (line, column) = line_column(&source, reminder.offset);
-            eprintln!(
-                "{}:{line}:{column}: warning[{}]: {}",
-                path.display(),
-                reminder.code,
-                reminder.message
-            );
+            let diagnostic =
+                StructuredDiagnostic::reminder(reminder.code, reminder.message, reminder.offset);
+            let (line, column) = line_column(&source, diagnostic.span.start);
+            if !json_output {
+                eprintln!(
+                    "{}",
+                    diagnostic.human(&path.display().to_string(), line, column)
+                );
+            }
+            output_diagnostics.push(diagnostic.json(&path.display().to_string(), line, column));
             reminders += 1;
         }
     }
 
-    eprintln!(
-        "Decay preflight: {} file(s), {errors} error(s), {reminders} runtime-contract reminder(s)",
-        files.len()
-    );
+    if json_output {
+        println!(
+            "{}",
+            json!({
+                "schemaVersion": 1,
+                "success": errors == 0,
+                "filesChecked": files.len(),
+                "errorCount": errors,
+                "reminderCount": reminders,
+                "diagnostics": output_diagnostics
+            })
+        );
+    } else {
+        eprintln!(
+            "Decay preflight: {} file(s), {errors} error(s), {reminders} runtime-contract reminder(s)",
+            files.len()
+        );
+    }
     Ok(errors == 0)
 }
 
