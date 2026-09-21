@@ -16,12 +16,22 @@ pub enum Severity {
 #[serde(rename_all = "snake_case")]
 pub enum DiagnosticSource {
     Rust,
+    Test,
     Decay,
     Asset,
     Scene,
     Project,
     Build,
     Other(String),
+}
+
+/// How a problem relates to the root cause of a failed check.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DiagnosticRelation {
+    Primary,
+    Downstream,
+    Independent,
 }
 
 /// Stable machine-readable identifier, for example `RUST_E0308`.
@@ -57,4 +67,6 @@ pub struct Diagnostic {
     pub suggestion: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rendered: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub relation: Option<DiagnosticRelation>,
 }
