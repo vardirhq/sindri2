@@ -107,7 +107,7 @@ fn convert_message(message: RustMessage) -> Result<Diagnostic, CargoMessageError
         location,
         notes,
         suggestion,
-        rendered: message.rendered,
+        rendered: message.rendered,\n        relation: None,
     })
 }
 
