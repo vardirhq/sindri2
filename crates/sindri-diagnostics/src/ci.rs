@@ -1,14 +1,17 @@
 use crate::{Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity};
+use serde::Deserialize;
 use std::collections::BTreeMap;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
 pub enum CheckOutcome {
     Success,
     Failure,
     Skipped,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckResult {
     pub name: String,
     pub outcome: CheckOutcome,
