@@ -37,12 +37,15 @@ jobs:
   quick:
     name: Format and file sizes
     runs-on: ubuntu-latest
+    outputs:
+      failure: ${{ steps.rustfmt.outputs.failure || steps.file_size.outputs.failure }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: rustfmt
       - name: Check formatting with structured diagnostics
+        id: rustfmt
         shell: bash
         run: |
           output="$(mktemp)"
@@ -54,6 +57,14 @@ jobs:
             cat "$output"
             cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
               rustfmt --github <"$output" || true
+            {
+              echo "Format and file sizes"
+              cat "$output"
+            } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              check-result >failure.json || true
+            if [[ -s failure.json ]]; then
+              echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
+            fi
             rm -f "$output"
             exit "$status"
           fi
@@ -61,6 +72,7 @@ jobs:
       - name: Test agent preflight discovery
         run: python3 -m unittest scripts/test_preflight.py
       - name: Check file sizes with structured diagnostics
+        id: file_size
         shell: bash
         run: |
           output="$(mktemp)"
@@ -71,6 +83,14 @@ jobs:
           cat "$output"
           if [[ $status -ne 0 ]]; then
             cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- file-size --github <"$output" || true
+            {
+              echo "Format and file sizes"
+              cat "$output"
+            } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              check-result >failure.json || true
+            if [[ -s failure.json ]]; then
+              echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
+            fi
           fi
           rm -f "$output"
           exit "$status"
@@ -81,6 +101,8 @@ jobs:
   decay_preflight:
     name: Decay project preflight
     runs-on: ubuntu-latest
+    outputs:
+      failure: ${{ steps.decay.outputs.failure }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -90,6 +112,7 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Check changed Decay scripts
+        id: decay
         shell: bash
         run: |
           mapfile -t scripts < <(
@@ -116,6 +139,14 @@ jobs:
           cat "$output"
           cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- decay --github <"$output" || true
           if [[ $status -ne 0 ]]; then
+            {
+              echo "Decay project preflight"
+              cat "$output"
+            } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              check-result >failure.json || true
+            if [[ -s failure.json ]]; then
+              echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
+            fi
             {
               echo
               echo "Run locally:"
@@ -495,21 +526,27 @@ jobs:
 
   diagnostics_summary:
     name: CI failure summary
-    if: ${{ always() && needs.clippy.result == 'failure' }}
-    needs: [clippy]
+    if: ${{ always() && (needs.quick.result == 'failure' || needs.decay_preflight.result == 'failure' || needs.clippy.result == 'failure') }}
+    needs: [quick, decay_preflight, clippy]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.95.0
       - name: Correlate structured failures
         env:
+          QUICK_FAILURE: ${{ needs.quick.outputs.failure }}
+          DECAY_FAILURE: ${{ needs.decay_preflight.outputs.failure }}
           CLIPPY_FAILURE: ${{ needs.clippy.outputs.failure }}
         shell: bash
         run: |
-          if [[ -z "$CLIPPY_FAILURE" ]]; then
-            echo "Clippy failed before a structured fingerprint could be emitted." >>"$GITHUB_STEP_SUMMARY"
+          failures=()
+          [[ -n "$QUICK_FAILURE" ]] && failures+=("$QUICK_FAILURE")
+          [[ -n "$DECAY_FAILURE" ]] && failures+=("$DECAY_FAILURE")
+          [[ -n "$CLIPPY_FAILURE" ]] && failures+=("$CLIPPY_FAILURE")
+          if [[ ${#failures[@]} -eq 0 ]]; then
+            echo "A watched CI job failed before a structured fingerprint could be emitted." >>"$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          printf '[%s]\n' "$CLIPPY_FAILURE" | \
+          printf '%s\n' "${failures[@]}" | jq -s '.' | \
             cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- correlate \
             >>"$GITHUB_STEP_SUMMARY"
