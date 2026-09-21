@@ -50,7 +50,10 @@ fingerprint. The first manifestation is primary, later checks with the same
 fingerprint are downstream, and infrastructure failures stay independent.
 `render_ci_summary` turns those relations into compact Markdown, and the
 `sindri-diagnostics correlate` command accepts a JSON array of check results so
-workflow aggregation does not need to reproduce the correlation rules. This
+workflow aggregation does not need to reproduce the correlation rules. The
+Clippy job now emits a serialized check result on failure and a final
+`CI failure summary` job consumes it. This proves the cross-job transport path;
+additional jobs can join the same contract incrementally. This
 models real failures seen while building this crate, where one Rust compiler
 error failed several jobs while an artifact-finalization 403 was unrelated.
 
@@ -100,7 +103,7 @@ cheap heuristic proves a platform is exactly how automation becomes decorative.
 The shared contract now has live rustfmt, file-size, Decay, and agent-preflight
 consumers. The next useful slices are:
 
-1. collect per-job fingerprints and feed them into the correlation summary;
+1. expand the live correlation transport beyond Clippy to other failure-producing jobs;
 2. extend native Cargo JSON rendering to other compile-heavy CI jobs where it adds value;
 3. finer stable Decay diagnostic codes and syntax-aware runtime reminders;
 4. editor Problems-panel consumption once the editor work is free to move.
