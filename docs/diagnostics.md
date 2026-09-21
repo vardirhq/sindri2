@@ -60,7 +60,7 @@ through the complete job log. A later slice should expose structured Decay
 diagnostics directly from the checker so CI can add source annotations without
 scraping its human output.
 
-## Next integrations
+## Agent preflight\n\n`scripts/preflight.py` is the one-command cheap gate for coding agents and local\ndevelopment. It diffs the merge base with `origin/main` through the current\nworking tree, maps changed files to Cargo workspace packages, then runs global\nrustfmt/file-size checks, typed checking for changed `.decay` scripts, and\n`cargo check` plus tests for affected packages. Root workspace/toolchain changes\nexpand Rust checking to the whole workspace. `--list` exposes the discovered\nscope without executing it.\n\nPreflight deliberately does not guess WASM, render, browser, or dependency\nimpact. Those checks remain explicit requirements in `AGENTS.md`; pretending a\ncheap heuristic proves a platform is exactly how automation becomes decorative.\n\n## Next integrations
 
 The first crate establishes the contract and Cargo/Clippy adapter without
 changing existing CI while PR #339 owns scene/editor/voxel integration. Follow-up
