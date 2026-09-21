@@ -1,4 +1,6 @@
-use crate::{Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticReport, DiagnosticSource, Severity};
+use crate::{
+    Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticReport, DiagnosticSource, Severity,
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt::Write};
 
