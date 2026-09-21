@@ -15,22 +15,22 @@ pub fn parse_rustfmt_diff(input: &str) -> Vec<Diagnostic> {
         .collect();
 
     diagnostics.extend(paths.into_iter().map(|path| Diagnostic {
-            severity: Severity::Error,
-            source: DiagnosticSource::Build,
-            code: Some(DiagnosticCode("RUSTFMT_REQUIRED".into())),
-            message: format!("{path} requires rustfmt"),
-            location: Some(SourceLocation {
-                path: path.into(),
-                line: 1,
-                column: 1,
-                end_line: None,
-                end_column: None,
-            }),
-            notes: Vec::new(),
-            suggestion: Some("run cargo fmt --all".into()),
-            rendered: None,
-            relation: Some(DiagnosticRelation::Primary),
-        }));
+        severity: Severity::Error,
+        source: DiagnosticSource::Build,
+        code: Some(DiagnosticCode("RUSTFMT_REQUIRED".into())),
+        message: format!("{path} requires rustfmt"),
+        location: Some(SourceLocation {
+            path: path.into(),
+            line: 1,
+            column: 1,
+            end_line: None,
+            end_column: None,
+        }),
+        notes: Vec::new(),
+        suggestion: Some("run cargo fmt --all".into()),
+        rendered: None,
+        relation: Some(DiagnosticRelation::Primary),
+    }));
     diagnostics
 }
 
@@ -47,10 +47,10 @@ fn parse_rust_errors(input: &str) -> Vec<Diagnostic> {
             code: Some(DiagnosticCode("RUST_PARSE_ERROR".into())),
             message: message.to_owned(),
             location: Some(location),
-            notes: Vec::new(),
+        notes: Vec::new(),
             suggestion: None,
-            rendered: None,
-            relation: Some(DiagnosticRelation::Primary),
+        rendered: None,
+        relation: Some(DiagnosticRelation::Primary),
         });
     }
     diagnostics
