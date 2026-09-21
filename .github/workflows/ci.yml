@@ -543,6 +543,8 @@ jobs:
             node scripts/browser/smoke.mjs target/dist/causeway target/render-artifacts/browser-no-device.png
       - name: Upload browser captures
         if: always()
+        id: browser_artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: browser-captures
@@ -560,16 +562,28 @@ jobs:
 
       - name: Capture job failure
         id: failure
-        if: ${{ failure() }}
+        if: ${{ failure() || steps.browser_artifact.outcome == 'failure' }}
         shell: bash
         run: |
-          {
-            echo "Run the engine in a browser"
-            echo "failed: Run the engine in a browser"
-          } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
-            check-result >failure.json || true
+          if [[ "${{ steps.browser_artifact.outcome }}" == "failure" ]]; then
+            {
+              echo "Run the engine in a browser"
+              echo "HTTP 403 while finalizing browser-captures artifact"
+            } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              check-result >failure.json || true
+          else
+            {
+              echo "Run the engine in a browser"
+              echo "failed: Run the engine in a browser"
+            } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              check-result >failure.json || true
+          fi
           if [[ -s failure.json ]]; then
             echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
+          fi
+          if [[ "${{ steps.browser_artifact.outcome }}" == "failure" ]]; then
+            echo "::error::Browser captures were produced, but GitHub rejected artifact finalization with HTTP 403."
+            exit 1
           fi
 
   diagnostics_summary:
