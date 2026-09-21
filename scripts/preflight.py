@@ -36,7 +36,12 @@ def changed_files(root: Path, base: str) -> list[Path]:
         root,
         ["git", "diff", "--name-only", "--diff-filter=ACMRT", merge_base],
     )
-    return [Path(line) for line in output.splitlines() if line]
+    untracked = capture(
+        root, ["git", "ls-files", "--others", "--exclude-standard"]
+    )
+    names = {line for line in output.splitlines() if line}
+    names.update(line for line in untracked.splitlines() if line)
+    return [Path(name) for name in sorted(names)]
 
 
 def workspace_packages(root: Path) -> list[tuple[Path, str]]:
