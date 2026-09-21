@@ -57,11 +57,15 @@ jobs:
             cat "$output"
             cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
               rustfmt --github <"$output" || true
+            report="$(mktemp)"
+            cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              rustfmt --json <"$output" >"$report" || true
             {
               echo "Format and file sizes"
-              cat "$output"
+              cat "$report"
             } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
-              check-result >failure.json || true
+              report-check-result >failure.json || true
+            rm -f "$report"
             if [[ -s failure.json ]]; then
               echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
             fi
@@ -83,11 +87,15 @@ jobs:
           cat "$output"
           if [[ $status -ne 0 ]]; then
             cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- file-size --github <"$output" || true
+            report="$(mktemp)"
+            cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              file-size --json <"$output" >"$report" || true
             {
               echo "Format and file sizes"
-              cat "$output"
+              cat "$report"
             } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
-              check-result >failure.json || true
+              report-check-result >failure.json || true
+            rm -f "$report"
             if [[ -s failure.json ]]; then
               echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
             fi
@@ -139,11 +147,15 @@ jobs:
           cat "$output"
           cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- decay --github <"$output" || true
           if [[ $status -ne 0 ]]; then
+            report="$(mktemp)"
+            cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              decay --json <"$output" >"$report" || true
             {
               echo "Decay project preflight"
-              cat "$output"
+              cat "$report"
             } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
-              check-result >failure.json || true
+              report-check-result >failure.json || true
+            rm -f "$report"
             if [[ -s failure.json ]]; then
               echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
             fi
@@ -252,11 +264,15 @@ jobs:
           if [[ $status -ne 0 ]]; then
             cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
               cargo --github <"$output" || true
+            report="$(mktemp)"
+            cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              cargo --json <"$output" >"$report" || true
             {
               echo "Clippy"
-              cat "$output"
+              cat "$report"
             } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
-              check-result >failure.json || true
+              report-check-result >failure.json || true
+            rm -f "$report"
             if [[ -s failure.json ]]; then
               echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
             fi
