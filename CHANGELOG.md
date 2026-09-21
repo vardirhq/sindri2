@@ -11,6 +11,9 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Changed
 
+- Voxel Lab now uses the editor Scene view's orbit, pan, and zoom interaction
+  model. Touch screens use one finger to orbit and two fingers to pan or pinch,
+  while an unmoved tap still digs at the camera focus.
 - Causeway now materializes deterministic 16×16 terrain chunks around its
   camera instead of generating a complete 160×160 island up front. Its sparse
   navigation work follows loaded ground rather than the declared world bounds,

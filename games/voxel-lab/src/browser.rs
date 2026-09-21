@@ -16,7 +16,10 @@ use sindri_scene::{VoxelRenderError, VoxelTexture};
 use sindri_voxel::{SectionCoord, VoxelCoord, VoxelFace, VoxelId};
 use thiserror::Error;
 
-use crate::{VoxelLabRuntime, VoxelLabStats};
+use crate::{
+    VoxelLabRuntime, VoxelLabStats,
+    camera_control::{CameraControls, LabCamera},
+};
 
 const CAUSEWAY_TOPS: &[u8] = include_bytes!("../../../game/assets/textures/blocks-top.png");
 const CAUSEWAY_SIDES: &[u8] = include_bytes!("../../../game/assets/textures/blocks-side.png");
@@ -47,14 +50,6 @@ enum VoxelLabError {
     FramePlan(#[from] FramePlanError),
 }
 
-#[derive(Clone, Copy)]
-struct TouchPan {
-    id: u64,
-    start: [f32; 2],
-    last: [f32; 2],
-    moved: bool,
-}
-
 struct VoxelLabApp {
     lab: VoxelLabRuntime,
     textures: TextureRegistry,
@@ -65,9 +60,7 @@ struct VoxelLabApp {
     text: TextRenderer,
     glyphs: GlyphRenderer,
     shapes: ShapeRenderer,
-    centre: Vec3,
-    orbit: f32,
-    touch: Option<TouchPan>,
+    camera: CameraControls,
 }
 
 impl DesktopApp for VoxelLabApp {
@@ -76,6 +69,8 @@ impl DesktopApp for VoxelLabApp {
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let mut textures = TextureRegistry::new(context.device(), context.queue());
         let material_textures = load_causeway_atlases(context, &mut textures)?;
+        let mut camera = CameraControls::default();
+        camera.set_viewport_height(context.height());
         Ok(Self {
             lab: VoxelLabRuntime::new(),
             textures,
@@ -86,26 +81,16 @@ impl DesktopApp for VoxelLabApp {
             text: TextRenderer::new(),
             glyphs: GlyphRenderer::new(context.device(), context.format()),
             shapes: ShapeRenderer::new(context.device(), context.format()),
-            centre: Vec3::new(0.0, 3.0, 0.0),
-            orbit: 0.0,
-            touch: None,
+            camera,
         })
     }
 
     fn input(&mut self, event: InputEvent) {
-        match event {
-            InputEvent::KeyPressed(key) => self.key_pressed(key),
-            InputEvent::TouchStarted { id, x, y } if self.touch.is_none() => {
-                self.touch = Some(TouchPan {
-                    id,
-                    start: [x, y],
-                    last: [x, y],
-                    moved: false,
-                });
-            }
-            InputEvent::TouchMoved { id, x, y } => self.touch_moved(id, [x, y]),
-            InputEvent::TouchEnded { id } => self.touch_ended(id),
-            _ => {}
+        if let InputEvent::KeyPressed(key) = event {
+            self.key_pressed(key);
+        }
+        if self.camera.input(event) {
+            self.dig_centre();
         }
     }
 
@@ -114,6 +99,7 @@ impl DesktopApp for VoxelLabApp {
     }
 
     fn resize(&mut self, context: &AppContext<'_>) -> Result<(), Self::Error> {
+        self.camera.set_viewport_height(context.height());
         self.depth
             .resize(context.device(), context.width(), context.height());
         Ok(())
@@ -124,11 +110,13 @@ impl DesktopApp for VoxelLabApp {
         context: &AppContext<'_>,
         view: &wgpu::TextureView,
     ) -> Result<(), Self::Error> {
+        self.camera.set_viewport_height(context.height());
+        let camera_view = self.camera.camera();
         #[allow(clippy::cast_possible_truncation)]
         let focus = VoxelCoord::new(
-            self.centre.x.floor() as i32,
+            camera_view.focus.x.floor() as i32,
             0,
-            self.centre.z.floor() as i32,
+            camera_view.focus.z.floor() as i32,
         )
         .section();
         let material_textures = self.material_textures;
@@ -137,7 +125,7 @@ impl DesktopApp for VoxelLabApp {
         })?;
         update_stats(lab.stats, focus);
 
-        let camera = camera(context, self.centre, self.orbit);
+        let camera = camera(context, camera_view);
         let mut extracted = ExtractedFrame::new(
             Viewport::new(context.width(), context.height()),
             ClearOperations {
@@ -185,49 +173,15 @@ impl DesktopApp for VoxelLabApp {
 
 impl VoxelLabApp {
     fn key_pressed(&mut self, key: Key) {
-        match key {
-            Key::A | Key::ArrowLeft => self.centre.x -= 2.0,
-            Key::D | Key::ArrowRight => self.centre.x += 2.0,
-            Key::W | Key::ArrowUp => self.centre.z -= 2.0,
-            Key::S | Key::ArrowDown => self.centre.z += 2.0,
-            Key::Q => self.orbit -= 0.2,
-            Key::E => self.orbit += 0.2,
-            Key::Space => self.dig_centre(),
-            _ => {}
-        }
-    }
-
-    fn touch_moved(&mut self, id: u64, at: [f32; 2]) {
-        let Some(mut touch) = self.touch.filter(|touch| touch.id == id) else {
-            return;
-        };
-        let delta = [at[0] - touch.last[0], at[1] - touch.last[1]];
-        let from_start = [at[0] - touch.start[0], at[1] - touch.start[1]];
-        if from_start[0].hypot(from_start[1]) > 6.0 {
-            touch.moved = true;
-        }
-        touch.last = at;
-        self.touch = Some(touch);
-
-        let yaw = std::f32::consts::FRAC_PI_4 + self.orbit;
-        let right = Vec3::new(-yaw.sin(), 0.0, yaw.cos());
-        let forward = Vec3::new(yaw.cos(), 0.0, yaw.sin());
-        self.centre += right * (-delta[0] * 0.035) + forward * (-delta[1] * 0.035);
-    }
-
-    fn touch_ended(&mut self, id: u64) {
-        let Some(touch) = self.touch.filter(|touch| touch.id == id) else {
-            return;
-        };
-        self.touch = None;
-        if !touch.moved {
+        if key == Key::Space {
             self.dig_centre();
         }
     }
 
     fn dig_centre(&mut self) {
+        let focus = self.camera.camera().focus;
         #[allow(clippy::cast_possible_truncation)]
-        let (x, z) = (self.centre.x.round() as i32, self.centre.z.round() as i32);
+        let (x, z) = (focus.x.round() as i32, focus.z.round() as i32);
         self.lab.dig_surface(x, z);
     }
 }
@@ -300,17 +254,15 @@ fn browser_texture(textures: [TextureId; 2], voxel: VoxelId, face: VoxelFace) ->
 }
 
 #[allow(clippy::cast_precision_loss)]
-fn camera(context: &AppContext<'_>, centre: Vec3, orbit: f32) -> FrameCamera {
-    let yaw = std::f32::consts::FRAC_PI_4 + orbit;
-    let pitch = std::f32::consts::FRAC_PI_6;
-    let eye = centre
+fn camera(context: &AppContext<'_>, camera: LabCamera) -> FrameCamera {
+    let eye = camera.focus
         + Vec3::new(
-            yaw.cos() * pitch.cos(),
-            pitch.sin(),
-            yaw.sin() * pitch.cos(),
+            camera.yaw.cos() * camera.pitch.cos(),
+            camera.pitch.sin(),
+            camera.yaw.sin() * camera.pitch.cos(),
         ) * 52.0;
     let aspect = context.width() as f32 / context.height().max(1) as f32;
-    let zoom = 20.0;
+    let zoom = camera.half_height;
     FrameCamera {
         view_projection: orthographic_projection(
             -zoom * aspect,
@@ -319,7 +271,7 @@ fn camera(context: &AppContext<'_>, centre: Vec3, orbit: f32) -> FrameCamera {
             zoom,
             0.1,
             160.0,
-        ) * look_at(eye, centre, Vec3::Y),
+        ) * look_at(eye, camera.focus, Vec3::Y),
     }
 }
 

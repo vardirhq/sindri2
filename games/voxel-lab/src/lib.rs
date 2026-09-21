@@ -13,6 +13,8 @@
 //! cargo run -p voxel-lab --bin voxel-lab-capture -- target/render-artifacts
 //! ```
 
+#[cfg(any(test, target_arch = "wasm32"))]
+mod camera_control;
 mod runtime;
 
 #[cfg(target_arch = "wasm32")]
