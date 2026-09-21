@@ -167,7 +167,7 @@ every push, including a small CI-fix commit, perform the cheapest applicable
 checks first and inspect the changed files for warning-level problems.
 
 For the common case, run `scripts/preflight.py` first. It discovers changes against
-`origin/main`, includes staged and working-tree edits, runs formatting and file-size
+`origin/main`, includes committed, staged, working-tree, and untracked edits, runs formatting and file-size
 checks, typed Decay preflight for changed scripts, and check/tests the affected
 workspace crates. Use `--base <ref>` for another integration branch and `--list`
 to inspect the discovered scope without running checks.
