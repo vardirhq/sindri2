@@ -5,6 +5,7 @@ members = [
     "crates/sindri-assets",
     "crates/sindri-core",
     "crates/sindri-decay",
+    "crates/sindri-diagnostics",
     "crates/sindri-desktop",
     "crates/sindri-export",
     "crates/sindri-gpu",
