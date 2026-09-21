@@ -234,7 +234,6 @@ pub(crate) fn word_at(source: &str, offset: usize) -> Option<&str> {
     (start < end).then(|| &source[start..end])
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -247,8 +246,14 @@ mod tests {
 
     #[test]
     fn function_snippets_follow_arity() {
-        let zero = FunctionType { params: vec![], return_type: Type::Unit };
-        let three = FunctionType { params: vec![Type::Number, Type::Bool, Type::String], return_type: Type::Unit };
+        let zero = FunctionType {
+            params: vec![],
+            return_type: Type::Unit,
+        };
+        let three = FunctionType {
+            params: vec![Type::Number, Type::Bool, Type::String],
+            return_type: Type::Unit,
+        };
         assert_eq!(function_snippet("tick", &zero), "tick()");
         assert_eq!(function_snippet("mix", &three), "mix($1, $2, $3)");
     }
