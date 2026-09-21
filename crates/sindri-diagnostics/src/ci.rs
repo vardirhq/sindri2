@@ -37,10 +37,11 @@ pub fn fingerprint_failure(output: &str) -> Option<FailureFingerprint> {
         });
     }
 
-    for line in output.lines() {
+    let lines = output.lines().collect::<Vec<_>>();
+    for (index, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
         if let Some(code) = rust_error_code(trimmed) {
-            let location = first_source_location(output).unwrap_or_default();
+            let location = source_location_after(&lines, index).unwrap_or_default();
             return Some(FailureFingerprint {
                 value: format!("rust:{code}:{location}"),
                 infrastructure: false,
@@ -84,8 +85,8 @@ fn rust_error_code(line: &str) -> Option<&str> {
         .then_some(code)
 }
 
-fn first_source_location(output: &str) -> Option<String> {
-    output.lines().find_map(|line| {
+fn source_location_after(lines: &[&str], error_index: usize) -> Option<String> {
+    lines.iter().skip(error_index + 1).take(4).find_map(|line| {
         let location = line.trim().strip_prefix("-->")?.trim();
         let mut parts = location.rsplitn(3, ':');
         let column = parts.next()?;
@@ -186,6 +187,15 @@ mod tests {
                 value: "rust:E0063:crates/a/src/lib.rs:68".into(),
                 infrastructure: false,
             })
+        );
+    }
+
+    #[test]
+    fn pairs_compiler_code_with_its_own_location() {
+        let output = "warning: earlier\n  --> crates/warn.rs:2:1\nerror[E0425]: missing\n  --> crates/fail.rs:9:4\n";
+        assert_eq!(
+            fingerprint_failure(output).unwrap().value,
+            "rust:E0425:crates/fail.rs:9"
         );
     }
 
