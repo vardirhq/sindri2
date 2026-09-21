@@ -23,7 +23,7 @@ use sindri_core::{ComponentSchemaRegistry, TagsComponent};
 use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
-    CameraComponent, GridNavigationComponent, GridOccupantComponent, GridPlacementComponent,
+    CameraBehaviorComponent, CameraComponent, GridNavigationComponent, GridOccupantComponent, GridPlacementComponent,
     MeshComponent, ShapeComponent, SpriteComponent, TileGridComponent, TileVolumeComponent,
     TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind,
     UiTextComponent, VoxelWorldComponent,
@@ -105,6 +105,20 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "vertical_fov_degrees": CameraComponent::DEFAULT_VERTICAL_FOV_DEGREES,
             "near": CameraComponent::DEFAULT_NEAR,
             "far": CameraComponent::DEFAULT_FAR
+        }),
+    )?;
+    components.register_with_default::<CameraBehaviorComponent>(
+        "Camera Behavior",
+        serde_json::json!({
+            "follow": null,
+            "confine": null,
+            "shake": {
+                "trauma": 0.0,
+                "strength": 0.12,
+                "decay": 2.8,
+                "frequency": 57.0,
+                "phase": 0.0
+            }
         }),
     )?;
     components.register_with_default::<MeshComponent>(
