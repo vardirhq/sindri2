@@ -2,6 +2,10 @@
 
 Status: Phases 1-3 complete; Phase 4 in progress
 
+The ordered remaining-work checklist is
+[`voxel-system-completion-checklist.md`](voxel-system-completion-checklist.md).
+This document remains the architectural contract and phase history.
+
 Causeway proved that Sindri can generate, stream, pick, edit, and render a large voxel-like world. It also proved the current ownership boundary is wrong: generation and residency live in the game, terrain is materialized as a `sindri.tile_volume`, renderer revisions can rebake too much work, and the experimental smooth patch has no persistent chunk mesh cache.
 
 The next milestone is an engine-owned voxel subsystem. Minecraft is the architectural reference for the boring, battle-tested parts: chunked world data, vertical sections, palette-friendly storage, neighbour-aware meshing, dirty rebuilds, bounded residency, separate simulation and render concerns, and cached compiled geometry. Sindri deliberately differs by making the visual mesher pluggable rather than making block faces the only presentation.
