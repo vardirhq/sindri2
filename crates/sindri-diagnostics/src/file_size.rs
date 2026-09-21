@@ -61,7 +61,7 @@ mod tests {
 
     #[test]
     fn ignores_success_and_guidance_lines() {
-        let diagnostics = parse_file_size_violations("All 421 Rust files are within 600 lines.\\n");
+        let diagnostics = parse_file_size_violations("All 421 Rust files are within 600 lines.\n");
         assert!(diagnostics.is_empty());
     }
 }
