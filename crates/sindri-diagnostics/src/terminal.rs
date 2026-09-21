@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use crate::{Diagnostic, DiagnosticRelation, DiagnosticReport};
 
 #[must_use]
@@ -26,20 +28,21 @@ fn render_diagnostic(output: &mut String, diagnostic: &Diagnostic) {
         Some(DiagnosticRelation::Independent) => "INDEPENDENT",
         None => "DIAGNOSTIC",
     };
-    output.push_str(&format!("\n{relation}: {}", diagnostic.message));
+    let _ = write!(output, "\n{relation}: {}", diagnostic.message);
     if let Some(location) = &diagnostic.location {
-        output.push_str(&format!(
+        let _ = write!(
+            output,
             "\n  at {}:{}:{}",
             location.path.display(),
             location.line,
             location.column
-        ));
+        );
     }
     for note in &diagnostic.notes {
-        output.push_str(&format!("\n  {note}"));
+        let _ = write!(output, "\n  {note}");
     }
     if let Some(suggestion) = &diagnostic.suggestion {
-        output.push_str(&format!("\n  suggestion: {suggestion}"));
+        let _ = write!(output, "\n  suggestion: {suggestion}");
     }
 }
 

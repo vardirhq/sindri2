@@ -37,7 +37,6 @@ impl DiagnosticReport {
             .count()
     }
 
-    #[must_use]
     pub fn primary(&self) -> impl Iterator<Item = &Diagnostic> {
         self.diagnostics
             .iter()
