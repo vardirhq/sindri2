@@ -46,11 +46,7 @@ pub(crate) fn run(paths: &[PathBuf], json_output: bool) -> io::Result<bool> {
                     diagnostic.human(&path.display().to_string(), line, column)
                 );
             }
-            output_diagnostics.push(diagnostic.json(
-                &path.display().to_string(),
-                line,
-                column,
-            ));
+            output_diagnostics.push(diagnostic.json(&path.display().to_string(), line, column));
             errors += 1;
         }
 
@@ -64,11 +60,7 @@ pub(crate) fn run(paths: &[PathBuf], json_output: bool) -> io::Result<bool> {
                     diagnostic.human(&path.display().to_string(), line, column)
                 );
             }
-            output_diagnostics.push(diagnostic.json(
-                &path.display().to_string(),
-                line,
-                column,
-            ));
+            output_diagnostics.push(diagnostic.json(&path.display().to_string(), line, column));
             reminders += 1;
         }
     }
