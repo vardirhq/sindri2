@@ -96,7 +96,61 @@ remeshes per frame. A settled camera pan must visibly hold remeshes at zero;
 one edit must replace only the affected section and resident boundary neighbour.
 Editor picking/painting and camera-driven scene residency remain follow-up work.
 
-### 5. Move Causeway onto the engine
+### 5. Author voxel worlds and reusable voxel assets
+
+Treat these as two related authoring surfaces with different persistence and
+intent. A **voxel world editor** changes cells in a streamed world. A **voxel
+asset editor** creates a bounded reusable object that can be placed many times.
+A tree prefab is not a tiny terrain chunk, and terrain painting is not model
+authoring.
+
+#### World authoring
+
+- Drive editor residency from the Scene-view camera rather than a fixed focus.
+- Pick visible voxel faces through the engine picking path.
+- Place, remove, and paint blocks/materials with drag strokes that each become
+  one undoable command.
+- Expose a project-owned block/material palette rather than hard-coded lab IDs.
+- Add selection/fill and vertical slice/cutaway controls once basic painting is
+  reliable; deep terrain must remain authorable without hiding it in JSON.
+- Persist authored changes as sparse deltas from deterministic generation, so
+  saving does not materialize an otherwise procedural world.
+
+Exit: open Voxel Lab in the editor, navigate beyond the initial resident area,
+dig and build with project materials, undo/redo the edits, save, reopen, and see
+the same edited cells without serializing untouched terrain.
+
+#### Reusable voxel asset editor
+
+- Define a versioned project asset for a bounded voxel model with explicit
+  dimensions/pivot and palette/material references. Keep it independent of a
+  streamed world section so asset dimensions are chosen by the object, not by
+  the residency implementation.
+- Selecting or creating that asset opens a focused orbitable workspace using
+  the same renderer and picking rules as the Scene view.
+- Provide place, remove, paint, palette/material selection, clear, and
+  undo/redo. Empty space is first-class; authors should be able to make sparse
+  trees, arches, furniture, buildings, machines, and item-like props rather
+  than only solid cuboids.
+- Preview the asset from useful angles and make its pivot/origin visible and
+  editable. Placement must be predictable before the asset leaves its editor.
+- Save/load through the normal project asset pipeline and keep canonical,
+  diffable serialization. No editor-only representation and no game-specific
+  Rust type owns the format.
+- Place an authored voxel asset from the project browser into a scene or voxel
+  world with one direct interaction. Repeated placements reuse the asset rather
+  than copying its cell data into every instance unless a project explicitly
+  converts an instance to editable world cells.
+- Make the runtime representation compatible with the engine voxel material and
+  meshing contracts so block, smooth, hybrid, or later custom presentation can
+  evolve without replacing the authoring format.
+
+Exit: create a small tree and a building entirely in the editor, save both as
+project assets, reopen and edit them, place several instances into Voxel Lab,
+and verify native/browser rendering from the same project data. No JSON or Rust
+editing is required anywhere in that flow.
+
+### 6. Move Causeway onto the engine
 - Move generic chunk/streaming concepts out of `game/src/streaming.rs`.
 - Adapt Causeway's biome/noise policy to engine generator traits.
 - Preserve the seed and recognizable opening landscape.
@@ -107,7 +161,7 @@ Editor picking/painting and camera-driven scene residency remain follow-up work.
 
 Exit: Causeway uses `sindri-voxel` for generation/residency and has no holes caused by skirts or centre-chunk mesh replacement.
 
-### 6. Persistence and digging
+### 7. Persistence and digging
 - Store edits as sparse overrides/deltas from deterministic generation.
 - Generate a real vertical volume rather than a surface skirt.
 - Support caves, tunnels, overhangs, ores, and multiple surfaces at one X/Z.
@@ -115,7 +169,7 @@ Exit: Causeway uses `sindri-voxel` for generation/residency and has no holes cau
 
 Exit: dig through a mountain, unload it, reload it, and the tunnel remains.
 
-### 7. Smooth and hybrid terrain
+### 8. Smooth and hybrid terrain
 - Introduce a scalar/density sampling contract instead of smoothing block-top heights.
 - Evaluate Surface Nets and Dual Contouring against editing and seam requirements.
 - Hybrid mode smooths natural terrain while constructions/selected materials remain block-meshed.
@@ -123,7 +177,7 @@ Exit: dig through a mountain, unload it, reload it, and the tunnel remains.
 
 Exit: one authoritative world can switch Block/Hybrid presentation without changing voxel data.
 
-### 8. Minecraft-grade follow-ons
+### 9. Minecraft-grade follow-ons
 Only after the foundation is measured:
 - skylight and emissive/block-light propagation
 - biome/material registries and richer per-face material rules
