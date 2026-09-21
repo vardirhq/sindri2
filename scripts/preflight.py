@@ -9,6 +9,7 @@ checks required by AGENTS.md for changes that affect those surfaces.
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
