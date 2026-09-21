@@ -13,6 +13,8 @@
       h1 { margin: 0 0 5px; font-size: 18px; letter-spacing: .02em; }
       p { margin: 4px 0; color: #aebdd0; font-size: 13px; line-height: 1.45; }
       #voxel-stats { color: #8ee7b0; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .focus-marker { position: fixed; z-index: 1; left: 50%; top: 50%; width: 18px; height: 18px; translate: -50% -50%; border: 1px solid #dfffea99; border-radius: 50%; box-shadow: 0 0 0 1px #07111ccc, 0 0 14px #73e7a966; pointer-events: none; }
+      .focus-marker::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; translate: -50% -50%; border-radius: 50%; background: #b5ffd1; }
       .mobile-hint { display: none; }
       @media (pointer: coarse) {
         .panel { top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); max-width: calc(100vw - 20px); }
@@ -23,12 +25,13 @@
   </head>
   <body>
     <canvas id="sindri-canvas"></canvas>
+    <div class="focus-marker" aria-hidden="true"></div>
     <section class="panel">
       <h1>Sindri Voxel Lab</h1>
       <p>Engine-owned 16³ sections → neighbour-aware meshing → persistent GPU cache.</p>
       <p id="voxel-stats">Starting WebGPU…</p>
-      <p class="desktop-hint">Move with WASD/arrows, orbit with Q/E, dig with Space.</p>
-      <p class="mobile-hint">Drag the world to pan. Tap to dig the surface at the camera focus.</p>
+      <p class="desktop-hint">Drag to orbit · Shift/middle-drag to pan · wheel to zoom · Space to dig.</p>
+      <p class="mobile-hint">One finger orbits · two fingers pan/pinch · tap digs at the focus.</p>
     </section>
     <script type="module">
       import init from './pkg/voxel_lab.js';
