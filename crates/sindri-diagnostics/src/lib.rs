@@ -6,9 +6,15 @@
 mod cargo;
 mod diagnostic;
 mod github;
-mod report;\nmod terminal;\nmod test;
+mod report;
+mod terminal;
+mod test;
 
 pub use cargo::{CargoMessageError, parse_cargo_messages};
-pub use diagnostic::{\n    Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity, SourceLocation,\n};
+pub use diagnostic::{
+    Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity, SourceLocation,
+};
 pub use github::GithubAnnotation;
-pub use report::{DiagnosticReport, SCHEMA_VERSION};\npub use terminal::render_terminal_report;\npub use test::parse_nextest_failure;
+pub use report::{DiagnosticReport, SCHEMA_VERSION};
+pub use terminal::render_terminal_report;
+pub use test::parse_nextest_failure;
