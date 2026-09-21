@@ -7,7 +7,7 @@ use std::{
 };
 
 use sindri_diagnostics::{
-    DiagnosticReport, GithubAnnotation, parse_decay_report, parse_rustfmt_diff,
+    DiagnosticReport, GithubAnnotation, parse_decay_report, parse_file_size_violations,\n    parse_rustfmt_diff,
     render_terminal_report,
 };
 
@@ -24,9 +24,9 @@ fn main() -> ExitCode {
 fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
-        return Err("expected command: rustfmt or decay".into());
+        return Err("expected command: rustfmt, decay, or file-size".into());
     };
-    if command != "rustfmt" && command != "decay" {
+    if command != "rustfmt" && command != "decay" && command != "file-size" {
         return Err(format!("unknown command: {command}").into());
     }
 
