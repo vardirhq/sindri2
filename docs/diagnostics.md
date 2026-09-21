@@ -71,7 +71,7 @@ scraping its human output.
 
 `scripts/preflight.py` is the one-command cheap gate for coding agents and local
 development. It diffs the merge base with `origin/main` through the current
-working tree, maps changed files to Cargo workspace packages, then runs global
+working tree, including untracked files, maps changed files to Cargo workspace packages, then runs global
 rustfmt/file-size checks, typed checking for changed `.decay` scripts, and
 `cargo check` plus tests for affected packages. Root workspace/toolchain changes
 expand Rust checking to the whole workspace. `--list` exposes the discovered
@@ -83,19 +83,16 @@ cheap heuristic proves a platform is exactly how automation becomes decorative.
 
 ## Next integrations
 
-The first crate establishes the contract and Cargo/Clippy adapter without
-changing existing CI while PR #339 owns scene/editor/voxel integration. Follow-up
-slices should add:
+The shared contract now has live rustfmt, file-size, Decay, and agent-preflight
+consumers. The next useful slices are:
 
-1. extend the runner beyond the now-integrated rustfmt path so repository checks can emit one summary;
-2. richer CI failure fingerprint extraction and cross-job correlation;
-3. Decay diagnostics raised directly from the typed checker rather than the current CI summary of checker prose;
-4. Cargo/Clippy GitHub summary and annotation emission;
-5. editor Problems-panel consumption once the editor work is free to move.
+1. richer CI failure fingerprint extraction and cross-job correlation;
+2. Cargo/Clippy GitHub summary and annotation emission from their native JSON;
+3. finer stable Decay diagnostic codes and syntax-aware runtime reminders;
+4. editor Problems-panel consumption once the editor work is free to move.
 
-CI remains authoritative until those integrations replace individual workflow
-commands and prove equivalent behavior.
-
+CI remains authoritative for the platform and integration checks that the cheap
+preflight deliberately does not attempt.
 
 ### Structured Decay checker output
 
