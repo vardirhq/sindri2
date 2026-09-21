@@ -32,6 +32,7 @@ Sindri is deliberately small enough to understand and opinionated enough to buil
 - **Native and web from the same foundation**, using Rust, `wgpu`, `winit`, and WebGPU/WASM where appropriate.
 - **Portable project data** with versioned, canonical, review-friendly scene files and logical asset IDs.
 - **Measured complexity**: systems are kept simple until profiling or real use proves they need to become more complicated.
+- **Actionable diagnostics**: changed-scope preflight and structured CI diagnostics identify source locations, distinguish infrastructure failures, and correlate duplicate failures across jobs. See [`docs/diagnostics.md`](docs/diagnostics.md).
 
 Sindri is not trying to win a feature-count contest with mature engines. The current goal is to make the foundation coherent, testable, authorable, and difficult to accidentally lie about.
 
