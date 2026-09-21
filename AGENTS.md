@@ -166,7 +166,7 @@ Do not push a code change merely because the edited code looks correct. Before
 every push, including a small CI-fix commit, perform the cheapest applicable
 checks first and inspect the changed files for warning-level problems.
 
-For Rust changes, the minimum pre-push sequence is:
+For the common case, run `scripts/preflight.py` first. It discovers changes against\n`origin/main`, includes staged and working-tree edits, runs formatting and file-size\nchecks, typed Decay preflight for changed scripts, and check/tests the affected\nworkspace crates. Use `--base <ref>` for another integration branch and `--list`\nto inspect the discovered scope without running checks.\n\nThe command is the shortest route through the cheap gates, not a substitute for\nsurface-specific checks below. For Rust changes, the minimum pre-push sequence is:
 
 1. Run or reproduce `cargo fmt --all --check`.
 2. Compile/check every changed crate with warnings denied:
