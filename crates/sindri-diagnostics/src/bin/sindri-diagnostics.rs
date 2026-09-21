@@ -7,9 +7,9 @@ use std::{
 };
 
 use sindri_diagnostics::{
-    CheckOutcome, CheckResult, DiagnosticReport, GithubAnnotation, fingerprint_failure, parse_cargo_messages,
-    parse_decay_report, parse_file_size_violations, parse_rustfmt_diff, render_ci_summary,
-    render_terminal_report,
+    CheckOutcome, CheckResult, DiagnosticReport, GithubAnnotation, fingerprint_failure,
+    parse_cargo_messages, parse_decay_report, parse_file_size_violations, parse_rustfmt_diff,
+    render_ci_summary, render_terminal_report,
 };
 
 fn main() -> ExitCode {
@@ -26,7 +26,8 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
         return Err(
-            "expected command: rustfmt, cargo, decay, file-size, fingerprint, correlate, or check-result".into(),
+            "expected command: rustfmt, cargo, decay, file-size, fingerprint, correlate, or check-result"
+                .into(),
         );
     };
     if command != "rustfmt"
@@ -80,7 +81,9 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
             return Err("check-result does not accept renderer flags".into());
         }
         let mut lines = input.lines();
-        let name = lines.next().ok_or("check-result expects a check name on the first line")?;
+        let name = lines
+            .next()
+            .ok_or("check-result expects a check name on the first line")?;
         let log = lines.collect::<Vec<_>>().join("\n");
         let fingerprint = fingerprint_failure(&log);
         let result = CheckResult {
