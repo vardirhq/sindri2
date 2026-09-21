@@ -43,26 +43,6 @@ impl GithubAnnotation {
     pub fn as_str(&self) -> &str {
         &self.0
     }
-
-    #[test]
-    fn renders_annotation_without_location() {
-        let diagnostic = Diagnostic {
-            severity: Severity::Error,
-            source: DiagnosticSource::Build,
-            code: Some(DiagnosticCode("BUILD_FAILURE".into())),
-            message: "build failed".into(),
-            location: None,
-            notes: Vec::new(),
-            suggestion: None,
-            rendered: None,
-            relation: None,
-        };
-
-        assert_eq!(
-            GithubAnnotation::from_diagnostic(&diagnostic).as_str(),
-            "::error title=BUILD_FAILURE::build failed"
-        );
-    }
 }
 
 fn escape_message(value: &str) -> String {
@@ -83,6 +63,26 @@ mod tests {
     use super::*;
     use crate::{DiagnosticCode, DiagnosticSource, SourceLocation};
     use std::path::PathBuf;
+
+    #[test]
+    fn renders_annotation_without_location() {
+        let diagnostic = Diagnostic {
+            severity: Severity::Error,
+            source: DiagnosticSource::Build,
+            code: Some(DiagnosticCode("BUILD_FAILURE".into())),
+            message: "build failed".into(),
+            location: None,
+            notes: Vec::new(),
+            suggestion: None,
+            rendered: None,
+            relation: None,
+        };
+
+        assert_eq!(
+            GithubAnnotation::from_diagnostic(&diagnostic).as_str(),
+            "::error title=BUILD_FAILURE::build failed"
+        );
+    }
 
     #[test]
     fn renders_file_annotation() {
