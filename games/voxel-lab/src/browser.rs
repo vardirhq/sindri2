@@ -69,6 +69,8 @@ impl DesktopApp for VoxelLabApp {
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let mut textures = TextureRegistry::new(context.device(), context.queue());
         let material_textures = load_causeway_atlases(context, &mut textures)?;
+        let mut camera = CameraControls::default();
+        camera.set_viewport_height(context.height());
         Ok(Self {
             lab: VoxelLabRuntime::new(),
             textures,
@@ -79,7 +81,7 @@ impl DesktopApp for VoxelLabApp {
             text: TextRenderer::new(),
             glyphs: GlyphRenderer::new(context.device(), context.format()),
             shapes: ShapeRenderer::new(context.device(), context.format()),
-            camera: CameraControls::default(),
+            camera,
         })
     }
 
@@ -96,9 +98,8 @@ impl DesktopApp for VoxelLabApp {
         Ok(Flow::Continue)
     }
 
-    #[allow(clippy::cast_precision_loss)]
     fn resize(&mut self, context: &AppContext<'_>) -> Result<(), Self::Error> {
-        self.camera.set_viewport_height(context.height() as f32);
+        self.camera.set_viewport_height(context.height());
         self.depth
             .resize(context.device(), context.width(), context.height());
         Ok(())
@@ -109,19 +110,22 @@ impl DesktopApp for VoxelLabApp {
         context: &AppContext<'_>,
         view: &wgpu::TextureView,
     ) -> Result<(), Self::Error> {
-        #[allow(clippy::cast_precision_loss)]
-        self.camera.set_viewport_height(context.height() as f32);
-        let view = self.camera.camera();
+        self.camera.set_viewport_height(context.height());
+        let camera_view = self.camera.camera();
         #[allow(clippy::cast_possible_truncation)]
-        let focus = VoxelCoord::new(view.focus.x.floor() as i32, 0, view.focus.z.floor() as i32)
-            .section();
+        let focus = VoxelCoord::new(
+            camera_view.focus.x.floor() as i32,
+            0,
+            camera_view.focus.z.floor() as i32,
+        )
+        .section();
         let material_textures = self.material_textures;
         let lab = self.lab.frame(focus, &move |voxel, face| {
             browser_texture(material_textures, voxel, face)
         })?;
         update_stats(lab.stats, focus);
 
-        let camera = camera(context, view);
+        let camera = camera(context, camera_view);
         let mut extracted = ExtractedFrame::new(
             Viewport::new(context.width(), context.height()),
             ClearOperations {

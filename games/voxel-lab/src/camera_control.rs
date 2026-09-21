@@ -67,8 +67,7 @@ impl LabCamera {
     }
 
     fn zoom_factor(&mut self, factor: f32) {
-        self.half_height =
-            (self.half_height * factor).clamp(MIN_HALF_HEIGHT, MAX_HALF_HEIGHT);
+        self.half_height = (self.half_height * factor).clamp(MIN_HALF_HEIGHT, MAX_HALF_HEIGHT);
     }
 }
 
@@ -112,8 +111,10 @@ impl CameraControls {
         self.camera
     }
 
-    pub fn set_viewport_height(&mut self, height: f32) {
-        self.viewport_height = height.max(1.0);
+    pub fn set_viewport_height(&mut self, height: u32) {
+        #[allow(clippy::cast_precision_loss)]
+        let height = height.max(1) as f32;
+        self.viewport_height = height;
     }
 
     /// Returns `true` when an unmoved single-finger tap should dig.
@@ -171,7 +172,10 @@ impl CameraControls {
             return;
         };
         if self.touches.len() == 1 {
-            if self.touch_start.is_some_and(|start| start.distance(at) > TAP_SLOP) {
+            if self
+                .touch_start
+                .is_some_and(|start| start.distance(at) > TAP_SLOP)
+            {
                 self.touch_moved = true;
             }
             self.camera.orbit(at - last);
@@ -249,7 +253,7 @@ mod tests {
     #[test]
     fn shift_drag_pans_without_orbiting() {
         let mut controls = CameraControls::default();
-        controls.set_viewport_height(500.0);
+        controls.set_viewport_height(500);
         let before = controls.camera();
         controls.input(pointer(10.0, 10.0));
         controls.input(InputEvent::KeyPressed(Key::ShiftLeft));
