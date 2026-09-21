@@ -172,58 +172,88 @@ pub fn update_camera_behaviors(world: &mut World, dt: f32) {
         .collect();
 
     for (entity, mut behavior) in cameras {
-        let Some(current) = world.get(entity).and_then(|data| data.transform_3d) else {
-            continue;
-        };
-        let mut position = current.position;
+        update_camera_behavior(world, entity, &mut behavior, dt);
+    }
+}
 
-        if let Some(follow) = behavior.follow {
-            if let Some(target) = world.get(follow.target).and_then(|data| data.transform_3d) {
-                let desired = [
-                    target.position[0] + follow.offset[0],
-                    target.position[1] + follow.offset[1],
-                    target.position[2] + follow.offset[2],
-                ];
-                for axis in 0..2 {
-                    let delta = desired[axis] - position[axis];
-                    let dead = follow.dead_zone[axis].max(0.0) * 0.5;
-                    if delta.abs() > dead {
-                        let outside = delta - delta.signum() * dead;
-                        let alpha = 1.0 - (-follow.smoothing.max(0.0) * dt).exp();
-                        let mut step = outside * alpha;
-                        if follow.max_speed > 0.0 {
-                            step = step.clamp(-follow.max_speed * dt, follow.max_speed * dt);
-                        }
-                        position[axis] += step;
-                    }
-                }
-            }
-        }
+fn update_camera_behavior(
+    world: &mut World,
+    entity: EntityId,
+    behavior: &mut CameraBehaviorComponent,
+    dt: f32,
+) {
+    let Some(current) = world.get(entity).and_then(|data| data.transform_3d) else {
+        return;
+    };
+    let mut position = current.position;
+    apply_follow(world, behavior.follow, &mut position, dt);
+    apply_confine(behavior.confine, &mut position);
+    apply_shake(&mut behavior.shake, &mut position, dt);
 
-        if let Some(bounds) = behavior.confine {
-            position[0] = position[0].clamp(bounds.min[0], bounds.max[0]);
-            position[1] = position[1].clamp(bounds.min[1], bounds.max[1]);
-        }
-
-        behavior.shake.phase += dt * behavior.shake.frequency.max(0.0);
-        let trauma = behavior.shake.trauma.clamp(0.0, 1.0);
-        let amplitude = trauma * trauma * behavior.shake.strength.max(0.0);
-        position[0] += behavior.shake.phase.sin() * amplitude;
-        position[1] += (behavior.shake.phase * 1.37).cos() * amplitude;
-        behavior.shake.trauma = (trauma - behavior.shake.decay.max(0.0) * dt).max(0.0);
-
-        if let Some(data) = world.get_mut(entity) {
-            data.transform_3d = Some(Transform3D {
-                position,
-                ..current
-            });
-            if let Ok(value) = serde_json::to_value(behavior) {
-                data.components
-                    .insert(CameraBehaviorComponent::TYPE_NAME.into(), value);
-            }
+    if let Some(data) = world.get_mut(entity) {
+        data.transform_3d = Some(Transform3D {
+            position,
+            ..current
+        });
+        if let Ok(value) = serde_json::to_value(*behavior) {
+            data.components
+                .insert(CameraBehaviorComponent::TYPE_NAME.into(), value);
         }
     }
 }
+
+fn apply_follow(world: &World, follow: Option<CameraFollow>, position: &mut [f32; 3], dt: f32) {
+    let Some(follow) = follow else {
+        return;
+    };
+    let Some(target) = world
+        .get(follow.target)
+        .and_then(|data| data.transform_3d)
+    else {
+        return;
+    };
+    let desired = [
+        target.position[0] + follow.offset[0],
+        target.position[1] + follow.offset[1],
+        target.position[2] + follow.offset[2],
+    ];
+    for axis in 0..2 {
+        let delta = desired[axis] - position[axis];
+        let dead = follow.dead_zone[axis].max(0.0) * 0.5;
+        if delta.abs() <= dead {
+            continue;
+        }
+        let outside = delta - delta.signum() * dead;
+        let alpha = 1.0 - (-follow.smoothing.max(0.0) * dt).exp();
+        let mut step = outside * alpha;
+        if follow.max_speed > 0.0 {
+            step = step.clamp(-follow.max_speed * dt, follow.max_speed * dt);
+        }
+        position[axis] += step;
+    }
+}
+
+fn apply_confine(bounds: Option<CameraBounds>, position: &mut [f32; 3]) {
+    let Some(bounds) = bounds else {
+        return;
+    };
+    position[0] = position[0].clamp(bounds.min[0], bounds.max[0]);
+    position[1] = position[1].clamp(bounds.min[1], bounds.max[1]);
+}
+
+fn apply_shake(shake: &mut CameraShake, position: &mut [f32; 3], dt: f32) {
+    shake.phase += dt * shake.frequency.max(0.0);
+    let trauma = shake.trauma.clamp(0.0, 1.0);
+    let amplitude = trauma * trauma * shake.strength.max(0.0);
+    position[0] += shake.phase.sin() * amplitude;
+    position[1] += (shake.phase * 1.37).cos() * amplitude;
+    shake.trauma = (trauma - shake.decay.max(0.0) * dt).max(0.0);
+}
+
+impl SceneComponent for CameraComponent {
+    const TYPE_NAME: &'static str = "sindri.camera";
+}
+
 
 #[cfg(test)]
 mod behavior_tests {
@@ -253,10 +283,8 @@ mod behavior_tests {
         }));
         let camera = world.spawn(camera);
         update_camera_behaviors(&mut world, 1.0);
-        assert_eq!(
-            world.get(camera).unwrap().transform_3d.unwrap().position[0],
-            4.0
-        );
+        let x = world.get(camera).unwrap().transform_3d.unwrap().position[0];
+        assert!((x - 4.0).abs() < f32::EPSILON);
     }
 
     #[test]
@@ -269,14 +297,11 @@ mod behavior_tests {
         let camera = world.spawn(camera);
         update_camera_behaviors(&mut world, 0.25);
         let data = world.get(camera).unwrap();
-        assert_ne!(data.transform_3d.unwrap().position[0], 0.0);
+        assert!(data.transform_3d.unwrap().position[0].abs() > f32::EPSILON);
         let behavior: CameraBehaviorComponent =
             serde_json::from_value(data.components[CameraBehaviorComponent::TYPE_NAME].clone())
                 .unwrap();
-        assert_eq!(behavior.shake.trauma, 0.75);
+        assert!((behavior.shake.trauma - 0.75).abs() < f32::EPSILON);
     }
 }
 
-impl SceneComponent for CameraComponent {
-    const TYPE_NAME: &'static str = "sindri.camera";
-}
