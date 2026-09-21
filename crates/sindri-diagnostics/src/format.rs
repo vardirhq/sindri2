@@ -38,9 +38,9 @@ fn parse_rust_errors(input: &str) -> Vec<Diagnostic> {
     let lines: Vec<_> = input.lines().collect();
     let mut diagnostics = Vec::new();
     for (index, line) in lines.iter().enumerate() {
-        let Some(message) = line.strip_prefix("error: ") else { continue; };
-        let Some(location_line) = lines.get(index + 1) else { continue; };
-        let Some(location) = parse_arrow_location(location_line.trim()) else { continue; };
+        let Some(message) = line.strip_prefix("error: ") else {\n            continue;\n        };
+        let Some(location_line) = lines.get(index + 1) else {\n            continue;\n        };
+        let Some(location) = parse_arrow_location(location_line.trim()) else {\n            continue;\n        };
         diagnostics.push(Diagnostic {
             severity: Severity::Error,
             source: DiagnosticSource::Rust,
