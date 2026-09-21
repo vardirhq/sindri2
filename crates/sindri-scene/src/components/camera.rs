@@ -1,7 +1,7 @@
 //! `sindri.camera`: how a scene's own camera sees the world.
 
 use serde::Deserialize;
-use sindri_core::SceneComponent;
+use sindri_core::{EntityId, SceneComponent, Transform3D, World};
 
 /// A camera authored into a scene.
 ///
@@ -92,6 +92,114 @@ impl CameraComponent {
         match self {
             Self::Perspective { .. } => Self::PROJECTIONS[0],
             Self::Orthographic { .. } => Self::PROJECTIONS[1],
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+pub struct CameraBehaviorComponent {
+    #[serde(default)]
+    pub follow: Option<CameraFollow>,
+    #[serde(default)]
+    pub confine: Option<CameraBounds>,
+    #[serde(default)]
+    pub shake: CameraShake,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+pub struct CameraFollow {
+    pub target: EntityId,
+    #[serde(default)]
+    pub offset: [f32; 3],
+    #[serde(default)]
+    pub dead_zone: [f32; 2],
+    #[serde(default = "default_follow_smoothing")]
+    pub smoothing: f32,
+    #[serde(default)]
+    pub max_speed: f32,
+}
+
+const fn default_follow_smoothing() -> f32 { 8.0 }
+
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+pub struct CameraBounds {
+    pub min: [f32; 2],
+    pub max: [f32; 2],
+}
+
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq)]
+pub struct CameraShake {
+    #[serde(default)]
+    pub trauma: f32,
+    #[serde(default = "default_shake_strength")]
+    pub strength: f32,
+    #[serde(default = "default_shake_decay")]
+    pub decay: f32,
+    #[serde(default = "default_shake_frequency")]
+    pub frequency: f32,
+    #[serde(default)]
+    pub phase: f32,
+}
+
+const fn default_shake_strength() -> f32 { 0.12 }
+const fn default_shake_decay() -> f32 { 2.8 }
+const fn default_shake_frequency() -> f32 { 57.0 }
+
+impl SceneComponent for CameraBehaviorComponent {
+    const TYPE_NAME: &'static str = "sindri.camera.behavior";
+}
+
+pub fn update_camera_behaviors(world: &mut World, dt: f32) {
+    if !dt.is_finite() || dt <= 0.0 { return; }
+    let cameras: Vec<_> = world.entities().filter_map(|(entity, data)| {
+        let behavior = data.components.get(CameraBehaviorComponent::TYPE_NAME)?;
+        serde_json::from_value::<CameraBehaviorComponent>(behavior.clone()).ok().map(|b| (entity, b))
+    }).collect();
+
+    for (entity, mut behavior) in cameras {
+        let Some(current) = world.get(entity).and_then(|data| data.transform_3d) else { continue; };
+        let mut position = current.position;
+
+        if let Some(follow) = behavior.follow {
+            if let Some(target) = world.get(follow.target).and_then(|data| data.transform_3d) {
+                let desired = [
+                    target.position[0] + follow.offset[0],
+                    target.position[1] + follow.offset[1],
+                    target.position[2] + follow.offset[2],
+                ];
+                for axis in 0..2 {
+                    let delta = desired[axis] - position[axis];
+                    let dead = follow.dead_zone[axis].max(0.0) * 0.5;
+                    if delta.abs() > dead {
+                        let outside = delta - delta.signum() * dead;
+                        let alpha = 1.0 - (-follow.smoothing.max(0.0) * dt).exp();
+                        let mut step = outside * alpha;
+                        if follow.max_speed > 0.0 {
+                            step = step.clamp(-follow.max_speed * dt, follow.max_speed * dt);
+                        }
+                        position[axis] += step;
+                    }
+                }
+            }
+        }
+
+        if let Some(bounds) = behavior.confine {
+            position[0] = position[0].clamp(bounds.min[0], bounds.max[0]);
+            position[1] = position[1].clamp(bounds.min[1], bounds.max[1]);
+        }
+
+        behavior.shake.phase += dt * behavior.shake.frequency.max(0.0);
+        let trauma = behavior.shake.trauma.clamp(0.0, 1.0);
+        let amplitude = trauma * trauma * behavior.shake.strength.max(0.0);
+        position[0] += behavior.shake.phase.sin() * amplitude;
+        position[1] += (behavior.shake.phase * 1.37).cos() * amplitude;
+        behavior.shake.trauma = (trauma - behavior.shake.decay.max(0.0) * dt).max(0.0);
+
+        if let Some(data) = world.get_mut(entity) {
+            data.transform_3d = Some(Transform3D { position, ..current });
+            if let Ok(value) = serde_json::to_value(behavior) {
+                data.components.insert(CameraBehaviorComponent::TYPE_NAME.into(), value);
+            }
         }
     }
 }
