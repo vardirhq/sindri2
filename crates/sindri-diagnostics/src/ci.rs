@@ -1,6 +1,6 @@
 use crate::{Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity};
 use serde::Deserialize;
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt::Write};
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -159,9 +159,9 @@ pub fn render_ci_summary(checks: &[CheckResult]) -> String {
             Some(DiagnosticRelation::Downstream) => "downstream",
             Some(DiagnosticRelation::Independent) | None => "independent",
         };
-        output.push_str(&format!("- **{relation}**: {}", diagnostic.message));
+        let _ = write!(output, "- **{relation}**: {}", diagnostic.message);
         if let Some(fingerprint) = diagnostic.notes.first() {
-            output.push_str(&format!(" ({fingerprint})"));
+            let _ = write!(output, " ({fingerprint})");
         }
         output.push('\n');
     }
