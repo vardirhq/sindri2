@@ -100,8 +100,7 @@ jobs:
           set -e
 
           cat "$output"
-          cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \\
-            decay --github <"$output" || true
+          cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- decay --github <"$output" || true
           if [[ $status -ne 0 ]]; then
             {
               echo
