@@ -269,6 +269,8 @@ jobs:
     name: Test and render captures
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    outputs:
+      failure: ${{ steps.failure.outputs.failure }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.95.0
@@ -364,11 +366,27 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Capture failure fingerprint
+        id: failure
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          {
+            echo "Test and render captures"
+            echo "failed: Test and render captures"
+          } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+            check-result >failure.json || true
+          if [[ -s failure.json ]]; then
+            echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
+          fi
+
   wasm:
     needs: [quick, decay_preflight]
     name: Browser target
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      failure: ${{ steps.failure.outputs.failure }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.95.0
@@ -401,6 +419,20 @@ jobs:
           cargo test --package sindri-assets --target wasm32-unknown-unknown \
             --test decode_compatibility
 
+      - name: Capture failure fingerprint
+        id: failure
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          {
+            echo "Browser target"
+            echo "failed: Browser target"
+          } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+            check-result >failure.json || true
+          if [[ -s failure.json ]]; then
+            echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
+          fi
+
   # Compiling for wasm32 says nothing about whether the engine runs. The game
   # makes this gate stricter still: its static site includes the actual project
   # asset tree plus a manifest generated from those exact bytes, and the browser
@@ -419,6 +451,8 @@ jobs:
     name: Run the engine in a browser
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    outputs:
+      failure: ${{ steps.failure.outputs.failure }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.95.0
@@ -524,10 +558,24 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Capture failure fingerprint
+        id: failure
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          {
+            echo "Run the engine in a browser"
+            echo "failed: Run the engine in a browser"
+          } | cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+            check-result >failure.json || true
+          if [[ -s failure.json ]]; then
+            echo "failure=$(cat failure.json)" >>"$GITHUB_OUTPUT"
+          fi
+
   diagnostics_summary:
     name: CI failure summary
-    if: ${{ always() && (needs.quick.result == 'failure' || needs.decay_preflight.result == 'failure' || needs.clippy.result == 'failure') }}
-    needs: [quick, decay_preflight, clippy]
+    if: ${{ always() && (needs.quick.result == 'failure' || needs.decay_preflight.result == 'failure' || needs.clippy.result == 'failure' || needs.test.result == 'failure' || needs.wasm.result == 'failure' || needs.browser.result == 'failure') }}
+    needs: [quick, decay_preflight, clippy, test, wasm, browser]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -537,12 +585,18 @@ jobs:
           QUICK_FAILURE: ${{ needs.quick.outputs.failure }}
           DECAY_FAILURE: ${{ needs.decay_preflight.outputs.failure }}
           CLIPPY_FAILURE: ${{ needs.clippy.outputs.failure }}
+          TEST_FAILURE: ${{ needs.test.outputs.failure }}
+          WASM_FAILURE: ${{ needs.wasm.outputs.failure }}
+          BROWSER_FAILURE: ${{ needs.browser.outputs.failure }}
         shell: bash
         run: |
           failures=()
           [[ -n "$QUICK_FAILURE" ]] && failures+=("$QUICK_FAILURE")
           [[ -n "$DECAY_FAILURE" ]] && failures+=("$DECAY_FAILURE")
           [[ -n "$CLIPPY_FAILURE" ]] && failures+=("$CLIPPY_FAILURE")
+          [[ -n "$TEST_FAILURE" ]] && failures+=("$TEST_FAILURE")
+          [[ -n "$WASM_FAILURE" ]] && failures+=("$WASM_FAILURE")
+          [[ -n "$BROWSER_FAILURE" ]] && failures+=("$BROWSER_FAILURE")
           if [[ ${#failures[@]} -eq 0 ]]; then
             echo "A watched CI job failed before a structured fingerprint could be emitted." >>"$GITHUB_STEP_SUMMARY"
             exit 0
