@@ -254,13 +254,21 @@ fn causeway_atlas(
 ) -> Result<TextureId, VoxelLabError> {
     let id = label.parse::<AssetId>()?;
     let asset = TextureAssetDecoder.decode(AssetBytes::new(id, bytes.to_vec()))?;
+    let mut rgba = asset.rgba8().to_vec();
+    for pixel in rgba.chunks_exact_mut(4) {
+        // These atlases were authored for Causeway's sprite path, where a few
+        // transparent edge texels are harmless. A voxel face is an opaque 3D
+        // surface: preserving those texels literally punches holes through
+        // terrain and reveals buried faces.
+        pixel[3] = u8::MAX;
+    }
     Ok(textures.insert(Texture2D::from_rgba8(
         context.device(),
         context.queue(),
         label,
         asset.width(),
         asset.height(),
-        asset.rgba8(),
+        &rgba,
     )?))
 }
 

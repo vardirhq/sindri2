@@ -70,7 +70,12 @@ impl VoxelLabRuntime {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            world: VoxelWorld::new(LabTerrain, ResidencyConfig::new(1, 0, 0, 0)),
+            // Keep the residency boundary outside the camera and retain a
+            // section above and below the surface. Sampling a non-resident
+            // solid neighbour correctly removes shared faces, so presenting a
+            // tiny 3x3x1 window would expose that window's open outer edge as
+            // fake holes underneath the terrain.
+            world: VoxelWorld::new(LabTerrain, ResidencyConfig::new(2, 1, 0, 0)),
             render: VoxelRenderBridge::default(),
             resident: BTreeSet::new(),
         }
@@ -160,8 +165,8 @@ mod tests {
         let mut lab = VoxelLabRuntime::new();
         let focus = SectionCoord::new(0, 0, 0);
         let first = lab.frame(focus, &texture).unwrap();
-        assert_eq!(first.stats.entering_sections, 9);
-        assert_eq!(first.stats.mesh_jobs, 9);
+        assert_eq!(first.stats.entering_sections, 75);
+        assert_eq!(first.stats.mesh_jobs, 75);
         assert!(first.stats.uploads > 0);
 
         let settled = lab.frame(focus, &texture).unwrap();
@@ -190,10 +195,19 @@ mod tests {
         lab.frame(SectionCoord::new(0, 0, 0), &texture).unwrap();
 
         let moved = lab.frame(SectionCoord::new(1, 0, 0), &texture).unwrap();
-        assert_eq!(moved.stats.entering_sections, 3);
-        assert_eq!(moved.stats.leaving_sections, 3);
-        assert_eq!(moved.stats.mesh_jobs, 3);
+        assert_eq!(moved.stats.entering_sections, 15);
+        assert_eq!(moved.stats.leaving_sections, 15);
+        assert_eq!(moved.stats.mesh_jobs, 15);
         assert_eq!(moved.stats.remeshes, 0);
         assert!(moved.stats.releases > 0);
+    }
+
+    #[test]
+    fn lab_residency_includes_real_depth_below_the_surface() {
+        let mut lab = VoxelLabRuntime::new();
+        let frame = lab.frame(SectionCoord::new(0, 0, 0), &texture).unwrap();
+
+        assert_eq!(frame.stats.resident_sections, 75);
+        assert_eq!(LabTerrain.voxel(VoxelCoord::new(0, -16, 0)), STONE);
     }
 }
