@@ -125,8 +125,17 @@ impl Server {
             params.pointer("/textDocument/uri").and_then(Value::as_str),
             params.pointer("/textDocument/text").and_then(Value::as_str),
         ) {
-            let version = params.pointer("/textDocument/version").and_then(Value::as_i64).unwrap_or(0);
-            self.documents.insert(uri.to_owned(), Document { text: text.to_owned(), version });
+            let version = params
+                .pointer("/textDocument/version")
+                .and_then(Value::as_i64)
+                .unwrap_or(0);
+            self.documents.insert(
+                uri.to_owned(),
+                Document {
+                    text: text.to_owned(),
+                    version,
+                },
+            );
             self.publish_diagnostics(uri, text, output)?;
         }
         Ok(())
@@ -138,10 +147,22 @@ impl Server {
                 .pointer("/contentChanges/0/text")
                 .and_then(Value::as_str)
         {
-            let version = params.pointer("/textDocument/version").and_then(Value::as_i64).unwrap_or(0);
-            let stale = self.documents.get(uri).is_some_and(|document| version <= document.version);
+            let version = params
+                .pointer("/textDocument/version")
+                .and_then(Value::as_i64)
+                .unwrap_or(0);
+            let stale = self
+                .documents
+                .get(uri)
+                .is_some_and(|document| version <= document.version);
             if !stale {
-                self.documents.insert(uri.to_owned(), Document { text: text.to_owned(), version });
+                self.documents.insert(
+                    uri.to_owned(),
+                    Document {
+                        text: text.to_owned(),
+                        version,
+                    },
+                );
                 self.publish_diagnostics(uri, text, output)?;
             }
         }
@@ -160,7 +181,14 @@ impl Server {
     fn did_close(&mut self, params: &Value, output: &mut impl Write) -> io::Result<()> {
         if let Some(uri) = params.pointer("/textDocument/uri").and_then(Value::as_str) {
             self.documents.remove(uri);
-            write_message(output, &json!({"jsonrpc":"2.0","method":"textDocument/publishDiagnostics","params":{"uri":uri,"diagnostics":[]}}))?;
+            write_message(
+                output,
+                &json!({
+                    "jsonrpc":"2.0",
+                    "method":"textDocument/publishDiagnostics",
+                    "params":{"uri":uri,"diagnostics":[]}
+                }),
+            )?;
         }
         Ok(())
     }
