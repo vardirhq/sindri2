@@ -178,7 +178,7 @@ is why it earns a section rather than a footnote.
 | **Nine-slice sprites** | ❌ | ❌ | — | — | **Absent** | Every UI panel that resizes needs it |
 | **Sprite masking / stencil** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | Sorting and draw order | ✅ | ✅ | 🟡 | ✅ | **Par** | Layers plus the ground anchor |
-| **Camera follow / confine / shake** | ❌ | ❌ | ❌ | ❌ | **Absent** | Cinemachine is the most-used Unity package there is; Unity bought it. Games hand-roll it today: Orbital's `camera-fx.decay` carries a trauma value in `Game` state, squares it, drives the camera offset from two sines and decays it per frame — a competent shake written in gameplay script because the engine offers none |
+| **Camera follow / confine / shake** | 🟡 | 🟡 | ❌ | ❌ | **Behind** | `sindri.camera.behavior` defines target follow with offset/dead zone/smoothing/max speed, XY confinement, and deterministic trauma shake. The generic inspector can author the component and engine code can advance it, but the dedicated visual camera demo, Decay control surface, and Orbital migration are still required before this becomes a proved gameplay capability. |
 
 ## 3D rendering
 
