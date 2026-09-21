@@ -14,10 +14,10 @@ mod test;
 
 pub use cargo::{CargoMessageError, parse_cargo_messages};
 pub use ci::{CheckOutcome, CheckResult, correlate_checks};
-pub use format::parse_rustfmt_diff;
 pub use diagnostic::{
     Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity, SourceLocation,
 };
+pub use format::parse_rustfmt_diff;
 pub use github::GithubAnnotation;
 pub use report::{DiagnosticReport, SCHEMA_VERSION};
 pub use terminal::render_terminal_report;
