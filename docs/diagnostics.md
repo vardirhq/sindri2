@@ -43,7 +43,11 @@ Rust compiler code plus source location, then failed test identity, then a
 normalized actionable error line. Known runner/network failures get explicit
 infrastructure fingerprints, so a 403 does not get blamed on somebody's Rust.
 The CLI exposes the same extractor as `sindri-diagnostics fingerprint` for log
-collectors and workflow aggregation.
+collectors and workflow aggregation. When a producer already has a
+`DiagnosticReport`, `fingerprint_report` instead derives identity directly from
+the diagnostic source, stable code, file, and line. `report-check-result` exposes
+that path to workflows, avoiding the rather silly cycle of structuring an error,
+rendering it to prose, and then asking another parser what the prose meant.
 
 `correlate_checks` groups check failures by a caller-supplied failure
 fingerprint. The first manifestation is primary, later checks with the same
@@ -102,7 +106,7 @@ cheap heuristic proves a platform is exactly how automation becomes decorative.
 The shared contract now has live rustfmt, file-size, Decay, and agent-preflight
 consumers. The next useful slices are:
 
-1. capture the exact failing step output inside multi-step test/WASM/browser jobs instead of the current job-level fallback;
+1. route structured reports from compile-heavy steps directly into check-result fingerprints, then capture exact failing-step output for the remaining multi-step jobs;
 2. extend native Cargo JSON rendering to other compile-heavy CI jobs where it adds value;
 3. finer stable Decay diagnostic codes and syntax-aware runtime reminders;
 4. editor Problems-panel consumption once the editor work is free to move.
