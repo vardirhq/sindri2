@@ -23,6 +23,7 @@ use super::{SceneExtractError, SceneExtractor, transform_matrix};
 
 const MAX_RESIDENCY_RADIUS: u32 = 8;
 const MAX_HEIGHT_VARIATION: u32 = 4_096;
+const TERRAIN_SAMPLE_SCALE: i32 = 8;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct LayeredTerrain {
@@ -61,11 +62,10 @@ impl LayeredTerrain {
         if self.height_variation == 0 {
             return self.base_height;
         }
-        const SCALE: i32 = 8;
-        let grid_x = x.div_euclid(SCALE);
-        let grid_z = z.div_euclid(SCALE);
-        let offset_x = i64::from(x.rem_euclid(SCALE));
-        let offset_z = i64::from(z.rem_euclid(SCALE));
+        let grid_x = x.div_euclid(TERRAIN_SAMPLE_SCALE);
+        let grid_z = z.div_euclid(TERRAIN_SAMPLE_SCALE);
+        let offset_x = i64::from(x.rem_euclid(TERRAIN_SAMPLE_SCALE));
+        let offset_z = i64::from(z.rem_euclid(TERRAIN_SAMPLE_SCALE));
         let sample = |sample_x, sample_z| {
             i64::from(
                 u32::try_from(
@@ -76,7 +76,8 @@ impl LayeredTerrain {
             )
         };
         let lerp = |from: i64, to: i64, offset: i64| {
-            (from * (i64::from(SCALE) - offset) + to * offset) / i64::from(SCALE)
+            (from * (i64::from(TERRAIN_SAMPLE_SCALE) - offset) + to * offset)
+                / i64::from(TERRAIN_SAMPLE_SCALE)
         };
         let near = lerp(
             sample(grid_x, grid_z),
