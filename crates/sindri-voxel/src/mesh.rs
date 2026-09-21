@@ -112,7 +112,9 @@ impl BlockMeshPart {
     }
 
     fn push_face(&mut self, local: [u8; 3], material: VoxelId, face: VoxelFace) {
-        const UVS: [[u8; 2]; 4] = [[0, 0], [1, 0], [1, 1], [0, 1]];
+        // Texture images use a top-left origin. Face corners begin along the
+        // bottom edge, so V=1 belongs to the first two vertices.
+        const UVS: [[u8; 2]; 4] = [[0, 1], [1, 1], [1, 0], [0, 0]];
         let base =
             u32::try_from(self.vertices.len()).expect("one section mesh fits in u32 indices");
         for (position, uv) in face.corners(local).into_iter().zip(UVS) {

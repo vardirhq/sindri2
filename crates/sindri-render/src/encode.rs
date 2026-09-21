@@ -71,6 +71,7 @@ pub fn encode_prepared_frame(
     // Each batch draws from its own slot, and this is what hands the first one
     // back at the start of every submission. Without it a host would allocate a
     // slot per batch per frame for as long as it ran.
+    cube_renderer.begin_submission();
     sprite_renderer.begin_submission();
     glyph_renderer.begin_submission();
     shape_renderer.begin_submission();
