@@ -12,8 +12,7 @@ fn voxel_world() -> sindri_core::World {
 }
 
 fn voxel_world_with_radius(render_radius: u32) -> sindri_core::World {
-    world_from(&scene(&format!(
-        r#",
+    let entity = r#",
         { "id": "terrain", "transform_3d": {}, "components": {
           "sindri.voxel_world": {
             "generator": {
@@ -30,11 +29,12 @@ fn voxel_world_with_radius(render_radius: u32) -> sindri_core::World {
               { "voxel": 3, "top": "stone.png", "side": "stone.png",
                 "bottom": "stone.png" }
             ],
-            "focus": [0, 0, 0], "render_radius": {render_radius},
+            "focus": [0, 0, 0], "render_radius": __RENDER_RADIUS__,
             "vertical_radius": 0, "layer": 0
           }
-        } }"#,
-    )))
+        } }"#
+        .replace("__RENDER_RADIUS__", &render_radius.to_string());
+    world_from(&scene(&entity))
 }
 
 #[test]
