@@ -30,7 +30,8 @@ impl GithubAnnotation {
             }
         }
         if let Some(code) = &diagnostic.code {
-            let _ = write!(metadata, ",title={}", escape_property(&code.0));
+            let separator = if metadata.is_empty() { " " } else { "," };
+            let _ = write!(metadata, "{separator}title={}", escape_property(&code.0));
         }
         Self(format!(
             "::{level}{metadata}::{}",
@@ -41,6 +42,26 @@ impl GithubAnnotation {
     #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+
+    #[test]
+    fn renders_annotation_without_location() {
+        let diagnostic = Diagnostic {
+            severity: Severity::Error,
+            source: DiagnosticSource::Build,
+            code: Some(DiagnosticCode("BUILD_FAILURE".into())),
+            message: "build failed".into(),
+            location: None,
+            notes: Vec::new(),
+            suggestion: None,
+            rendered: None,
+            relation: None,
+        };
+
+        assert_eq!(
+            GithubAnnotation::from_diagnostic(&diagnostic).as_str(),
+            "::error title=BUILD_FAILURE::build failed"
+        );
     }
 }
 
@@ -80,6 +101,7 @@ mod tests {
             notes: Vec::new(),
             suggestion: None,
             rendered: None,
+            relation: None,
         };
 
         assert_eq!(
