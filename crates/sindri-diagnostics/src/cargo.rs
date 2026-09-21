@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn extracts_actionable_rust_diagnostic() {
         let input = r#"{"reason":"compiler-artifact","package_id":"ignored"}
-{"reason":"compiler-message","message":{"message":"unused variable: `texture`","code":{"code":"unused_variables","explanation":null},"level":"warning","spans":[{"file_name":"src/lib.rs","byte_start":0,"byte_end":1,"line_start":12,"line_end":12,"column_start":9,"column_end":16,"is_primary":true,"text":[],"label":null,"suggested_replacement":"_texture","suggestion_applicability":"MaybeIncorrect","expansion":null}],"children":[{"message":"prefix it with an underscore","code":null,"level":"help","spans":[]}],"rendered":"warning: unused variable"}}}"#;
+{"reason":"compiler-message","message":{"message":"unused variable: `texture`","code":{"code":"unused_variables","explanation":null},"level":"warning","spans":[{"file_name":"src/lib.rs","byte_start":0,"byte_end":1,"line_start":12,"line_end":12,"column_start":9,"column_end":16,"is_primary":true,"text":[],"label":null,"suggested_replacement":"_texture","suggestion_applicability":"MaybeIncorrect","expansion":null}],"children":[{"message":"prefix it with an underscore","code":null,"level":"help","spans":[]}],"rendered":"warning: unused variable"}}"#;
 
         let diagnostics = parse_cargo_messages(input).unwrap();
         assert_eq!(diagnostics.len(), 1);
