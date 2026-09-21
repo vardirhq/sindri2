@@ -1,6 +1,12 @@
-use std::{env, fs, io::{self, Read}, process::ExitCode};
+use std::{
+    env, fs,
+    io::{self, Read},
+    process::ExitCode,
+};
 
-use sindri_diagnostics::{DiagnosticReport, GithubAnnotation, parse_rustfmt_diff, render_terminal_report};
+use sindri_diagnostics::{
+    DiagnosticReport, GithubAnnotation, parse_rustfmt_diff, render_terminal_report,
+};
 
 fn main() -> ExitCode {
     match run() {
@@ -30,6 +36,9 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
             _ => return Err(format!("unknown argument: {argument}").into()),
         }
     }
+    if github && json {
+        return Err("--github and --json are mutually exclusive".into());
+    }
 
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
@@ -48,7 +57,11 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
         println!("{}", render_terminal_report(&report));
     }
 
-    Ok(if report.success { ExitCode::SUCCESS } else { ExitCode::FAILURE })
+    Ok(if report.success {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    })
 }
 
 fn github_summary(report: &DiagnosticReport) -> String {
