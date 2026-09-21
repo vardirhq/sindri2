@@ -30,7 +30,10 @@ which file and line failed.
 ## Formatting and CI correlation
 
 `parse_rustfmt_diff` turns rustfmt's repeated diff blocks into one actionable
-diagnostic per affected file with the exact `cargo fmt --all` remedy.
+diagnostic per affected file with the exact `cargo fmt --all` remedy. If rustfmt
+cannot parse a Rust file, the adapter instead preserves that compiler-style
+location as `RUST_PARSE_ERROR`; a syntax error is no longer mislabeled as a
+formatting request.
 
 `correlate_checks` groups check failures by a caller-supplied failure
 fingerprint. The first manifestation is primary, later checks with the same
