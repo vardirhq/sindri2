@@ -640,6 +640,15 @@ Buffered press and consume-once are features of a named action, not a new
 subsystem — which folds this candidate into an existing queue item instead of
 adding an eleventh.
 
+## Decay tooling modernization
+
+Decay is the primary gameplay language, so language tooling is part of the
+authoring surface rather than optional editor polish. The September 2026 deep
+audit found concrete drift and protocol/test gaps in `decay-lsp` and the VS Code
+integration. The complete prioritized checklist and definition of done live in
+[`docs/decay-lsp-modernization.md`](decay-lsp-modernization.md). Update that
+checklist in the same change that closes or discovers a Decay tooling gap.
+
 ## Maintenance rule
 
 Update this file in the same change that moves any cell, as
