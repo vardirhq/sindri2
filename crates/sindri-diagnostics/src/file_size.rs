@@ -24,7 +24,10 @@ fn parse_violation(line: &str) -> Option<Diagnostic> {
         severity: Severity::Error,
         source: DiagnosticSource::Build,
         code: Some(DiagnosticCode("FILE_SIZE_LIMIT".into())),
-        message: format!("{} has {count} lines and exceeds the source-file cap", path.display()),
+        message: format!(
+            "{} has {count} lines and exceeds the source-file cap",
+            path.display()
+        ),
         location: Some(SourceLocation {
             path,
             line: 1,
