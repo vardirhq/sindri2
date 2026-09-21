@@ -16,7 +16,7 @@ mod test;
 
 pub use cargo::{CargoMessageError, parse_cargo_messages};
 pub use ci::{
-    CheckOutcome, CheckResult, FailureFingerprint, correlate_checks, fingerprint_failure,
+    CheckOutcome, CheckResult, FailureFingerprint, correlate_checks, fingerprint_failure, render_ci_summary,
 };
 pub use decay::{DecayReportError, parse_decay_report};
 pub use diagnostic::{
