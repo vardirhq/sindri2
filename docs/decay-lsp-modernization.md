@@ -113,14 +113,14 @@ shared foundation instead of re-rendering the same compiler result repeatedly.
 - [x] Render the same representation as LSP diagnostics.
 - [x] Render it in `decay-lsp --check` human output.
 - [x] Add machine-readable `--check --json` output with a documented schema.
-- [ ] Adapt it into `sindri-diagnostics` without parsing human compiler prose.
-- [ ] Emit GitHub annotations/summary through the shared diagnostics path.
+- [x] Adapt it into `sindri-diagnostics` without parsing human compiler prose.
+- [x] Emit GitHub annotations/summary through the shared diagnostics path.
 - [ ] Preserve diagnostic codes so agents and editor code actions can identify
       failure classes without matching message strings.
 - [ ] Add related spans/information for diagnostics involving two declarations
       or conflicting symbols where the compiler has enough context.
 - [ ] Add suggested fixes only where they are mechanically trustworthy.
-- [ ] Ensure a failure in the diagnostics renderer cannot hide the compiler's
+- [x] Ensure a failure in the diagnostics renderer cannot hide the compiler's
       original non-zero result.
 
 ## P1 — replace textual runtime reminders

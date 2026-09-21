@@ -5,6 +5,7 @@
 
 mod cargo;
 mod ci;
+mod decay;
 mod diagnostic;
 mod format;
 mod github;
@@ -14,6 +15,7 @@ mod test;
 
 pub use cargo::{CargoMessageError, parse_cargo_messages};
 pub use ci::{CheckOutcome, CheckResult, correlate_checks};
+pub use decay::{DecayReportError, parse_decay_report};
 pub use diagnostic::{
     Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity, SourceLocation,
 };
