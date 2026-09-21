@@ -1,6 +1,6 @@
 //! `sindri.camera`: how a scene's own camera sees the world.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sindri_core::{EntityId, SceneComponent, Transform3D, World};
 
 /// A camera authored into a scene.
@@ -96,7 +96,7 @@ impl CameraComponent {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CameraBehaviorComponent {
     #[serde(default)]
     pub follow: Option<CameraFollow>,
@@ -106,7 +106,7 @@ pub struct CameraBehaviorComponent {
     pub shake: CameraShake,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CameraFollow {
     pub target: EntityId,
     #[serde(default)]
@@ -121,13 +121,13 @@ pub struct CameraFollow {
 
 const fn default_follow_smoothing() -> f32 { 8.0 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CameraBounds {
     pub min: [f32; 2],
     pub max: [f32; 2],
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct CameraShake {
     #[serde(default)]
     pub trauma: f32,
