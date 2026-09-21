@@ -1,4 +1,4 @@
-use crate::{Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity};
+use crate::{Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticReport, DiagnosticSource, Severity};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt::Write};
 
@@ -23,6 +23,36 @@ pub struct CheckResult {
 pub struct FailureFingerprint {
     pub value: String,
     pub infrastructure: bool,
+}
+
+/// Derives a fingerprint from an already-structured diagnostic report.
+///
+/// Prefer this over reparsing rendered output whenever the producer has already
+/// identified a stable code and source location.
+#[must_use]
+pub fn fingerprint_report(report: &DiagnosticReport) -> Option<FailureFingerprint> {
+    let diagnostic = report
+        .diagnostics
+        .iter()
+        .find(|diagnostic| diagnostic.severity == Severity::Error)?;
+    let code = diagnostic.code.as_ref()?;
+    let location = diagnostic.location.as_ref().map(|location| {
+        format!("{}:{}", location.path.display(), location.start.line)
+    });
+    let source = match diagnostic.source {
+        DiagnosticSource::Compiler => "compiler",
+        DiagnosticSource::Build => "build",
+        DiagnosticSource::Script => "script",
+        DiagnosticSource::Asset => "asset",
+        DiagnosticSource::Editor => "editor",
+    };
+    Some(FailureFingerprint {
+        value: match location {
+            Some(location) => format!("diagnostic:{source}:{}:{location}", code.0),
+            None => format!("diagnostic:{source}:{}", code.0),
+        },
+        infrastructure: false,
+    })
 }
 
 /// Extracts a stable-enough fingerprint from common CI failure output.
@@ -219,6 +249,29 @@ pub fn correlate_checks(checks: &[CheckResult]) -> Vec<Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fingerprints_structured_report_by_source_code_and_location() {
+        let report = DiagnosticReport::new(vec![Diagnostic {
+            severity: Severity::Error,
+            source: DiagnosticSource::Build,
+            code: Some(DiagnosticCode("FILE_SIZE_LIMIT".into())),
+            message: "too large".into(),
+            location: Some(crate::SourceLocation {
+                path: "crates/a/src/lib.rs".into(),
+                start: crate::SourcePosition { line: 601, column: 1 },
+                end: None,
+            }),
+            notes: Vec::new(),
+            suggestion: None,
+            rendered: None,
+            relation: None,
+        }]);
+        assert_eq!(
+            fingerprint_report(&report).unwrap().value,
+            "diagnostic:build:FILE_SIZE_LIMIT:crates/a/src/lib.rs:601"
+        );
+    }
 
     #[test]
     fn fingerprints_compiler_error_by_code_and_location() {
