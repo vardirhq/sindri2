@@ -110,9 +110,9 @@ shared foundation instead of re-rendering the same compiler result repeatedly.
       related information, and optional fix/suggestion.
 - [ ] Convert syntax diagnostics into that representation once.
 - [ ] Convert semantic diagnostics into that representation once.
-- [ ] Render the same representation as LSP diagnostics.
-- [ ] Render it in `decay-lsp --check` human output.
-- [ ] Add machine-readable `--check --json` output with a documented schema.
+- [x] Render the same representation as LSP diagnostics.
+- [x] Render it in `decay-lsp --check` human output.
+- [x] Add machine-readable `--check --json` output with a documented schema.
 - [ ] Adapt it into `sindri-diagnostics` without parsing human compiler prose.
 - [ ] Emit GitHub annotations/summary through the shared diagnostics path.
 - [ ] Preserve diagnostic codes so agents and editor code actions can identify
