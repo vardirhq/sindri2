@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::{
     MeshComponent, SpriteAnimationComponent, SpriteComponent, TilemapComponent, UiImageComponent,
-    UiTextComponent,
+    UiTextComponent, VoxelWorldComponent,
 };
 
 /// Maps the texture references a scene names to the textures a renderer holds.
@@ -333,6 +333,24 @@ fn sprite_references(world: &World) -> BTreeSet<SpriteRef> {
     let mut referenced = BTreeSet::new();
     for (_, data) in world.entities() {
         for (type_name, payload) in &data.components {
+            if type_name == VoxelWorldComponent::TYPE_NAME {
+                if let Some(materials) = payload
+                    .get("materials")
+                    .and_then(serde_json::Value::as_array)
+                {
+                    for material in materials {
+                        for field in ["top", "side", "bottom"] {
+                            if let Some(texture) =
+                                material.get(field).and_then(serde_json::Value::as_str)
+                                && let Ok(reference) = SpriteRef::parse(texture)
+                            {
+                                referenced.insert(reference);
+                            }
+                        }
+                    }
+                }
+                continue;
+            }
             if !TEXTURE_NAMING_COMPONENTS.contains(&type_name.as_str()) {
                 continue;
             }

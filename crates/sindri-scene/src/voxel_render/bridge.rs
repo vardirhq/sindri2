@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use glam::{Mat4, Vec3};
 use sindri_render::{CachedMeshId, CachedTexturedMeshUpload, FrameCommand, TextureId};
@@ -36,9 +37,10 @@ pub struct VoxelRenderBridge {
     identities: BTreeMap<BatchKey, CachedMeshId>,
     uploads: BTreeMap<BatchKey, CachedTexturedMeshUpload>,
     releases: Vec<CachedMeshId>,
-    next_identity: u64,
     triangles: usize,
 }
+
+static NEXT_CACHE_ID: AtomicU64 = AtomicU64::new(0);
 
 impl VoxelRenderBridge {
     /// Records newer mesh work while leaving the current section drawable.
@@ -189,18 +191,13 @@ impl VoxelRenderBridge {
         if let Some(identity) = self.identities.get(&key) {
             return *identity;
         }
-        loop {
-            self.next_identity = self.next_identity.wrapping_add(1);
-            let candidate = CachedMeshId::new(self.next_identity);
-            if !self
-                .identities
-                .values()
-                .any(|identity| *identity == candidate)
-            {
-                self.identities.insert(key, candidate);
-                return candidate;
-            }
-        }
+        let value = NEXT_CACHE_ID
+            .fetch_add(1, Ordering::Relaxed)
+            .wrapping_add(1);
+        assert_ne!(value, 0, "voxel renderer exhausted persistent cache IDs");
+        let identity = CachedMeshId::new(value);
+        self.identities.insert(key, identity);
+        identity
     }
 
     fn release_missing(&mut self, previous: ResidentSection, current: &BTreeSet<BatchKey>) {

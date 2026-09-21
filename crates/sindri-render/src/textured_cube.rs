@@ -134,12 +134,20 @@ fn create_pipeline(
 pub struct TexturedCubeRenderer {
     pipeline: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
-    /// One bind group per texture, built on first use and kept for reuse.
-    bind_groups: std::collections::HashMap<TextureId, wgpu::BindGroup>,
-    current: TextureId,
-    uniform: wgpu::Buffer,
+    batches: Vec<MeshBatch>,
+    next: usize,
     mesh: MeshBuffers,
     cached_meshes: TexturedMeshCache,
+}
+
+/// GPU state owned by one textured-mesh draw in a submission.
+///
+/// Queue writes land before the submitted command buffer runs, so sharing a
+/// uniform across draws would make every mesh use the final draw's transform.
+#[derive(Debug)]
+struct MeshBatch {
+    uniform: wgpu::Buffer,
+    bind_groups: std::collections::HashMap<TextureId, wgpu::BindGroup>,
 }
 
 /// The GPU handles and texture a draw resolves against.
@@ -165,24 +173,40 @@ impl TexturedCubeRenderer {
     /// Textures come from the frame's [`TextureRegistry`] rather than being
     /// baked in, so one renderer draws every mesh in a scene.
     pub fn new(device: &wgpu::Device, target_format: wgpu::TextureFormat) -> Self {
-        let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Sindri textured cube uniform"),
-            contents: bytemuck::bytes_of(&CubeUniform {
-                model_view_projection: Mat4::IDENTITY.to_cols_array_2d(),
-            }),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
         let bind_group_layout = create_bind_group_layout(device);
         let pipeline = create_pipeline(device, target_format, &bind_group_layout);
         Self {
             pipeline,
             bind_group_layout,
-            bind_groups: std::collections::HashMap::new(),
-            current: TextureRegistry::MISSING,
-            uniform,
+            batches: Vec::new(),
+            next: 0,
             mesh: MeshBuffers::new(device, "Sindri textured cube", &VERTICES, &INDICES),
             cached_meshes: TexturedMeshCache::default(),
         }
+    }
+
+    /// Makes the reusable draw slots available for a new GPU submission.
+    pub fn begin_submission(&mut self) {
+        self.next = 0;
+    }
+
+    fn reserve(&mut self, device: &wgpu::Device) -> usize {
+        let slot = self.next;
+        self.next += 1;
+        if slot == self.batches.len() {
+            let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Sindri textured mesh uniform"),
+                contents: bytemuck::bytes_of(&CubeUniform {
+                    model_view_projection: Mat4::IDENTITY.to_cols_array_2d(),
+                }),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
+            self.batches.push(MeshBatch {
+                uniform,
+                bind_groups: std::collections::HashMap::new(),
+            });
+        }
+        slot
     }
 
     /// Returns the bind group for `texture`, creating it on first use.
@@ -190,10 +214,11 @@ impl TexturedCubeRenderer {
         &mut self,
         device: &wgpu::Device,
         registry: &TextureRegistry,
+        slot: usize,
         texture: TextureId,
     ) {
-        self.current = texture;
-        if self.bind_groups.contains_key(&texture) {
+        let batch = &mut self.batches[slot];
+        if batch.bind_groups.contains_key(&texture) {
             return;
         }
         let resolved = registry.get(texture);
@@ -203,7 +228,7 @@ impl TexturedCubeRenderer {
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: self.uniform.as_entire_binding(),
+                    resource: batch.uniform.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
@@ -215,7 +240,7 @@ impl TexturedCubeRenderer {
                 },
             ],
         });
-        self.bind_groups.insert(texture, bind_group);
+        batch.bind_groups.insert(texture, bind_group);
     }
 
     /// Draws the cube into a frame something else has already cleared.
@@ -231,17 +256,19 @@ impl TexturedCubeRenderer {
         depth: &DepthTarget,
         model_view_projection: Mat4,
     ) {
-        self.bind_texture(context.device, context.textures, context.texture);
-        let bind_group = self
+        let slot = self.reserve(context.device);
+        self.bind_texture(context.device, context.textures, slot, context.texture);
+        let batch = &self.batches[slot];
+        let bind_group = batch
             .bind_groups
-            .get(&self.current)
+            .get(&context.texture)
             .expect("the texture is bound before encoding");
         encode_mesh_buffers(
             context.queue,
             encoder,
             (target, depth),
             model_view_projection,
-            (&self.uniform, &self.pipeline, bind_group),
+            (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
         );
@@ -265,17 +292,19 @@ impl TexturedCubeRenderer {
             return;
         }
         let mesh = MeshBuffers::new(context.device, "Sindri textured surface", vertices, indices);
-        self.bind_texture(context.device, context.textures, context.texture);
-        let bind_group = self
+        let slot = self.reserve(context.device);
+        self.bind_texture(context.device, context.textures, slot, context.texture);
+        let batch = &self.batches[slot];
+        let bind_group = batch
             .bind_groups
-            .get(&self.current)
+            .get(&context.texture)
             .expect("the texture is bound before encoding");
         encode_mesh_buffers(
             context.queue,
             encoder,
             target,
             model_view_projection,
-            (&self.uniform, &self.pipeline, bind_group),
+            (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
         );
@@ -291,7 +320,8 @@ impl TexturedCubeRenderer {
         model_view_projection: Mat4,
         request: CachedMeshRequest<'_>,
     ) {
-        self.bind_texture(context.device, context.textures, context.texture);
+        let slot = self.reserve(context.device);
+        self.bind_texture(context.device, context.textures, slot, context.texture);
         let Some(mesh) = self.cached_meshes.resolve(
             context.device,
             request.id,
@@ -300,16 +330,17 @@ impl TexturedCubeRenderer {
         ) else {
             return;
         };
-        let bind_group = self
+        let batch = &self.batches[slot];
+        let bind_group = batch
             .bind_groups
-            .get(&self.current)
+            .get(&context.texture)
             .expect("the texture is bound before encoding");
         encode_mesh_buffers(
             context.queue,
             encoder,
             target,
             model_view_projection,
-            (&self.uniform, &self.pipeline, bind_group),
+            (&batch.uniform, &self.pipeline, bind_group),
             mesh,
             "Sindri cached textured mesh pass",
         );
@@ -325,9 +356,10 @@ impl TexturedCubeRenderer {
         self.cached_meshes.stats()
     }
 
-    /// The texture the next encode will draw with.
-    pub const fn texture(&self) -> TextureId {
-        self.current
+    /// High-water mark of textured mesh draws in one submission.
+    #[must_use]
+    pub fn batch_slots(&self) -> usize {
+        self.batches.len()
     }
 }
 

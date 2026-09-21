@@ -17,6 +17,7 @@ mod tile_volume;
 pub(crate) use tile_volume::face_is_occluded;
 mod tilemap;
 mod ui;
+mod voxel_world;
 
 pub use camera::view::UiCanvas;
 
@@ -72,6 +73,8 @@ pub struct SceneExtractor {
     /// to a volume -- or to its grid, its transform, or the tile set and
     /// textures it draws from -- is picked up on the next frame.
     baked_volumes: RefCell<BTreeMap<EntityId, BakedVolume>>,
+    /// Persistent section worlds and their compiled renderer bridges.
+    voxel_worlds: voxel_world::VoxelWorldCache,
 }
 
 fn transform_matrix(transform: Transform3D) -> Mat4 {
@@ -122,6 +125,22 @@ pub enum SceneExtractError {
     SpriteRef(#[from] SpriteRefError),
     #[error(transparent)]
     Text(#[from] TextError),
+    #[error(transparent)]
+    VoxelRender(#[from] crate::VoxelRenderError),
+    #[error(
+        "voxel residency radius {horizontal}x{vertical} exceeds the supported maximum {maximum}"
+    )]
+    VoxelRadiusTooLarge {
+        horizontal: u32,
+        vertical: u32,
+        maximum: u32,
+    },
+    #[error("voxel height variation {variation} exceeds the supported maximum {maximum}")]
+    VoxelHeightVariationTooLarge { variation: u32, maximum: u32 },
+    #[error("voxel materials must use unique non-air IDs")]
+    InvalidVoxelMaterials,
+    #[error("voxel generator references material ID {0}, but the component does not define it")]
+    MissingVoxelMaterial(u16),
     #[error("the viewport is too large for text rendering")]
     TextViewport(#[from] std::num::TryFromIntError),
 }
@@ -134,6 +153,7 @@ impl SceneExtractor {
         Ok(Self {
             components: builtin_components()?,
             baked_volumes: RefCell::default(),
+            voxel_worlds: voxel_world::VoxelWorldCache::default(),
         })
     }
 
@@ -228,6 +248,7 @@ impl SceneExtractor {
         }
         let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
         self.push_meshes(world, &cameras, textures, &mut frame)?;
+        self.push_voxel_worlds(world, &cameras, textures, &mut frame)?;
         let resting = SpriteAnimations::new();
         let animations = animations.unwrap_or(&resting);
         // Resolved once and shared: what is drawn, what is clickable and what
@@ -284,6 +305,7 @@ impl SceneExtractor {
 
         let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
         self.push_meshes(world, &cameras, textures, &mut frame)?;
+        self.push_voxel_worlds(world, &cameras, textures, &mut frame)?;
         let resting = SpriteAnimations::new();
         let animations = animations.unwrap_or(&resting);
         // Resolved once and shared: what is drawn, what is clickable and what

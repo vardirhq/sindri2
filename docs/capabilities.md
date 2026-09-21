@@ -445,10 +445,15 @@ cumulative cache counters. `sindri-scene` is the texture-aware seam between the
 two: it maps semantic voxel/face identities to atlas regions, groups one section
 into deterministic texture batches, keeps stable GPU identities across newer
 section revisions, ignores superseded results, and releases every batch when a
-section leaves residency. This first bridge supports opaque block batches;
-cutout/transparent pipelines, frustum culling, and the Voxel Lab proof remain.
-Causeway has not migrated to this path yet, so it is engine-tested foundation
-rather than game proof.
+section leaves residency. Scenes can author this as `sindri.voxel_world`, with
+a deterministic layered generator, per-face voxel material textures, bounded
+horizontal/vertical residency, and a section focus. The same scene path renders
+in games and in the editor Scene view. Voxel Lab now uses that component rather
+than a tile volume, while its browser route exposes the persistent-cache and
+settled-remesh counters. This first bridge supports opaque block batches;
+cutout/transparent pipelines, frustum culling, editor voxel picking/painting,
+and camera-driven scene residency remain. Causeway has not migrated to this path
+yet, so the proof is still narrower than a production game migration.
 
 ### Hosts and platforms
 

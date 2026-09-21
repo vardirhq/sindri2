@@ -26,7 +26,7 @@ use crate::components::{
     CameraComponent, GridNavigationComponent, GridOccupantComponent, GridPlacementComponent,
     MeshComponent, ShapeComponent, SpriteComponent, TileGridComponent, TileVolumeComponent,
     TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind,
-    UiTextComponent,
+    UiTextComponent, VoxelWorldComponent,
 };
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
@@ -259,6 +259,45 @@ fn register_tiles(components: &mut ComponentSchemaRegistry) -> Result<(), SceneE
             "cells": [],
             "layer": 0,
             "variant_seed": 0
+        }),
+    )?;
+    components.register_with_default::<VoxelWorldComponent>(
+        "Voxel World",
+        serde_json::json!({
+            "generator": {
+                "kind": "layered_terrain",
+                "seed": 0,
+                "base_height": 3,
+                "height_variation": 6,
+                "surface_voxel": 1,
+                "subsurface_voxel": 2,
+                "deep_voxel": 3,
+                "subsurface_depth": 3
+            },
+            "materials": [
+                {
+                    "voxel": 1,
+                    "top": PROCEDURAL_TEXTURES[0].reference,
+                    "side": PROCEDURAL_TEXTURES[0].reference,
+                    "bottom": PROCEDURAL_TEXTURES[0].reference
+                },
+                {
+                    "voxel": 2,
+                    "top": PROCEDURAL_TEXTURES[0].reference,
+                    "side": PROCEDURAL_TEXTURES[0].reference,
+                    "bottom": PROCEDURAL_TEXTURES[0].reference
+                },
+                {
+                    "voxel": 3,
+                    "top": PROCEDURAL_TEXTURES[0].reference,
+                    "side": PROCEDURAL_TEXTURES[0].reference,
+                    "bottom": PROCEDURAL_TEXTURES[0].reference
+                }
+            ],
+            "focus": [0, 0, 0],
+            "render_radius": 2,
+            "vertical_radius": 1,
+            "layer": 0
         }),
     )?;
     Ok(())
