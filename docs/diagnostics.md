@@ -56,7 +56,11 @@ fingerprint are downstream, and infrastructure failures stay independent.
 `sindri-diagnostics correlate` command accepts a JSON array of check results so
 workflow aggregation does not need to reproduce the correlation rules. Clippy, the quick formatting/file-size gate, Decay preflight, native tests,
 WASM checks, and browser smoke tests now emit a serialized check result on
-failure, and a final `CI failure summary` job consumes all available results. Artifact-finalization failures in the browser job are also classified explicitly as infrastructure failures, rather than being attributed to the engine. This lets an early gate failure still participate in the
+failure, and a final `CI failure summary` job consumes all available results.
+Rustfmt, file-size, Clippy, and Decay derive those fingerprints directly from
+structured reports instead of reparsing rendered diagnostics. Multi-step native,
+WASM, and browser jobs preserve the exact failing step name when only prose is
+available. Artifact-finalization failures in the browser job are also classified explicitly as infrastructure failures, rather than being attributed to the engine. This lets an early gate failure still participate in the
 same correlation contract instead of becoming a separate diagnostics island. This models real failures seen while building this crate, where one Rust compiler
 error failed several jobs while an artifact-finalization 403 was unrelated.
 
@@ -82,9 +86,8 @@ The Decay CI gate now preserves the typed checker's full output and, when a
 changed script fails, mirrors that output into the GitHub step summary together
 with the exact changed-script set and a reproducible local command. This keeps
 the checker authoritative while making its failure visible without digging
-through the complete job log. A later slice should expose structured Decay
-diagnostics directly from the checker so CI can add source annotations without
-scraping its human output.
+through the complete job log. The checker now exposes structured Decay diagnostics directly, so CI can add
+source annotations and derive stable fingerprints without scraping human output.
 
 ## Agent preflight
 
@@ -101,15 +104,17 @@ Preflight deliberately does not guess WASM, render, browser, or dependency
 impact. Those checks remain explicit requirements in `AGENTS.md`; pretending a
 cheap heuristic proves a platform is exactly how automation becomes decorative.
 
-## Next integrations
+## Foundation status
 
-The shared contract now has live rustfmt, file-size, Decay, and agent-preflight
-consumers. The next useful slices are:
+The CI diagnostics foundation is complete enough to stop growing as a separate
+workstream. Cheap preflight, structured producer reports, GitHub annotations,
+stable fingerprints, infrastructure classification, cross-job correlation, and
+failing-step identity are all wired into the main gates.
 
-1. route structured reports from compile-heavy steps directly into check-result fingerprints, then capture exact failing-step output for the remaining multi-step jobs;
-2. extend native Cargo JSON rendering to other compile-heavy CI jobs where it adds value;
-3. finer stable Decay diagnostic codes and syntax-aware runtime reminders;
-4. editor Problems-panel consumption once the editor work is free to move.
+Future diagnostics work should be driven by a concrete consumer or a real
+failure rather than by plumbing for its own sake. The obvious later consumers
+are finer Decay codes/runtime reminders and an editor Problems panel; neither is
+a prerequisite for treating CI diagnostics as established infrastructure.
 
 CI remains authoritative for the platform and integration checks that the cheap
 preflight deliberately does not attempt.
