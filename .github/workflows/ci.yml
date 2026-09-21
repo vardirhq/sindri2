@@ -95,26 +95,15 @@ jobs:
 
           output="$(mktemp)"
           set +e
-          cargo run --quiet --package decay-lsp -- --check "${scripts[@]}" >"$output" 2>&1
+          cargo run --quiet --package decay-lsp -- --check --json "${scripts[@]}" >"$output"
           status=$?
           set -e
 
           cat "$output"
+          cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \\
+            decay --github <"$output" || true
           if [[ $status -ne 0 ]]; then
             {
-              echo "## Decay preflight failed"
-              echo
-              echo "The typed Decay checker rejected the changed scripts:"
-              echo
-              for script in "${scripts[@]}"; do
-                echo "- `$script`"
-              done
-              echo
-              echo "### Checker output"
-              echo
-              echo '~~~text'
-              cat "$output"
-              echo '~~~'
               echo
               echo "Run locally:"
               echo
