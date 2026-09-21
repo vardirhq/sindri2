@@ -204,6 +204,49 @@ pub fn update_camera_behaviors(world: &mut World, dt: f32) {
     }
 }
 
+#[cfg(test)]
+mod behavior_tests {
+    use super::*;
+    use sindri_core::EntityData;
+    use serde_json::json;
+
+    fn entity(position: [f32; 3]) -> EntityData {
+        EntityData { transform_3d: Some(Transform3D { position, ..Transform3D::default() }), ..EntityData::default() }
+    }
+
+    #[test]
+    fn follow_respects_dead_zone_and_bounds() {
+        let mut world = World::default();
+        let target = world.spawn(entity([8.0, 0.0, 0.0]));
+        let mut camera = entity([0.0, 0.0, 5.0]);
+        camera.components.insert(CameraBehaviorComponent::TYPE_NAME.into(), json!({
+            "follow": { "target": target, "dead_zone": [2.0, 2.0], "smoothing": 1000.0, "max_speed": 0.0 },
+            "confine": { "min": [-4.0, -3.0], "max": [4.0, 3.0] },
+            "shake": {}
+        }));
+        let camera = world.spawn(camera);
+        update_camera_behaviors(&mut world, 1.0);
+        assert_eq!(world.get(camera).unwrap().transform_3d.unwrap().position[0], 4.0);
+    }
+
+    #[test]
+    fn shake_decays_and_is_deterministic() {
+        let mut world = World::default();
+        let mut camera = entity([0.0, 0.0, 5.0]);
+        camera.components.insert(CameraBehaviorComponent::TYPE_NAME.into(), json!({
+            "shake": { "trauma": 1.0, "strength": 1.0, "decay": 1.0, "frequency": 1.0, "phase": 0.0 }
+        }));
+        let camera = world.spawn(camera);
+        update_camera_behaviors(&mut world, 0.25);
+        let data = world.get(camera).unwrap();
+        assert_ne!(data.transform_3d.unwrap().position[0], 0.0);
+        let behavior: CameraBehaviorComponent = serde_json::from_value(
+            data.components[CameraBehaviorComponent::TYPE_NAME].clone()
+        ).unwrap();
+        assert_eq!(behavior.shake.trauma, 0.75);
+    }
+}
+
 impl SceneComponent for CameraComponent {
     const TYPE_NAME: &'static str = "sindri.camera";
 }
