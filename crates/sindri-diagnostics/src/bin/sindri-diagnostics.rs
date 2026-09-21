@@ -7,7 +7,7 @@ use std::{
 };
 
 use sindri_diagnostics::{
-    CheckResult, DiagnosticReport, GithubAnnotation, fingerprint_failure, parse_cargo_messages,
+    CheckOutcome, CheckResult, DiagnosticReport, GithubAnnotation, fingerprint_failure, parse_cargo_messages,
     parse_decay_report, parse_file_size_violations, parse_rustfmt_diff, render_ci_summary,
     render_terminal_report,
 };
@@ -26,7 +26,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
         return Err(
-            "expected command: rustfmt, cargo, decay, file-size, fingerprint, or correlate".into(),
+            "expected command: rustfmt, cargo, decay, file-size, fingerprint, correlate, or check-result".into(),
         );
     };
     if command != "rustfmt"
@@ -35,6 +35,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
         && command != "file-size"
         && command != "fingerprint"
         && command != "correlate"
+        && command != "check-result"
     {
         return Err(format!("unknown command: {command}").into());
     }
@@ -71,6 +72,24 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
         }
         let checks: Vec<CheckResult> = serde_json::from_str(&input)?;
         print!("{}", render_ci_summary(&checks));
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    if command == "check-result" {
+        if github || json {
+            return Err("check-result does not accept renderer flags".into());
+        }
+        let mut lines = input.lines();
+        let name = lines.next().ok_or("check-result expects a check name on the first line")?;
+        let log = lines.collect::<Vec<_>>().join("\n");
+        let fingerprint = fingerprint_failure(&log);
+        let result = CheckResult {
+            name: name.into(),
+            outcome: CheckOutcome::Failure,
+            fingerprint: fingerprint.as_ref().map(|value| value.value.clone()),
+            infrastructure: fingerprint.is_some_and(|value| value.infrastructure),
+        };
+        println!("{}", serde_json::to_string(&result)?);
         return Ok(ExitCode::SUCCESS);
     }
 
