@@ -3,13 +3,19 @@ use crate::{Diagnostic, DiagnosticRelation, DiagnosticReport};
 #[must_use]
 pub fn render_terminal_report(report: &DiagnosticReport) -> String {
     if report.success {
-        return format!("Sindri diagnostics: clean ({} warning(s))", report.warning_count());
+        return format!(
+            "Sindri diagnostics: clean ({} warning(s))",
+            report.warning_count()
+        );
     }
     let mut output = format!(
         "Sindri diagnostics: {} error(s), {} warning(s)\n",
-        report.error_count(), report.warning_count()
+        report.error_count(),
+        report.warning_count()
     );
-    for diagnostic in &report.diagnostics { render_diagnostic(&mut output, diagnostic); }
+    for diagnostic in &report.diagnostics {
+        render_diagnostic(&mut output, diagnostic);
+    }
     output
 }
 
@@ -22,9 +28,16 @@ fn render_diagnostic(output: &mut String, diagnostic: &Diagnostic) {
     };
     output.push_str(&format!("\n{relation}: {}", diagnostic.message));
     if let Some(location) = &diagnostic.location {
-        output.push_str(&format!("\n  at {}:{}:{}", location.path.display(), location.line, location.column));
+        output.push_str(&format!(
+            "\n  at {}:{}:{}",
+            location.path.display(),
+            location.line,
+            location.column
+        ));
     }
-    for note in &diagnostic.notes { output.push_str(&format!("\n  {note}")); }
+    for note in &diagnostic.notes {
+        output.push_str(&format!("\n  {note}"));
+    }
     if let Some(suggestion) = &diagnostic.suggestion {
         output.push_str(&format!("\n  suggestion: {suggestion}"));
     }
@@ -38,15 +51,20 @@ mod tests {
     #[test]
     fn highlights_root_cause() {
         let report = DiagnosticReport::new(vec![Diagnostic {
-            severity: Severity::Error, source: DiagnosticSource::Test,
+            severity: Severity::Error,
+            source: DiagnosticSource::Test,
             code: Some(DiagnosticCode("TEST_FAILURE".into())),
             message: "fixture is malformed".into(),
             location: Some(SourceLocation {
-                path: "src/test.rs".into(), line: 12, column: 4,
-                end_line: None, end_column: None,
+                path: "src/test.rs".into(),
+                line: 12,
+                column: 4,
+                end_line: None,
+                end_column: None,
             }),
             notes: vec!["failed test: parses_fixture".into()],
-            suggestion: None, rendered: None,
+            suggestion: None,
+            rendered: None,
             relation: Some(DiagnosticRelation::Primary),
         }]);
         let rendered = render_terminal_report(&report);

@@ -4,17 +4,35 @@ use std::path::PathBuf;
 /// Stable severity shared by every Sindri diagnostic producer.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum Severity { Error, Warning, Note, Help }
+pub enum Severity {
+    Error,
+    Warning,
+    Note,
+    Help,
+}
 
 /// Broad subsystem that raised a diagnostic.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum DiagnosticSource { Rust, Test, Decay, Asset, Scene, Project, Build, Other(String) }
+pub enum DiagnosticSource {
+    Rust,
+    Test,
+    Decay,
+    Asset,
+    Scene,
+    Project,
+    Build,
+    Other(String),
+}
 
 /// How a problem relates to the root cause of a failed check.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
-pub enum DiagnosticRelation { Primary, Downstream, Independent }
+pub enum DiagnosticRelation {
+    Primary,
+    Downstream,
+    Independent,
+}
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(transparent)]

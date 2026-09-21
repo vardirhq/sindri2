@@ -13,23 +13,37 @@ pub struct DiagnosticReport {
 impl DiagnosticReport {
     #[must_use]
     pub fn new(diagnostics: Vec<Diagnostic>) -> Self {
-        let success = !diagnostics.iter().any(|d| d.severity == Severity::Error);
-        Self { schema_version: SCHEMA_VERSION, success, diagnostics }
+        let success = !diagnostics
+            .iter()
+            .any(|d| d.severity == Severity::Error);
+        Self {
+            schema_version: SCHEMA_VERSION,
+            success,
+            diagnostics,
+        }
     }
 
     #[must_use]
     pub fn error_count(&self) -> usize {
-        self.diagnostics.iter().filter(|d| d.severity == Severity::Error).count()
+        self.diagnostics
+            .iter()
+            .filter(|d| d.severity == Severity::Error)
+            .count()
     }
 
     #[must_use]
     pub fn warning_count(&self) -> usize {
-        self.diagnostics.iter().filter(|d| d.severity == Severity::Warning).count()
+        self.diagnostics
+            .iter()
+            .filter(|d| d.severity == Severity::Warning)
+            .count()
     }
 
     #[must_use]
     pub fn primary(&self) -> impl Iterator<Item = &Diagnostic> {
-        self.diagnostics.iter().filter(|d| d.relation == Some(DiagnosticRelation::Primary))
+        self.diagnostics
+            .iter()
+            .filter(|d| d.relation == Some(DiagnosticRelation::Primary))
     }
 }
 
@@ -40,8 +54,15 @@ mod tests {
 
     fn diagnostic(severity: Severity, relation: Option<DiagnosticRelation>) -> Diagnostic {
         Diagnostic {
-            severity, source: DiagnosticSource::Build, code: None, message: "example".into(),
-            location: None, notes: Vec::new(), suggestion: None, rendered: None, relation,
+            severity,
+            source: DiagnosticSource::Build,
+            code: None,
+            message: "example".into(),
+            location: None,
+            notes: Vec::new(),
+            suggestion: None,
+            rendered: None,
+            relation,
         }
     }
 
