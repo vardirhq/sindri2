@@ -38,7 +38,7 @@ jobs:
     name: Format and file sizes
     runs-on: ubuntu-latest
     outputs:
-      failure: ${{ steps.rustfmt.outputs.failure || steps.file_size.outputs.failure }}
+      failure: ${{ steps.rustfmt.outputs.failure }}${{ steps.file_size.outputs.failure }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.95.0
