@@ -54,11 +54,7 @@ impl StructuredDiagnostic {
         }
     }
 
-    pub(crate) fn reminder(
-        code: &'static str,
-        message: &'static str,
-        offset: usize,
-    ) -> Self {
+    pub(crate) fn reminder(code: &'static str, message: &'static str, offset: usize) -> Self {
         Self {
             severity: Severity::Warning,
             code: code.to_owned(),
@@ -97,12 +93,7 @@ impl StructuredDiagnostic {
         })
     }
 
-    pub(crate) fn human(
-        &self,
-        path: &str,
-        line: usize,
-        column: usize,
-    ) -> String {
+    pub(crate) fn human(&self, path: &str, line: usize, column: usize) -> String {
         format!(
             "{path}:{line}:{column}: {}[{}]: {}",
             self.severity.label(),
