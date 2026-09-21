@@ -24,8 +24,11 @@ becoming the owner of another subsystem's errors.
 model. Primary spans become source locations, compiler codes remain stable codes,
 help/note children remain notes, and machine suggestions are retained.
 
-This means CI does not need to scrape ANSI-formatted compiler prose to answer
-which file and line failed.
+The `sindri-diagnostics cargo` renderer consumes that stream directly. Clippy CI
+now captures Cargo JSON and, on failure, emits GitHub file annotations and a step
+summary while preserving Clippy's original exit status. This means CI does not
+need to scrape ANSI-formatted compiler prose to answer which file and line
+failed.
 
 ## Formatting and CI correlation
 
@@ -95,7 +98,7 @@ The shared contract now has live rustfmt, file-size, Decay, and agent-preflight
 consumers. The next useful slices are:
 
 1. aggregate per-job fingerprints into a cross-job CI summary;
-2. Cargo/Clippy GitHub summary and annotation emission from their native JSON;
+2. extend native Cargo JSON rendering to other compile-heavy CI jobs where it adds value;
 3. finer stable Decay diagnostic codes and syntax-aware runtime reminders;
 4. editor Problems-panel consumption once the editor work is free to move.
 
