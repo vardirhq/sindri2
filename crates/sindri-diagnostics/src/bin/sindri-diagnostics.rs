@@ -7,8 +7,8 @@ use std::{
 };
 
 use sindri_diagnostics::{
-    DiagnosticReport, GithubAnnotation, fingerprint_failure, parse_cargo_messages, parse_decay_report,
-    parse_file_size_violations, parse_rustfmt_diff, render_terminal_report,
+    DiagnosticReport, GithubAnnotation, fingerprint_failure, parse_cargo_messages,
+    parse_decay_report, parse_file_size_violations, parse_rustfmt_diff, render_terminal_report,
 };
 
 fn main() -> ExitCode {
