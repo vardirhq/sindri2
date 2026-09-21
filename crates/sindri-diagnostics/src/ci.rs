@@ -16,6 +16,120 @@ pub struct CheckResult {
     pub infrastructure: bool,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FailureFingerprint {
+    pub value: String,
+    pub infrastructure: bool,
+}
+
+/// Extracts a stable-enough fingerprint from common CI failure output.
+///
+/// The fingerprint deliberately prefers compiler/test identities over rendered
+/// prose so the same root failure can be recognized across Clippy, test, WASM,
+/// and browser jobs without pretending unrelated errors are equivalent.
+#[must_use]
+pub fn fingerprint_failure(output: &str) -> Option<FailureFingerprint> {
+    let lower = output.to_ascii_lowercase();
+    if let Some(infrastructure) = infrastructure_fingerprint(&lower) {
+        return Some(FailureFingerprint {
+            value: infrastructure.into(),
+            infrastructure: true,
+        });
+    }
+
+    let lines = output.lines().collect::<Vec<_>>();
+    for (index, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        if let Some(code) = rust_error_code(trimmed) {
+            let location = source_location_after(&lines, index).unwrap_or_default();
+            return Some(FailureFingerprint {
+                value: format!("rust:{code}:{location}"),
+                infrastructure: false,
+            });
+        }
+    }
+
+    if let Some(test) = failed_test_name(output) {
+        return Some(FailureFingerprint {
+            value: format!("test:{test}"),
+            infrastructure: false,
+        });
+    }
+
+    first_actionable_line(output).map(|line| FailureFingerprint {
+        value: format!("message:{}", normalize_message(line)),
+        infrastructure: false,
+    })
+}
+
+fn infrastructure_fingerprint(lower: &str) -> Option<&'static str> {
+    [
+        ("http 403", "infra:http-403"),
+        ("status code: 403", "infra:http-403"),
+        ("rate limit", "infra:rate-limit"),
+        ("no space left on device", "infra:disk-full"),
+        ("connection timed out", "infra:network-timeout"),
+        ("connection reset by peer", "infra:connection-reset"),
+        ("the operation was canceled", "infra:runner-cancelled"),
+    ]
+    .into_iter()
+    .find_map(|(needle, fingerprint)| lower.contains(needle).then_some(fingerprint))
+}
+
+fn rust_error_code(line: &str) -> Option<&str> {
+    let start = line.find("error[E")? + "error[".len();
+    let rest = &line[start..];
+    let end = rest.find(']')?;
+    let code = &rest[..end];
+    (code.len() == 5 && code.starts_with('E') && code[1..].chars().all(|c| c.is_ascii_digit()))
+        .then_some(code)
+}
+
+fn source_location_after(lines: &[&str], error_index: usize) -> Option<String> {
+    lines.iter().skip(error_index + 1).take(4).find_map(|line| {
+        let location = line.trim().strip_prefix("-->")?.trim();
+        let mut parts = location.rsplitn(3, ':');
+        let column = parts.next()?;
+        let line_number = parts.next()?;
+        let path = parts.next()?;
+        (column.parse::<u32>().is_ok() && line_number.parse::<u32>().is_ok())
+            .then(|| format!("{path}:{line_number}"))
+    })
+}
+
+fn failed_test_name(output: &str) -> Option<&str> {
+    output.lines().find_map(|line| {
+        let trimmed = line.trim();
+        trimmed
+            .strip_prefix("test ")
+            .and_then(|rest| rest.strip_suffix(" ... FAILED"))
+            .or_else(|| {
+                trimmed
+                    .strip_prefix("---- ")
+                    .and_then(|rest| rest.strip_suffix(" stdout ----"))
+            })
+    })
+}
+
+fn first_actionable_line(output: &str) -> Option<&str> {
+    output.lines().map(str::trim).find(|line| {
+        !line.is_empty()
+            && (line.starts_with("error:")
+                || line.starts_with("Error:")
+                || line.contains("FAILED")
+                || line.contains("failed"))
+    })
+}
+
+fn normalize_message(line: &str) -> String {
+    line.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .chars()
+        .take(160)
+        .collect()
+}
+
 /// Correlates check-level failures so duplicate manifestations of one error do
 /// not masquerade as separate root causes.
 #[must_use]
@@ -67,6 +181,48 @@ pub fn correlate_checks(checks: &[CheckResult]) -> Vec<Diagnostic> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn fingerprints_compiler_error_by_code_and_location() {
+        let output = "error[E0063]: missing field\n  --> crates/a/src/lib.rs:68:9\n";
+        assert_eq!(
+            fingerprint_failure(output),
+            Some(FailureFingerprint {
+                value: "rust:E0063:crates/a/src/lib.rs:68".into(),
+                infrastructure: false,
+            })
+        );
+    }
+
+    #[test]
+    fn pairs_compiler_code_with_its_own_location() {
+        let output = "warning: earlier\n  --> crates/warn.rs:2:1\nerror[E0425]: missing\n  --> crates/fail.rs:9:4\n";
+        assert_eq!(
+            fingerprint_failure(output).unwrap().value,
+            "rust:E0425:crates/fail.rs:9"
+        );
+    }
+
+    #[test]
+    fn fingerprints_rust_test_failure_by_name() {
+        let output = "test scene::tests::loads_prefab ... FAILED\n";
+        assert_eq!(
+            fingerprint_failure(output).unwrap().value,
+            "test:scene::tests::loads_prefab"
+        );
+    }
+
+    #[test]
+    fn recognizes_infrastructure_before_generic_error_text() {
+        let output = "Error: artifact upload failed with HTTP 403";
+        assert_eq!(
+            fingerprint_failure(output),
+            Some(FailureFingerprint {
+                value: "infra:http-403".into(),
+                infrastructure: true,
+            })
+        );
+    }
 
     #[test]
     fn groups_duplicate_failures_and_keeps_infrastructure_independent() {

@@ -7,8 +7,8 @@ use std::{
 };
 
 use sindri_diagnostics::{
-    DiagnosticReport, GithubAnnotation, parse_decay_report, parse_file_size_violations,
-    parse_rustfmt_diff, render_terminal_report,
+    DiagnosticReport, GithubAnnotation, fingerprint_failure, parse_decay_report,
+    parse_file_size_violations, parse_rustfmt_diff, render_terminal_report,
 };
 
 fn main() -> ExitCode {
@@ -24,9 +24,13 @@ fn main() -> ExitCode {
 fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
-        return Err("expected command: rustfmt, decay, or file-size".into());
+        return Err("expected command: rustfmt, decay, file-size, or fingerprint".into());
     };
-    if command != "rustfmt" && command != "decay" && command != "file-size" {
+    if command != "rustfmt"
+        && command != "decay"
+        && command != "file-size"
+        && command != "fingerprint"
+    {
         return Err(format!("unknown command: {command}").into());
     }
 
@@ -45,6 +49,17 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
 
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
+    if command == "fingerprint" {
+        if github || json {
+            return Err("fingerprint does not accept renderer flags".into());
+        }
+        if let Some(fingerprint) = fingerprint_failure(&input) {
+            println!("{}", fingerprint.value);
+            return Ok(ExitCode::SUCCESS);
+        }
+        return Ok(ExitCode::FAILURE);
+    }
+
     let report = match command.as_str() {
         "decay" => parse_decay_report(&input)?,
         "file-size" => DiagnosticReport::new(parse_file_size_violations(&input)),
