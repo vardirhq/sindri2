@@ -34,7 +34,7 @@ def changed_files(root: Path, base: str) -> list[Path]:
     merge_base = capture(root, ["git", "merge-base", base, "HEAD"]).strip()
     output = capture(
         root,
-        ["git", "diff", "--name-only", "--diff-filter=ACMRT", merge_base, "HEAD"],
+        ["git", "diff", "--name-only", "--diff-filter=ACMRT", merge_base],
     )
     return [Path(line) for line in output.splitlines() if line]
 
