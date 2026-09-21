@@ -42,7 +42,19 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.95.0
         with:
           components: rustfmt
-      - run: cargo fmt --all --check
+      - name: Check formatting with structured diagnostics
+        shell: bash
+        run: |
+          set +e
+          cargo fmt --all --check >target/rustfmt-diff.txt 2>&1
+          status=$?
+          set -e
+          if [[ $status -ne 0 ]]; then
+            cat target/rustfmt-diff.txt
+            cargo run --quiet --package sindri-diagnostics --bin sindri-diagnostics -- \
+              rustfmt --github <target/rustfmt-diff.txt
+            exit $status
+          fi
       - name: Check file sizes
         run: scripts/check-file-size.py
 
