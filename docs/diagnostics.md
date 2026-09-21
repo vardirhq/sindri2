@@ -41,7 +41,14 @@ fingerprint are downstream, and infrastructure failures stay independent. This
 models real failures seen while building this crate, where one Rust compiler
 error failed several jobs while an artifact-finalization 403 was unrelated.
 
-## File sizes\n\n`scripts/check-file-size.py` remains the authority for the 600-line cap. Failed\noutput is adapted into `FILE_SIZE_LIMIT` diagnostics with the offending Rust\nfile and line count, so the quick CI gate can annotate the file and point to\n`docs/module-layout.md` without changing the script's exit contract.\n\n## GitHub Actions
+## File sizes
+
+`scripts/check-file-size.py` remains the authority for the 600-line cap. Failed
+output is adapted into `FILE_SIZE_LIMIT` diagnostics with the offending Rust
+file and line count, so the quick CI gate can annotate the file and point to
+`docs/module-layout.md` without changing the script's exit contract.
+
+## GitHub Actions
 
 `GithubAnnotation::from_diagnostic` renders the common model as a GitHub
 workflow annotation. The quick CI gate now feeds a failed rustfmt check through
@@ -60,7 +67,21 @@ through the complete job log. A later slice should expose structured Decay
 diagnostics directly from the checker so CI can add source annotations without
 scraping its human output.
 
-## Agent preflight\n\n`scripts/preflight.py` is the one-command cheap gate for coding agents and local\ndevelopment. It diffs the merge base with `origin/main` through the current\nworking tree, maps changed files to Cargo workspace packages, then runs global\nrustfmt/file-size checks, typed checking for changed `.decay` scripts, and\n`cargo check` plus tests for affected packages. Root workspace/toolchain changes\nexpand Rust checking to the whole workspace. `--list` exposes the discovered\nscope without executing it.\n\nPreflight deliberately does not guess WASM, render, browser, or dependency\nimpact. Those checks remain explicit requirements in `AGENTS.md`; pretending a\ncheap heuristic proves a platform is exactly how automation becomes decorative.\n\n## Next integrations
+## Agent preflight
+
+`scripts/preflight.py` is the one-command cheap gate for coding agents and local
+development. It diffs the merge base with `origin/main` through the current
+working tree, maps changed files to Cargo workspace packages, then runs global
+rustfmt/file-size checks, typed checking for changed `.decay` scripts, and
+`cargo check` plus tests for affected packages. Root workspace/toolchain changes
+expand Rust checking to the whole workspace. `--list` exposes the discovered
+scope without executing it.
+
+Preflight deliberately does not guess WASM, render, browser, or dependency
+impact. Those checks remain explicit requirements in `AGENTS.md`; pretending a
+cheap heuristic proves a platform is exactly how automation becomes decorative.
+
+## Next integrations
 
 The first crate establishes the contract and Cargo/Clippy adapter without
 changing existing CI while PR #339 owns scene/editor/voxel integration. Follow-up
