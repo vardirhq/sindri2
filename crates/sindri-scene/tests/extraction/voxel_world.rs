@@ -3,9 +3,7 @@
 
 use glam::Mat4;
 use sindri_render::{FrameCommand, TextureId};
-use sindri_scene::{
-    CameraView, SceneExtractor, SceneRuntime, TextureBindings, ViewCamera,
-};
+use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings, ViewCamera};
 
 use crate::support::{VIEWPORT, scene, world_from};
 
@@ -61,7 +59,10 @@ fn resident_sections_outside_the_camera_frustum_are_not_submitted() {
         .iter()
         .filter(|pass| matches!(&pass.command, FrameCommand::CachedTexturedMesh { .. }))
         .count();
-    assert!(submitted > 0, "sections intersecting the frustum remain visible");
+    assert!(
+        submitted > 0,
+        "sections intersecting the frustum remain visible"
+    );
     assert!(
         submitted < 9,
         "the 3x3 resident window should not all be submitted through a unit clip volume"
