@@ -91,10 +91,15 @@ def main() -> int:
         return 2
 
     rust_packages = changed_packages(root, files, packages)
-    decay_files = sorted(str(path) for path in files if path.suffix == ".decay")
+    decay_files = sorted(
+        str(path)
+        for path in files
+        if path.suffix == ".decay" and (not path.parts or path.parts[0] != "decay")
+    )
     workspace_wide = any(
         path in {Path("Cargo.toml"), Path("rust-toolchain.toml")} for path in files
     )
+    decay_workspace = any(path.parts and path.parts[0] == "decay" for path in files)
 
     print(f"Changed files: {len(files)}")
     print(
@@ -102,6 +107,7 @@ def main() -> int:
         + ("workspace" if workspace_wide else ", ".join(rust_packages) or "none")
     )
     print("Decay scripts: " + (", ".join(decay_files) or "none"))
+    print("Decay workspace: " + ("changed" if decay_workspace else "unchanged"))
 
     if args.list or not files:
         return 0
@@ -123,6 +129,16 @@ def main() -> int:
                 *decay_files,
             ],
         ) and ok
+
+    if decay_workspace:
+        decay_root = root / "decay"
+        ok = run(root, ["cargo", "fmt", "--all", "--check"], cwd=decay_root) and ok
+        ok = run(
+            root,
+            ["cargo", "clippy", "--workspace", "--all-targets", "--", "-D", "warnings"],
+            cwd=decay_root,
+        ) and ok
+        ok = run(root, ["cargo", "test", "--workspace"], cwd=decay_root) and ok
 
     scopes = [None] if workspace_wide else rust_packages
     for package in scopes:
