@@ -72,22 +72,21 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
 }
 
 fn github_summary(report: &DiagnosticReport, command: &str) -> String {
-    if report.success {
-        return "## Sindri diagnostics\n\nFormatting is clean.\n".into();
-    }
-
+    let errors = report.error_count();
+    let warnings = report.warning_count();
     let mut output = format!(
-        "## Sindri diagnostics\n\n**{} formatting error(s)**\n\n",
-        report.error_count()
+        "## Sindri diagnostics\n\n**{errors} {command} error(s), {warnings} warning(s)**\n\n"
     );
     for diagnostic in &report.diagnostics {
         let location = diagnostic.location.as_ref().map_or_else(
             || "unknown file".into(),
             |location| location.path.display().to_string(),
         );
-        let _ = writeln!(output, "- `{location}`: {}", diagnostic.message);
+        let _ = writeln!(output, "- \`{location}\`: {}", diagnostic.message);
     }
-    output.push_str("\nRun `cargo fmt --all` locally before pushing.\n");
+    if command == "rustfmt" && errors > 0 {
+        output.push_str("\nRun \`cargo fmt --all\` locally before pushing.\n");
+    }
     output
 }
 
