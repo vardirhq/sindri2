@@ -18,6 +18,41 @@ The current renderer supports exactly one authored world camera for a game frame
 
 Supporting camera stacks, render targets, split-screen, or explicit camera priority later should be an authored feature with its own ordering/composition contract. It must not be introduced by making entity order significant.
 
+## Gameplay camera behavior
+
+Projection and gameplay behavior are separate. A camera may carry
+`sindri.camera.behavior` beside `sindri.camera` to follow a target, stay inside
+world bounds, and respond to impact shake without making those policies part of
+the renderer.
+
+Follow has an offset, a rectangular dead zone, exponential smoothing, and an
+optional maximum speed. Confinement clamps the resulting XY camera position to
+a world-space rectangle. Shake is transient trauma: amplitude is quadratic in
+trauma, its phase is deterministic across native and web, and trauma decays each
+update. Behavior order is follow, then confinement, then shake, so impact motion
+may briefly cross a confine edge without changing the camera's underlying
+follow position.
+
+The behavior update is an engine operation rather than a render-extraction side
+effect. A host advances it once per gameplay frame with
+`update_camera_behaviors`; extracting the same world twice never advances or
+changes camera state.
+
+### Camera demo acceptance surface
+
+The dedicated camera demo should make every behavior legible without reading a
+log: a moving target crosses a visible dead-zone rectangle; the camera eases
+after it only when the target leaves that zone; world-edge markers prove
+confinement; and a deliberate impact control adds trauma so shake and decay can
+be watched in isolation. Controls should also allow follow, confinement, and
+shake to be toggled independently and expose the important authored values.
+
+The demo is the acceptance surface for camera behavior on desktop and browser,
+not a second implementation. It must use the same scene component and update
+path a game uses. Orbital Last Stand is the later migration proof: its current
+script-owned camera shake should disappear only after the demo has established
+the engine behavior.
+
 ## Screen-space UI and overlays
 
 The `sindri.ui.*` family does not require a camera entity. Their projection is owned by the viewport and their anchors resolve against the viewport's screen-space extent.
