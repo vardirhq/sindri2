@@ -30,7 +30,10 @@ pub fn correlate_checks(checks: &[CheckResult]) -> Vec<Diagnostic> {
         let relation = if check.infrastructure {
             DiagnosticRelation::Independent
         } else if let Some(fingerprint) = check.fingerprint.as_deref() {
-            if first_for_fingerprint.insert(fingerprint, &check.name).is_some() {
+            if first_for_fingerprint
+                .insert(fingerprint, &check.name)
+                .is_some()
+            {
                 DiagnosticRelation::Downstream
             } else {
                 DiagnosticRelation::Primary
@@ -68,13 +71,39 @@ mod tests {
     #[test]
     fn groups_duplicate_failures_and_keeps_infrastructure_independent() {
         let diagnostics = correlate_checks(&[
-            CheckResult { name: "Clippy".into(), outcome: CheckOutcome::Failure, fingerprint: Some("E0063:github.rs:68".into()), infrastructure: false },
-            CheckResult { name: "Tests".into(), outcome: CheckOutcome::Failure, fingerprint: Some("E0063:github.rs:68".into()), infrastructure: false },
-            CheckResult { name: "Browser".into(), outcome: CheckOutcome::Failure, fingerprint: Some("artifact-403".into()), infrastructure: true },
-            CheckResult { name: "Format".into(), outcome: CheckOutcome::Success, fingerprint: None, infrastructure: false },
+            CheckResult {
+                name: "Clippy".into(),
+                outcome: CheckOutcome::Failure,
+                fingerprint: Some("E0063:github.rs:68".into()),
+                infrastructure: false,
+            },
+            CheckResult {
+                name: "Tests".into(),
+                outcome: CheckOutcome::Failure,
+                fingerprint: Some("E0063:github.rs:68".into()),
+                infrastructure: false,
+            },
+            CheckResult {
+                name: "Browser".into(),
+                outcome: CheckOutcome::Failure,
+                fingerprint: Some("artifact-403".into()),
+                infrastructure: true,
+            },
+            CheckResult {
+                name: "Format".into(),
+                outcome: CheckOutcome::Success,
+                fingerprint: None,
+                infrastructure: false,
+            },
         ]);
         assert_eq!(diagnostics[0].relation, Some(DiagnosticRelation::Primary));
-        assert_eq!(diagnostics[1].relation, Some(DiagnosticRelation::Downstream));
-        assert_eq!(diagnostics[2].relation, Some(DiagnosticRelation::Independent));
+        assert_eq!(
+            diagnostics[1].relation,
+            Some(DiagnosticRelation::Downstream)
+        );
+        assert_eq!(
+            diagnostics[2].relation,
+            Some(DiagnosticRelation::Independent)
+        );
     }
 }
