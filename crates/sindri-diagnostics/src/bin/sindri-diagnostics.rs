@@ -7,7 +7,8 @@ use std::{
 };
 
 use sindri_diagnostics::{
-    DiagnosticReport, GithubAnnotation, parse_decay_report, parse_file_size_violations,\n    parse_rustfmt_diff,
+    DiagnosticReport, GithubAnnotation, parse_decay_report, parse_file_size_violations,
+    parse_rustfmt_diff,
     render_terminal_report,
 };
 
@@ -45,10 +46,10 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
 
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
-    let report = if command == "decay" {
-        parse_decay_report(&input)?
-    } else {
-        DiagnosticReport::new(parse_rustfmt_diff(&input))
+    let report = match command.as_str() {
+        "decay" => parse_decay_report(&input)?,
+        "file-size" => DiagnosticReport::new(parse_file_size_violations(&input)),
+        _ => DiagnosticReport::new(parse_rustfmt_diff(&input)),
     };
 
     if github {
