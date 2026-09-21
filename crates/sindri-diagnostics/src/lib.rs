@@ -7,8 +7,8 @@ mod cargo;
 mod ci;
 mod decay;
 mod diagnostic;
-mod format;
 mod file_size;
+mod format;
 mod github;
 mod report;
 mod terminal;
@@ -20,8 +20,8 @@ pub use decay::{DecayReportError, parse_decay_report};
 pub use diagnostic::{
     Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity, SourceLocation,
 };
-pub use format::parse_rustfmt_diff;
 pub use file_size::parse_file_size_violations;
+pub use format::parse_rustfmt_diff;
 pub use github::GithubAnnotation;
 pub use report::{DiagnosticReport, SCHEMA_VERSION};
 pub use terminal::render_terminal_report;
