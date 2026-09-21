@@ -8,8 +8,8 @@ use std::{
 
 use sindri_diagnostics::{
     CheckOutcome, CheckResult, DiagnosticReport, GithubAnnotation, fingerprint_failure,
-    parse_cargo_messages, parse_decay_report, parse_file_size_violations, parse_rustfmt_diff,
-    render_ci_summary, render_terminal_report,
+    fingerprint_report, parse_cargo_messages, parse_decay_report, parse_file_size_violations,
+    parse_rustfmt_diff, render_ci_summary, render_terminal_report,
 };
 
 fn main() -> ExitCode {
@@ -26,7 +26,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
         return Err(
-            "expected command: rustfmt, cargo, decay, file-size, fingerprint, correlate, or check-result"
+            "expected command: rustfmt, cargo, decay, file-size, fingerprint, report-check-result, correlate, or check-result"
                 .into(),
         );
     };
@@ -35,6 +35,7 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
         && command != "decay"
         && command != "file-size"
         && command != "fingerprint"
+        && command != "report-check-result"
         && command != "correlate"
         && command != "check-result"
     {
@@ -65,6 +66,10 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
             return Ok(ExitCode::SUCCESS);
         }
         return Ok(ExitCode::FAILURE);
+    }
+
+    if command == "report-check-result" {
+        return report_check_result(&input, github, json);
     }
 
     if command == "correlate" {
@@ -121,6 +126,31 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     } else {
         ExitCode::FAILURE
     })
+}
+
+fn report_check_result(
+    input: &str,
+    github: bool,
+    json: bool,
+) -> Result<ExitCode, Box<dyn std::error::Error>> {
+    if github || json {
+        return Err("report-check-result does not accept renderer flags".into());
+    }
+    let mut lines = input.lines();
+    let name = lines
+        .next()
+        .ok_or("report-check-result expects a check name on the first line")?;
+    let report_json = lines.collect::<Vec<_>>().join("\n");
+    let report: DiagnosticReport = serde_json::from_str(&report_json)?;
+    let fingerprint = fingerprint_report(&report);
+    let result = CheckResult {
+        name: name.into(),
+        outcome: CheckOutcome::Failure,
+        fingerprint: fingerprint.as_ref().map(|value| value.value.clone()),
+        infrastructure: fingerprint.is_some_and(|value| value.infrastructure),
+    };
+    println!("{}", serde_json::to_string(&result)?);
+    Ok(ExitCode::SUCCESS)
 }
 
 fn github_summary(report: &DiagnosticReport, command: &str) -> String {
