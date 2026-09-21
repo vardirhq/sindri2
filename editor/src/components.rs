@@ -110,6 +110,11 @@ const KNOWN: &[Known] = &[
         icon: icons::TILEMAP,
     },
     Known {
+        type_name: "sindri.voxel_world",
+        family: Family::Rendering,
+        icon: icons::TILEMAP,
+    },
+    Known {
         type_name: "sindri.ui.image",
         family: Family::Ui,
         icon: icons::UI_ELEMENT,

@@ -18,6 +18,7 @@ mod tilemap;
 mod ui;
 mod ui_shape;
 mod ui_text_options;
+mod voxel_world;
 pub mod ui_text_template;
 
 pub use camera::{CameraComponent, CameraFit};
@@ -36,6 +37,7 @@ pub use ui_shape::{ShapeComponent, ShapeGeometry, UiShapeBlend, UiShapeComponent
 pub use ui_text_options::{
     UiTextAutoSize, UiTextCase, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,
 };
+pub use voxel_world::{VoxelGeneratorDocument, VoxelMaterialDocument, VoxelWorldComponent};
 
 /// The tint a component that does not name one draws with.
 ///

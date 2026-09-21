@@ -125,7 +125,14 @@ pub fn bind_textures(
     registry: &mut TextureRegistry,
 ) -> Result<TextureBindings, Box<dyn Error>> {
     let mut bindings = TextureBindings::new();
-    for name in ["user-top", "user-side-a", "user-side-b", "user-dirt"] {
+    for name in [
+        "user-top",
+        "user-side-a",
+        "user-side-b",
+        "user-dirt",
+        "block-tops",
+        "block-sides",
+    ] {
         let root = Path::new("games/voxel-lab/assets/textures");
         let png = fs::read(root.join(format!("{name}.png")))?;
         let asset = TextureAssetDecoder.decode(AssetBytes::new(
