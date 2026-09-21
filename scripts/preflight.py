@@ -21,7 +21,13 @@ def run(root: Path, command: list[str], *, cwd: Path | None = None) -> bool:
     prefix = "" if relative == Path(".") else f"(cd {relative} && "
     suffix = "" if not prefix else ")"
     print(f"\n==> {prefix}{shown}{suffix}", flush=True)
-    return subprocess.run(command, cwd=cwd or root, check=False).returncode == 0
+    environment = os.environ.copy()
+    rustflags = environment.get("RUSTFLAGS", "")
+    environment["RUSTFLAGS"] = f"{rustflags} -D warnings".strip()
+    return (
+        subprocess.run(command, cwd=cwd or root, env=environment, check=False).returncode
+        == 0
+    )
 
 
 def capture(root: Path, command: list[str]) -> str:
