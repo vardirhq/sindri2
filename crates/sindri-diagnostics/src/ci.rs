@@ -36,15 +36,19 @@ pub fn fingerprint_report(report: &DiagnosticReport) -> Option<FailureFingerprin
         .iter()
         .find(|diagnostic| diagnostic.severity == Severity::Error)?;
     let code = diagnostic.code.as_ref()?;
-    let location = diagnostic.location.as_ref().map(|location| {
-        format!("{}:{}", location.path.display(), location.start.line)
-    });
-    let source = match diagnostic.source {
-        DiagnosticSource::Compiler => "compiler",
-        DiagnosticSource::Build => "build",
-        DiagnosticSource::Script => "script",
+    let location = diagnostic
+        .location
+        .as_ref()
+        .map(|location| format!("{}:{}", location.path.display(), location.line));
+    let source = match &diagnostic.source {
+        DiagnosticSource::Rust => "rust",
+        DiagnosticSource::Test => "test",
+        DiagnosticSource::Decay => "decay",
         DiagnosticSource::Asset => "asset",
-        DiagnosticSource::Editor => "editor",
+        DiagnosticSource::Scene => "scene",
+        DiagnosticSource::Project => "project",
+        DiagnosticSource::Build => "build",
+        DiagnosticSource::Other(source) => source.as_str(),
     };
     Some(FailureFingerprint {
         value: match location {
@@ -259,8 +263,10 @@ mod tests {
             message: "too large".into(),
             location: Some(crate::SourceLocation {
                 path: "crates/a/src/lib.rs".into(),
-                start: crate::SourcePosition { line: 601, column: 1 },
-                end: None,
+                line: 601,
+                column: 1,
+                end_line: None,
+                end_column: None,
             }),
             notes: Vec::new(),
             suggestion: None,
