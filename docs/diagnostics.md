@@ -41,9 +41,11 @@ error failed several jobs while an artifact-finalization 403 was unrelated.
 ## GitHub Actions
 
 `GithubAnnotation::from_diagnostic` renders the common model as a GitHub
-workflow annotation. A later CI integration can therefore put failures directly
-on pull-request files while keeping the diagnostic producer independent of
-GitHub.
+workflow annotation. The quick CI gate now feeds a failed rustfmt check through
+the `sindri-diagnostics rustfmt --github` runner, which annotates every affected
+file and writes a concise step summary while preserving rustfmt's original exit
+status. This is the first live consumer of the shared diagnostic model; the
+producer remains independent of GitHub.
 
 ## Next integrations
 
@@ -51,10 +53,10 @@ The first crate establishes the contract and Cargo/Clippy adapter without
 changing existing CI while PR #339 owns scene/editor/voxel integration. Follow-up
 slices should add:
 
-1. a runner that invokes repository checks and emits one summary;
+1. extend the runner beyond the now-integrated rustfmt path so repository checks can emit one summary;
 2. file-size adapter and richer CI failure fingerprint extraction;
 3. Decay diagnostics raised from the typed checker rather than parsed from prose;
-4. GitHub summary/annotation emission in `.github/workflows/ci.yml`;
+4. Cargo/Clippy GitHub summary and annotation emission;
 5. editor Problems-panel consumption once the editor work is free to move.
 
 CI remains authoritative until those integrations replace individual workflow
