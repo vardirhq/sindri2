@@ -27,6 +27,17 @@ help/note children remain notes, and machine suggestions are retained.
 This means CI does not need to scrape ANSI-formatted compiler prose to answer
 which file and line failed.
 
+## Formatting and CI correlation
+
+`parse_rustfmt_diff` turns rustfmt's repeated diff blocks into one actionable
+diagnostic per affected file with the exact `cargo fmt --all` remedy.
+
+`correlate_checks` groups check failures by a caller-supplied failure
+fingerprint. The first manifestation is primary, later checks with the same
+fingerprint are downstream, and infrastructure failures stay independent. This
+models real failures seen while building this crate, where one Rust compiler
+error failed several jobs while an artifact-finalization 403 was unrelated.
+
 ## GitHub Actions
 
 `GithubAnnotation::from_diagnostic` renders the common model as a GitHub
@@ -41,7 +52,7 @@ changing existing CI while PR #339 owns scene/editor/voxel integration. Follow-u
 slices should add:
 
 1. a runner that invokes repository checks and emits one summary;
-2. rustfmt/file-size adapters;
+2. file-size adapter and richer CI failure fingerprint extraction;
 3. Decay diagnostics raised from the typed checker rather than parsed from prose;
 4. GitHub summary/annotation emission in `.github/workflows/ci.yml`;
 5. editor Problems-panel consumption once the editor work is free to move.

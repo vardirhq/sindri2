@@ -4,13 +4,17 @@
 //! can render the same data without scraping human prose.
 
 mod cargo;
+mod ci;
 mod diagnostic;
+mod format;
 mod github;
 mod report;
 mod terminal;
 mod test;
 
 pub use cargo::{CargoMessageError, parse_cargo_messages};
+pub use ci::{CheckOutcome, CheckResult, correlate_checks};
+pub use format::parse_rustfmt_diff;
 pub use diagnostic::{
     Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity, SourceLocation,
 };
