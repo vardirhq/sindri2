@@ -92,12 +92,7 @@ fn register_shapes(components: &mut ComponentSchemaRegistry) -> Result<(), Scene
     Ok(())
 }
 
-/// Everything a scene puts on the screen.
-fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
-    // Each default is what a freshly added component of that type looks
-    // like, and is what makes the type addable at all. They are chosen to
-    // be visible rather than neutral: a sprite added to an entity should
-    // appear, or the author is left wondering whether the click worked.
+fn register_cameras(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
     components.register_with_default::<CameraComponent>(
         "Camera",
         serde_json::json!({
@@ -121,6 +116,16 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             }
         }),
     )?;
+    Ok(())
+}
+
+/// Everything a scene puts on the screen.
+fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    // Each default is what a freshly added component of that type looks
+    // like, and is what makes the type addable at all. They are chosen to
+    // be visible rather than neutral: a sprite added to an entity should
+    // appear, or the author is left wondering whether the click worked.
+    register_cameras(components)?;
     components.register_with_default::<MeshComponent>(
         "Mesh",
         serde_json::json!({
