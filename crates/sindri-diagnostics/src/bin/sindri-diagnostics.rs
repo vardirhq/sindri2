@@ -1,5 +1,7 @@
 use std::{
-    env, fs,
+    env,
+    fmt::Write,
+    fs,
     io::{self, Read},
     process::ExitCode,
 };
@@ -74,12 +76,11 @@ fn github_summary(report: &DiagnosticReport) -> String {
         report.error_count()
     );
     for diagnostic in &report.diagnostics {
-        let location = diagnostic
-            .location
-            .as_ref()
-            .map(|location| location.path.display().to_string())
-            .unwrap_or_else(|| "unknown file".into());
-        output.push_str(&format!("- `{location}`: {}\n", diagnostic.message));
+        let location = diagnostic.location.as_ref().map_or_else(
+            || "unknown file".into(),
+            |location| location.path.display().to_string(),
+        );
+        let _ = writeln!(output, "- `{location}`: {}", diagnostic.message);
     }
     output.push_str("\nRun `cargo fmt --all` locally before pushing.\n");
     output
