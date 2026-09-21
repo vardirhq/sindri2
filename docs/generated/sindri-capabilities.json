@@ -1026,6 +1026,93 @@
       },
       "schema_version": 1,
       "type_name": "sindri.ui.text"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "focus": [
+          0,
+          0,
+          0
+        ],
+        "generator": {
+          "base_height": 3,
+          "deep_voxel": 3,
+          "height_variation": 6,
+          "kind": "layered_terrain",
+          "seed": 0,
+          "subsurface_depth": 3,
+          "subsurface_voxel": 2,
+          "surface_voxel": 1
+        },
+        "layer": 0,
+        "materials": [
+          {
+            "bottom": "procedural:checkerboard",
+            "side": "procedural:checkerboard",
+            "top": "procedural:checkerboard",
+            "voxel": 1
+          },
+          {
+            "bottom": "procedural:checkerboard",
+            "side": "procedural:checkerboard",
+            "top": "procedural:checkerboard",
+            "voxel": 2
+          },
+          {
+            "bottom": "procedural:checkerboard",
+            "side": "procedural:checkerboard",
+            "top": "procedural:checkerboard",
+            "voxel": 3
+          }
+        ],
+        "render_radius": 2,
+        "vertical_radius": 1
+      },
+      "display_name": "Voxel World",
+      "fields": {
+        "focus": [
+          0,
+          0,
+          0
+        ],
+        "generator": {
+          "base_height": 3,
+          "deep_voxel": 3,
+          "height_variation": 6,
+          "kind": "layered_terrain",
+          "seed": 0,
+          "subsurface_depth": 3,
+          "subsurface_voxel": 2,
+          "surface_voxel": 1
+        },
+        "layer": 0,
+        "materials": [
+          {
+            "bottom": "procedural:checkerboard",
+            "side": "procedural:checkerboard",
+            "top": "procedural:checkerboard",
+            "voxel": 1
+          },
+          {
+            "bottom": "procedural:checkerboard",
+            "side": "procedural:checkerboard",
+            "top": "procedural:checkerboard",
+            "voxel": 2
+          },
+          {
+            "bottom": "procedural:checkerboard",
+            "side": "procedural:checkerboard",
+            "top": "procedural:checkerboard",
+            "voxel": 3
+          }
+        ],
+        "render_radius": 2,
+        "vertical_radius": 1
+      },
+      "meanings": {},
+      "schema_version": 1,
+      "type_name": "sindri.voxel_world"
     }
   ],
   "engine_version": "0.1.0",

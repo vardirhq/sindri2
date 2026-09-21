@@ -11,6 +11,11 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Changed
 
+- Voxel Lab's authored scene now uses the engine-owned `sindri.voxel_world`
+  component in the editor, with deterministic layered terrain, bounded 3D
+  section residency, neighbour-aware block meshing, and persistent cached GPU
+  geometry. Its previous editor-only tile-volume island is no longer the scene
+  being inspected.
 - Voxel Lab now uses the editor Scene view's orbit, pan, and zoom interaction
   model. Touch screens use one finger to orbit and two fingers to pan or pinch,
   while an unmoved tap still digs at the camera focus.

@@ -198,10 +198,9 @@ impl ResidentVoxelWorld {
         for job in self.world.take_mesh_work() {
             if self.render.schedule(job) {
                 let mesh = mesh_block_section(&self.world, job.key.section);
-                let compiled = compile_block_mesh(
-                    &mesh,
-                    &|voxel: VoxelId, face: VoxelFace| resolved[&(voxel.value(), face)],
-                )?;
+                let compiled = compile_block_mesh(&mesh, &|voxel: VoxelId, face: VoxelFace| {
+                    resolved[&(voxel.value(), face)]
+                })?;
                 self.render.finish(job, compiled)?;
             }
         }

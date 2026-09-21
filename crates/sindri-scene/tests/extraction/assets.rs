@@ -3,7 +3,9 @@
 
 use std::error::Error;
 
-use sindri_scene::{FONT_NAMING_COMPONENTS, SceneExtractor, TEXTURE_NAMING_COMPONENTS};
+use sindri_scene::{
+    FONT_NAMING_COMPONENTS, SceneExtractor, TEXTURE_NAMING_COMPONENTS, referenced_textures,
+};
 
 use crate::support::{scene, world_from};
 
@@ -95,5 +97,27 @@ fn an_animated_sprite_asks_for_the_sheet_its_clips_read() {
         sindri_scene::referenced_sheets(&world).contains("textures/walk.sheet.json"),
         "a sprite whose clips name parts of a sheet needs that sheet loaded, \
          even though its own reference names no part of one"
+    );
+}
+
+#[test]
+fn a_voxel_world_asks_for_every_nested_material_texture() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "terrain", "transform_3d": {}, "components": {
+          "sindri.voxel_world": {
+            "materials": [
+              { "voxel": 1, "top": "top.png", "side": "side.png",
+                "bottom": "bottom.png" }
+            ]
+          }
+        } }"#,
+    ));
+    assert_eq!(
+        referenced_textures(&world),
+        ["bottom.png", "side.png", "top.png"]
+            .into_iter()
+            .map(str::to_owned)
+            .collect()
     );
 }

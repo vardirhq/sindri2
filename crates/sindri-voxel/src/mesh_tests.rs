@@ -192,3 +192,19 @@ fn triangle_winding_matches_each_vertex_normal() {
         );
     }
 }
+
+#[test]
+fn face_uvs_use_a_top_left_texture_origin() {
+    let mesh = mesh_block_section(
+        &Pair {
+            right: VoxelId::AIR,
+        },
+        SectionCoord::new(0, 0, 0),
+    );
+    for quad in mesh.opaque.vertices.chunks_exact(4) {
+        assert_eq!(
+            quad.iter().map(|vertex| vertex.uv).collect::<Vec<_>>(),
+            [[0, 1], [1, 1], [1, 0], [0, 0]]
+        );
+    }
+}
