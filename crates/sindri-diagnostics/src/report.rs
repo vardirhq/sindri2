@@ -13,9 +13,7 @@ pub struct DiagnosticReport {
 impl DiagnosticReport {
     #[must_use]
     pub fn new(diagnostics: Vec<Diagnostic>) -> Self {
-        let success = !diagnostics
-            .iter()
-            .any(|d| d.severity == Severity::Error);
+        let success = !diagnostics.iter().any(|d| d.severity == Severity::Error);
         Self {
             schema_version: SCHEMA_VERSION,
             success,
