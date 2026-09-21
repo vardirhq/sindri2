@@ -366,7 +366,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Capture failure fingerprint
+      - name: Capture job failure
         id: failure
         if: ${{ failure() }}
         shell: bash
@@ -419,7 +419,7 @@ jobs:
           cargo test --package sindri-assets --target wasm32-unknown-unknown \
             --test decode_compatibility
 
-      - name: Capture failure fingerprint
+      - name: Capture job failure
         id: failure
         if: ${{ failure() }}
         shell: bash
@@ -558,7 +558,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      - name: Capture failure fingerprint
+      - name: Capture job failure
         id: failure
         if: ${{ failure() }}
         shell: bash
