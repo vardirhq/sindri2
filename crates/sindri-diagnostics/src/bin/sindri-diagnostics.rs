@@ -25,7 +25,9 @@ fn main() -> ExitCode {
 fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
-        return Err("expected command: rustfmt, cargo, decay, file-size, fingerprint, or correlate".into());
+        return Err(
+            "expected command: rustfmt, cargo, decay, file-size, fingerprint, or correlate".into(),
+        );
     };
     if command != "rustfmt"
         && command != "cargo"
