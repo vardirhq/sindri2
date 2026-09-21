@@ -1,4 +1,4 @@
-use crate::{Diagnostic, Severity};
+use crate::{Diagnostic, DiagnosticRelation, Severity};
 use serde::{Deserialize, Serialize};
 
 /// Version of the JSON diagnostics contract.
@@ -40,14 +40,21 @@ impl DiagnosticReport {
             .filter(|diagnostic| diagnostic.severity == Severity::Warning)
             .count()
     }
+
+    #[must_use]
+    pub fn primary(&self) -> impl Iterator<Item = &Diagnostic> {
+        self.diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.relation == Some(DiagnosticRelation::Primary))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{DiagnosticSource, Severity};
+    use crate::DiagnosticSource;
 
-    fn diagnostic(severity: Severity) -> Diagnostic {
+    fn diagnostic(severity: Severity, relation: Option<DiagnosticRelation>) -> Diagnostic {
         Diagnostic {
             severity,
             source: DiagnosticSource::Build,
@@ -57,17 +64,19 @@ mod tests {
             notes: Vec::new(),
             suggestion: None,
             rendered: None,
+            relation,
         }
     }
 
     #[test]
-    fn errors_make_a_report_fail() {
+    fn errors_make_a_report_fail_and_primary_is_queryable() {
         let report = DiagnosticReport::new(vec![
-            diagnostic(Severity::Warning),
-            diagnostic(Severity::Error),
+            diagnostic(Severity::Warning, None),
+            diagnostic(Severity::Error, Some(DiagnosticRelation::Primary)),
         ]);
         assert!(!report.success);
         assert_eq!(report.error_count(), 1);
         assert_eq!(report.warning_count(), 1);
+        assert_eq!(report.primary().count(), 1);
     }
 }
