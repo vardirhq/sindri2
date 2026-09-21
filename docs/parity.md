@@ -145,6 +145,9 @@ is why it earns a section rather than a footnote.
 
 ## Voxel worlds and terrain
 
+The ordered work required to close these gaps is tracked in
+[`voxel-system-completion-checklist.md`](voxel-system-completion-checklist.md).
+
 | Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |
 | --- | :-: | :-: | :-: | :-: | --- | --- |
 | Engine-owned voxel coordinates and 16³ sections | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | `sindri-voxel` owns signed world/section/local coordinates, palette-backed sections, air/material IDs, revisions, and deterministic random-access generation. `sindri.voxel_world` makes the engine world visible in authored scenes and Voxel Lab now opens that path in the editor. Causeway still uses its game-owned terrain path. |
