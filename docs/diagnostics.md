@@ -35,6 +35,13 @@ cannot parse a Rust file, the adapter instead preserves that compiler-style
 location as `RUST_PARSE_ERROR`; a syntax error is no longer mislabeled as a
 formatting request.
 
+`fingerprint_failure` extracts a compact identity from common CI output. It prefers
+Rust compiler code plus source location, then failed test identity, then a
+normalized actionable error line. Known runner/network failures get explicit
+infrastructure fingerprints, so a 403 does not get blamed on somebody's Rust.
+The CLI exposes the same extractor as `sindri-diagnostics fingerprint` for log
+collectors and workflow aggregation.
+
 `correlate_checks` groups check failures by a caller-supplied failure
 fingerprint. The first manifestation is primary, later checks with the same
 fingerprint are downstream, and infrastructure failures stay independent. This
@@ -87,7 +94,7 @@ cheap heuristic proves a platform is exactly how automation becomes decorative.
 The shared contract now has live rustfmt, file-size, Decay, and agent-preflight
 consumers. The next useful slices are:
 
-1. richer CI failure fingerprint extraction and cross-job correlation;
+1. aggregate per-job fingerprints into a cross-job CI summary;
 2. Cargo/Clippy GitHub summary and annotation emission from their native JSON;
 3. finer stable Decay diagnostic codes and syntax-aware runtime reminders;
 4. editor Problems-panel consumption once the editor work is free to move.
