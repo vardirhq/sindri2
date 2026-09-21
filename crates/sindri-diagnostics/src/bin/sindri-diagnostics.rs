@@ -7,8 +7,9 @@ use std::{
 };
 
 use sindri_diagnostics::{
-    DiagnosticReport, GithubAnnotation, fingerprint_failure, parse_cargo_messages,
-    parse_decay_report, parse_file_size_violations, parse_rustfmt_diff, render_terminal_report,
+    CheckResult, DiagnosticReport, GithubAnnotation, fingerprint_failure, parse_cargo_messages,
+    parse_decay_report, parse_file_size_violations, parse_rustfmt_diff, render_ci_summary,
+    render_terminal_report,
 };
 
 fn main() -> ExitCode {
@@ -24,13 +25,16 @@ fn main() -> ExitCode {
 fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
     let mut args = env::args().skip(1);
     let Some(command) = args.next() else {
-        return Err("expected command: rustfmt, cargo, decay, file-size, or fingerprint".into());
+        return Err(
+            "expected command: rustfmt, cargo, decay, file-size, fingerprint, or correlate".into(),
+        );
     };
     if command != "rustfmt"
         && command != "cargo"
         && command != "decay"
         && command != "file-size"
         && command != "fingerprint"
+        && command != "correlate"
     {
         return Err(format!("unknown command: {command}").into());
     }
@@ -59,6 +63,15 @@ fn run() -> Result<ExitCode, Box<dyn std::error::Error>> {
             return Ok(ExitCode::SUCCESS);
         }
         return Ok(ExitCode::FAILURE);
+    }
+
+    if command == "correlate" {
+        if github || json {
+            return Err("correlate does not accept renderer flags".into());
+        }
+        let checks: Vec<CheckResult> = serde_json::from_str(&input)?;
+        print!("{}", render_ci_summary(&checks));
+        return Ok(ExitCode::SUCCESS);
     }
 
     let report = match command.as_str() {

@@ -1,14 +1,17 @@
 use crate::{Diagnostic, DiagnosticCode, DiagnosticRelation, DiagnosticSource, Severity};
-use std::collections::BTreeMap;
+use serde::Deserialize;
+use std::{collections::BTreeMap, fmt::Write};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "snake_case")]
 pub enum CheckOutcome {
     Success,
     Failure,
     Skipped,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckResult {
     pub name: String,
     pub outcome: CheckOutcome,
@@ -130,6 +133,41 @@ fn normalize_message(line: &str) -> String {
         .collect()
 }
 
+/// Renders correlated check failures as a compact Markdown summary.
+#[must_use]
+pub fn render_ci_summary(checks: &[CheckResult]) -> String {
+    let diagnostics = correlate_checks(checks);
+    let primary = diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.relation == Some(DiagnosticRelation::Primary))
+        .count();
+    let downstream = diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.relation == Some(DiagnosticRelation::Downstream))
+        .count();
+    let independent = diagnostics
+        .iter()
+        .filter(|diagnostic| diagnostic.relation == Some(DiagnosticRelation::Independent))
+        .count();
+
+    let mut output = format!(
+        "## CI failure correlation\n\n**{primary} primary, {downstream} downstream, {independent} independent failure(s)**\n\n"
+    );
+    for diagnostic in diagnostics {
+        let relation = match diagnostic.relation {
+            Some(DiagnosticRelation::Primary) => "primary",
+            Some(DiagnosticRelation::Downstream) => "downstream",
+            Some(DiagnosticRelation::Independent) | None => "independent",
+        };
+        let _ = write!(output, "- **{relation}**: {}", diagnostic.message);
+        if let Some(fingerprint) = diagnostic.notes.first() {
+            let _ = write!(output, " ({fingerprint})");
+        }
+        output.push('\n');
+    }
+    output
+}
+
 /// Correlates check-level failures so duplicate manifestations of one error do
 /// not masquerade as separate root causes.
 #[must_use]
@@ -222,6 +260,28 @@ mod tests {
                 infrastructure: true,
             })
         );
+    }
+
+    #[test]
+    fn renders_correlation_summary() {
+        let checks = [
+            CheckResult {
+                name: "Clippy".into(),
+                outcome: CheckOutcome::Failure,
+                fingerprint: Some("rust:E0063:a.rs:9".into()),
+                infrastructure: false,
+            },
+            CheckResult {
+                name: "Browser target".into(),
+                outcome: CheckOutcome::Failure,
+                fingerprint: Some("rust:E0063:a.rs:9".into()),
+                infrastructure: false,
+            },
+        ];
+        let summary = render_ci_summary(&checks);
+        assert!(summary.contains("1 primary, 1 downstream, 0 independent"));
+        assert!(summary.contains("**primary**: Clippy failed"));
+        assert!(summary.contains("**downstream**: Browser target failed"));
     }
 
     #[test]
