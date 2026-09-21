@@ -42,8 +42,8 @@ pub(crate) struct StructuredDiagnostic {
 impl StructuredDiagnostic {
     pub(crate) fn from_compiler(diagnostic: Diagnostic) -> Self {
         let (source, code) = match diagnostic.phase {
-            DiagnosticPhase::Syntax => ("decay-syntax", "syntax"),
-            DiagnosticPhase::Semantic => ("decay-semantic", "semantic"),
+            DiagnosticPhase::Syntax => ("decay-syntax", "decay-syntax"),
+            DiagnosticPhase::Semantic => ("decay-semantic", "decay-semantic"),
         };
         Self {
             severity: Severity::Error,
@@ -128,7 +128,7 @@ mod tests {
             column: 5,
         };
         let structured = StructuredDiagnostic::from_compiler(diagnostic);
-        assert_eq!(structured.code, "semantic");
+        assert_eq!(structured.code, "decay-semantic");
         assert_eq!(structured.source, "decay-semantic");
         assert_eq!(structured.severity, Severity::Error);
     }
