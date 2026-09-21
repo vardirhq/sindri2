@@ -53,8 +53,7 @@ fingerprint are downstream, and infrastructure failures stay independent.
 workflow aggregation does not need to reproduce the correlation rules. Clippy, the quick formatting/file-size gate, and Decay preflight now emit a
 serialized check result on failure, and a final `CI failure summary` job consumes
 all available results. This lets an early gate failure still participate in the
-same correlation contract instead of becoming a separate diagnostics island. This
-models real failures seen while building this crate, where one Rust compiler
+same correlation contract instead of becoming a separate diagnostics island. This models real failures seen while building this crate, where one Rust compiler
 error failed several jobs while an artifact-finalization 403 was unrelated.
 
 ## File sizes
