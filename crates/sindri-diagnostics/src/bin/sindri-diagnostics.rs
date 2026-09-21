@@ -82,10 +82,10 @@ fn github_summary(report: &DiagnosticReport, command: &str) -> String {
             || "unknown file".into(),
             |location| location.path.display().to_string(),
         );
-        let _ = writeln!(output, "- \`{location}\`: {}", diagnostic.message);
+        let _ = writeln!(output, "- `{location}`: {}", diagnostic.message);
     }
     if command == "rustfmt" && errors > 0 {
-        output.push_str("\nRun \`cargo fmt --all\` locally before pushing.\n");
+        output.push_str("\nRun `cargo fmt --all` locally before pushing.\n");
     }
     output
 }
