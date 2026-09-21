@@ -18,8 +18,8 @@ mod tilemap;
 mod ui;
 mod ui_shape;
 mod ui_text_options;
-mod voxel_world;
 pub mod ui_text_template;
+mod voxel_world;
 
 pub use camera::{CameraComponent, CameraFit};
 pub use grid::{

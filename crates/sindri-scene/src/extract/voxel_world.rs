@@ -3,10 +3,11 @@
 use std::cell::{RefCell, RefMut};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
-use std::rc::Rc;
 
 use sindri_core::{EntityId, SpriteRef, World};
-use sindri_render::{ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage};
+use sindri_render::{
+    ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage,
+};
 use sindri_voxel::{
     MeshingProfile, ResidencyConfig, SectionCoord, SectionMeshKey, VoxelCoord, VoxelFace, VoxelId,
     VoxelSource, VoxelWorld, mesh_block_section,
@@ -137,8 +138,16 @@ struct ResidentVoxelWorld {
     resident: BTreeSet<SectionCoord>,
 }
 
-#[derive(Clone, Default)]
-pub(super) struct VoxelWorldCache(Rc<RefCell<BTreeMap<EntityId, ResidentVoxelWorld>>>);
+#[derive(Default)]
+pub(super) struct VoxelWorldCache(RefCell<BTreeMap<EntityId, ResidentVoxelWorld>>);
+
+impl Clone for VoxelWorldCache {
+    fn clone(&self) -> Self {
+        // Runtime meshes are derived state. A cloned extractor starts with an
+        // empty cache rather than sharing mutable worlds with its source.
+        Self::default()
+    }
+}
 
 impl VoxelWorldCache {
     fn borrow_mut(&self) -> RefMut<'_, BTreeMap<EntityId, ResidentVoxelWorld>> {
@@ -157,10 +166,10 @@ impl fmt::Debug for VoxelWorldCache {
 
 impl ResidentVoxelWorld {
     fn new(definition: VoxelWorldDefinition, texture_generation: u64) -> Self {
-        let horizontal = i32::try_from(definition.render_radius)
-            .expect("validated voxel radius fits in i32");
-        let vertical = i32::try_from(definition.vertical_radius)
-            .expect("validated voxel radius fits in i32");
+        let horizontal =
+            i32::try_from(definition.render_radius).expect("validated voxel radius fits in i32");
+        let vertical =
+            i32::try_from(definition.vertical_radius).expect("validated voxel radius fits in i32");
         Self {
             world: VoxelWorld::new(
                 definition.source.clone(),
@@ -189,9 +198,10 @@ impl ResidentVoxelWorld {
         for job in self.world.take_mesh_work() {
             if self.render.schedule(job) {
                 let mesh = mesh_block_section(&self.world, job.key.section);
-                let compiled = compile_block_mesh(&mesh, &|voxel, face| {
-                    resolved[&(voxel.value(), face)]
-                })?;
+                let compiled = compile_block_mesh(
+                    &mesh,
+                    &|voxel: VoxelId, face: VoxelFace| resolved[&(voxel.value(), face)],
+                )?;
                 self.render.finish(job, compiled)?;
             }
         }
@@ -236,12 +246,7 @@ impl SceneExtractor {
             .collect();
         for entity in departed {
             if let Some(mut runtime) = runtimes.remove(&entity) {
-                push_commands(
-                    runtime.release_all(),
-                    0,
-                    camera.view_projection,
-                    frame,
-                );
+                push_commands(runtime.release_all(), 0, camera.view_projection, frame);
             }
         }
 
@@ -265,7 +270,8 @@ impl SceneExtractor {
                     ResidentVoxelWorld::new(definition, textures.generation()),
                 );
             }
-            let focus = SectionCoord::new(component.focus[0], component.focus[1], component.focus[2]);
+            let focus =
+                SectionCoord::new(component.focus[0], component.focus[1], component.focus[2]);
             let transform = world
                 .get(entity)
                 .and_then(|data| data.transform_3d)
@@ -322,7 +328,11 @@ fn definition(component: &VoxelWorldComponent) -> Result<VoxelWorldDefinition, S
         });
     }
     let source = LayeredTerrain::from_document(&component.generator);
-    let ids: BTreeSet<_> = component.materials.iter().map(|material| material.voxel).collect();
+    let ids: BTreeSet<_> = component
+        .materials
+        .iter()
+        .map(|material| material.voxel)
+        .collect();
     if ids.len() != component.materials.len() || ids.contains(&VoxelId::AIR.value()) {
         return Err(SceneExtractError::InvalidVoxelMaterials);
     }
@@ -380,8 +390,17 @@ mod tests {
     fn layered_terrain_is_solid_below_its_surface() {
         let source = LayeredTerrain::from_document(&VoxelGeneratorDocument::default());
         let height = source.height(12, -7);
-        assert_eq!(source.voxel(VoxelCoord::new(12, height + 1, -7)), VoxelId::AIR);
-        assert_eq!(source.voxel(VoxelCoord::new(12, height, -7)), VoxelId::new(1));
-        assert_eq!(source.voxel(VoxelCoord::new(12, height - 20, -7)), VoxelId::new(3));
+        assert_eq!(
+            source.voxel(VoxelCoord::new(12, height + 1, -7)),
+            VoxelId::AIR
+        );
+        assert_eq!(
+            source.voxel(VoxelCoord::new(12, height, -7)),
+            VoxelId::new(1)
+        );
+        assert_eq!(
+            source.voxel(VoxelCoord::new(12, height - 20, -7)),
+            VoxelId::new(3)
+        );
     }
 }

@@ -191,7 +191,9 @@ impl VoxelRenderBridge {
         if let Some(identity) = self.identities.get(&key) {
             return *identity;
         }
-        let value = NEXT_CACHE_ID.fetch_add(1, Ordering::Relaxed).wrapping_add(1);
+        let value = NEXT_CACHE_ID
+            .fetch_add(1, Ordering::Relaxed)
+            .wrapping_add(1);
         assert_ne!(value, 0, "voxel renderer exhausted persistent cache IDs");
         let identity = CachedMeshId::new(value);
         self.identities.insert(key, identity);

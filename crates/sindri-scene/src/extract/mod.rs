@@ -127,7 +127,9 @@ pub enum SceneExtractError {
     Text(#[from] TextError),
     #[error(transparent)]
     VoxelRender(#[from] crate::VoxelRenderError),
-    #[error("voxel residency radius {horizontal}x{vertical} exceeds the supported maximum {maximum}")]
+    #[error(
+        "voxel residency radius {horizontal}x{vertical} exceeds the supported maximum {maximum}"
+    )]
     VoxelRadiusTooLarge {
         horizontal: u32,
         vertical: u32,
