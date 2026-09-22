@@ -43,7 +43,7 @@ use self::tile_volume::BakedVolume;
 use crate::Effects2d;
 use crate::screen_ui::UiHierarchy;
 use crate::{
-    AnimationError, SpriteAnimations, TextureBindings, TileGridError, TileSetBindings,
+    AnimationError, EnvironmentError, SpriteAnimations, TextureBindings, TileGridError, TileSetBindings,
     TileVolumeError, TilemapError,
 };
 use sindri_core::TileSetError;
@@ -53,6 +53,16 @@ pub use camera::{
     OverlayPlacement, OverlayView, ViewCamera, overlay_for_viewport, overlay_in_scene,
     pan_for_drag, world_camera_of,
 };
+
+fn environment_clear(world: &World) -> Result<ClearOperations, SceneExtractError> {
+    let Some(environment) = crate::environment_of(world)? else {
+        return Ok(ClearOperations::default());
+    };
+    Ok(ClearOperations {
+        color: environment.background.map(f64::from),
+        depth: 1.0,
+    })
+}
 
 /// Turns a world into a frame the renderer can draw.
 ///
@@ -90,6 +100,8 @@ fn transform_matrix(transform: Transform3D) -> Mat4 {
 pub enum SceneExtractError {
     #[error(transparent)]
     Components(#[from] ComponentRegistryError),
+    #[error(transparent)]
+    Environment(#[from] EnvironmentError),
     #[error(transparent)]
     Frame(#[from] FramePlanError),
     #[error(transparent)]
@@ -247,7 +259,7 @@ impl SceneExtractor {
         if let UiCanvas::InScene { aspect } = canvas {
             place_overlay_in_scene(&mut cameras, aspect);
         }
-        let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
+        let mut frame = ExtractedFrame::new(viewport, environment_clear(world)?);
         self.push_meshes(world, &cameras, textures, &mut frame)?;
         self.push_voxel_worlds(world, &cameras, textures, &mut frame)?;
         let resting = SpriteAnimations::new();
@@ -304,7 +316,7 @@ impl SceneExtractor {
             place_overlay_in_scene(&mut cameras, aspect);
         }
 
-        let mut frame = ExtractedFrame::new(viewport, ClearOperations::default());
+        let mut frame = ExtractedFrame::new(viewport, environment_clear(world)?);
         self.push_meshes(world, &cameras, textures, &mut frame)?;
         self.push_voxel_worlds(world, &cameras, textures, &mut frame)?;
         let resting = SpriteAnimations::new();
