@@ -1,7 +1,7 @@
 //! `sindri.camera`: how a scene's own camera sees the world.
 
 use serde::{Deserialize, Serialize};
-use sindri_core::{EntityId, SceneComponent, Transform3D, World};
+use sindri_core::{EntityId, SceneComponent, SceneEntityId, Transform3D, World};
 
 /// A camera authored into a scene.
 ///
@@ -96,7 +96,7 @@ impl CameraComponent {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CameraBehaviorComponent {
     #[serde(default)]
     pub follow: Option<CameraFollow>,
@@ -106,9 +106,9 @@ pub struct CameraBehaviorComponent {
     pub shake: CameraShake,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CameraFollow {
-    pub target: EntityId,
+    pub target: SceneEntityId,
     #[serde(default)]
     pub offset: [f32; 3],
     #[serde(default)]
@@ -201,7 +201,7 @@ fn update_camera_behavior(
     let mut position = current.position;
     position[0] -= previous_shake[0];
     position[1] -= previous_shake[1];
-    apply_follow(world, behavior.follow, &mut position, dt);
+    apply_follow(world, behavior.follow.as_ref(), &mut position, dt);
     apply_confine(behavior.confine, &mut position);
     advance_shake(&mut behavior.shake, dt);
     let shake = shake_offset(&behavior.shake);
@@ -213,18 +213,22 @@ fn update_camera_behavior(
             position,
             ..current
         });
-        if let Ok(value) = serde_json::to_value(*behavior) {
+        if let Ok(value) = serde_json::to_value(&*behavior) {
             data.components
                 .insert(CameraBehaviorComponent::TYPE_NAME.into(), value);
         }
     }
 }
 
-fn apply_follow(world: &World, follow: Option<CameraFollow>, position: &mut [f32; 3], dt: f32) {
+fn apply_follow(world: &World, follow: Option<&CameraFollow>, position: &mut [f32; 3], dt: f32) {
     let Some(follow) = follow else {
         return;
     };
-    let Some(target) = world.get(follow.target).and_then(|data| data.transform_3d) else {
+    let Some(target) = world
+        .entity_for_source_id(&follow.target)
+        .and_then(|entity| world.get(entity))
+        .and_then(|data| data.transform_3d)
+    else {
         return;
     };
     let desired = [
@@ -294,10 +298,13 @@ mod behavior_tests {
     #[test]
     fn follow_respects_dead_zone_and_bounds() {
         let mut world = World::default();
-        let target = world.spawn(entity([8.0, 0.0, 0.0]));
+        let target_id = SceneEntityId::new("target").unwrap();
+        let mut target = entity([8.0, 0.0, 0.0]);
+        target.source_id = Some(target_id.clone());
+        world.spawn(target);
         let mut camera = entity([0.0, 0.0, 5.0]);
         camera.components.insert(CameraBehaviorComponent::TYPE_NAME.into(), json!({
-            "follow": { "target": target, "dead_zone": [2.0, 2.0], "smoothing": 1000.0, "max_speed": 0.0 },
+            "follow": { "target": target_id, "dead_zone": [2.0, 2.0], "smoothing": 1000.0, "max_speed": 0.0 },
             "confine": { "min": [-4.0, -3.0], "max": [4.0, 3.0] },
             "shake": {}
         }));
