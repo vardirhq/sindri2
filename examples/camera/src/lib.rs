@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use sindri_core::{ComponentSchemaRegistry, FixedStepConfig, SceneComponent, SceneDocument, World};
+use sindri_core::{ComponentSchemaRegistry, FixedStepConfig, SceneDocument, World};
 use sindri_decay::{ScriptComponent, ScriptFrame, ScriptSources, Scripts};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{EngineHost, FrameContext, Game, InputEvent, Key};
@@ -10,7 +10,7 @@ use sindri_render::{
     encode_prepared_frame,
 };
 use sindri_scene::{
-    CameraBehaviorComponent, SceneExtractError, SceneExtractor, TextureBindings,
+    SceneExtractError, SceneExtractor, TextureBindings,
     update_camera_behaviors,
 };
 use thiserror::Error;
