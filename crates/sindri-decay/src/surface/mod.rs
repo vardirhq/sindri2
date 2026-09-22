@@ -26,7 +26,7 @@ mod person;
 mod tests;
 
 pub(crate) use call::{
-    ANIMATION_CALLS, AnimationCall, CAMERA_CALLS, CameraCall, EFFECTS_CALLS, EffectsCall, FUNCTIONS, GAME_CALLS, GRID_CALLS,
+    ANIMATION_CALLS, AnimationCall, EFFECTS_CALLS, EffectsCall, FUNCTIONS, GAME_CALLS, GRID_CALLS,
     GameCall, GridCall, HostFunction, PHYSICS_CALLS, PRINT, PROFILE_CALLS, PhysicsCall,
     ProfileCall, RANDOM_CALLS, RandomCall, SAVE_CALLS, SCENE_CALLS, SaveCall, SceneCall,
     TIME_VALUES, TimeValue, UI_CALLS, UiCall, WORLD_CALLS, WorldCall,
@@ -38,7 +38,7 @@ pub(crate) use names::{
     TILEMAP_COMPONENT, TIME, TOUCH, TRANSFORM, UI, UI_IMAGE, VIEWPORT, WORLD,
 };
 pub(crate) use person::{
-    AIM_VALUES, AimValue, CAMERA_VALUES, CameraValue, GESTURE_VALUES, GestureValue, INPUT_QUERIES,
+    AIM_VALUES, AimValue, CAMERA_CALLS, CAMERA_VALUES, CameraCall, CameraValue, GESTURE_VALUES, GestureValue, INPUT_QUERIES,
     InputQuery, POINTER_QUERIES, POINTER_VALUES, PointerQuery, PointerValue, STICK_VALUES,
     StickValue, TOUCH_CALLS, TOUCH_COUNT, TouchCall, VIEWPORT_VALUES, ViewportValue,
 };
