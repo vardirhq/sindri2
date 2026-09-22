@@ -166,7 +166,7 @@ impl RuntimeViewport {
         let post_process = environment
             .map(EnvironmentComponent::post_process_settings)
             .unwrap_or_default();
-        if !post_process.is_neutral() {
+        if post_process.is_active() {
             encode_lit_frame(
                 frame_renderers,
                 &self.render_state.device,
