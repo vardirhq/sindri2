@@ -71,7 +71,6 @@ impl Default for BloomSettings {
             passes: 3,
         }
     }
-
 }
 
 impl BloomSettings {
