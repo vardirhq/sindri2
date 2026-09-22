@@ -133,7 +133,6 @@ impl EnvironmentComponent {
         }
         Ok(())
     }
-
 }
 
 /// Finds the single authored environment in a world.
