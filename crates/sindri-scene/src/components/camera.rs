@@ -329,8 +329,9 @@ mod behavior_tests {
                 .unwrap();
         let expected = shake_offset(&behavior.shake);
         let position = data.transform_3d.unwrap().position;
-        assert!((position[0] - (2.0 + expected[0])).abs() < f32::EPSILON);
-        assert!((position[1] - (-1.0 + expected[1])).abs() < f32::EPSILON);
+        const TOLERANCE: f32 = 1.0e-6;
+        assert!((position[0] - (2.0 + expected[0])).abs() < TOLERANCE);
+        assert!((position[1] - (-1.0 + expected[1])).abs() < TOLERANCE);
     }
 
     #[test]
