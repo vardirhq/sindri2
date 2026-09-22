@@ -244,7 +244,7 @@ mod tests {
             }
         }))
         .expect("legacy environment should deserialize");
-        assert_eq!(environment.directional.intensity, 0.0);
+        assert!(environment.directional.intensity.abs() < f32::EPSILON);
         assert!(!environment.shadows.enabled);
     }
 
