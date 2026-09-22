@@ -126,7 +126,7 @@ pub(crate) fn light_view_projection(
     projection * view
 }
 
-const SHADOW_SHADER: &str = r#"
+const SHADOW_SHADER: &str = r"
 struct ShadowUniform { light_model_view_projection: mat4x4<f32>, }
 @group(0) @binding(0) var<uniform> shadow: ShadowUniform;
 struct VertexInput { @location(0) position: vec3<f32>, @location(1) uv: vec2<f32>, }
