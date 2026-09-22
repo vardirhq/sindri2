@@ -59,8 +59,8 @@ fn a_script_adds_trauma_to_the_authored_camera_behavior() {
         ScriptFrame::new(&sources, &InputState::default(), 1.0 / 60.0),
     );
     assert!(report.is_quiet(), "{report:?}");
-    let trauma = world.get(camera).unwrap().components[CameraBehaviorComponent::TYPE_NAME]
-        ["shake"]["trauma"]
+    let trauma = world.get(camera).unwrap().components[CameraBehaviorComponent::TYPE_NAME]["shake"]
+        ["trauma"]
         .as_f64()
         .unwrap();
     assert!((trauma - 0.7).abs() < f64::EPSILON);
