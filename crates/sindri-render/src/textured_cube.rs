@@ -5,7 +5,7 @@ use wgpu::util::DeviceExt;
 
 use crate::{
     CachedMeshId, CachedTexturedMeshUpload, DepthTarget, MeshBuffers, TextureId, TextureRegistry,
-    TexturedMeshCacheStats, TexturedVertex, textured_mesh_cache::TexturedMeshCache,
+    TexturedMeshCacheStats, TexturedVertex, WorldLighting, textured_mesh_cache::TexturedMeshCache,
 };
 
 const SHADER: &str = include_str!("textured_cube.wgsl");
@@ -48,6 +48,10 @@ const INDICES: [u16; 36] = [
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct CubeUniform {
     model_view_projection: [[f32; 4]; 4],
+    model: [[f32; 4]; 4],
+    ambient: [f32; 4],
+    directional_direction: [f32; 4],
+    directional_color: [f32; 4],
 }
 
 fn create_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
@@ -56,7 +60,7 @@ fn create_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         entries: &[
             wgpu::BindGroupLayoutEntry {
                 binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX,
+                visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
                 ty: wgpu::BindingType::Buffer {
                     ty: wgpu::BufferBindingType::Uniform,
                     has_dynamic_offset: false,
@@ -138,6 +142,7 @@ pub struct TexturedCubeRenderer {
     next: usize,
     mesh: MeshBuffers,
     cached_meshes: TexturedMeshCache,
+    lighting: WorldLighting,
 }
 
 /// GPU state owned by one textured-mesh draw in a submission.
@@ -182,7 +187,13 @@ impl TexturedCubeRenderer {
             next: 0,
             mesh: MeshBuffers::new(device, "Sindri textured cube", &VERTICES, &INDICES),
             cached_meshes: TexturedMeshCache::default(),
+            lighting: WorldLighting::default(),
         }
+    }
+
+    /// Sets the world lighting used by subsequent textured 3D draws.
+    pub fn set_lighting(&mut self, lighting: WorldLighting) {
+        self.lighting = lighting;
     }
 
     /// Makes the reusable draw slots available for a new GPU submission.
@@ -196,9 +207,11 @@ impl TexturedCubeRenderer {
         if slot == self.batches.len() {
             let uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Sindri textured mesh uniform"),
-                contents: bytemuck::bytes_of(&CubeUniform {
-                    model_view_projection: Mat4::IDENTITY.to_cols_array_2d(),
-                }),
+                contents: bytemuck::bytes_of(&cube_uniform(
+                    Mat4::IDENTITY,
+                    Mat4::IDENTITY,
+                    WorldLighting::default(),
+                )),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
             self.batches.push(MeshBatch {
@@ -267,7 +280,39 @@ impl TexturedCubeRenderer {
             context.queue,
             encoder,
             (target, depth),
+            Mat4::IDENTITY,
             model_view_projection,
+            self.lighting,
+            (&batch.uniform, &self.pipeline, bind_group),
+            &self.mesh,
+            "Sindri textured cube pass",
+        );
+    }
+
+    /// Draws a cube with a separate model transform so lighting stays in world space.
+    pub fn encode_world(
+        &mut self,
+        context: DrawContext<'_>,
+        encoder: &mut wgpu::CommandEncoder,
+        target: &wgpu::TextureView,
+        depth: &DepthTarget,
+        model: Mat4,
+        view_projection: Mat4,
+    ) {
+        let slot = self.reserve(context.device);
+        self.bind_texture(context.device, context.textures, slot, context.texture);
+        let batch = &self.batches[slot];
+        let bind_group = batch
+            .bind_groups
+            .get(&context.texture)
+            .expect("the texture is bound before encoding");
+        encode_mesh_buffers(
+            context.queue,
+            encoder,
+            (target, depth),
+            model,
+            view_projection * model,
+            self.lighting,
             (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
@@ -303,7 +348,41 @@ impl TexturedCubeRenderer {
             context.queue,
             encoder,
             target,
+            Mat4::IDENTITY,
             model_view_projection,
+            self.lighting,
+            (&batch.uniform, &self.pipeline, bind_group),
+            &mesh,
+            "Sindri textured surface pass",
+        );
+    }
+
+    /// Draws caller-provided textured triangles with world-space lighting.
+    pub fn encode_mesh_world(
+        &mut self,
+        context: DrawContext<'_>,
+        encoder: &mut wgpu::CommandEncoder,
+        target: (&wgpu::TextureView, &DepthTarget),
+        model: Mat4,
+        view_projection: Mat4,
+        vertices: &[TexturedVertex],
+        indices: &[u16],
+    ) {
+        if vertices.is_empty() || indices.is_empty() {
+            return;
+        }
+        let mesh = MeshBuffers::new(context.device, "Sindri textured surface", vertices, indices);
+        let slot = self.reserve(context.device);
+        self.bind_texture(context.device, context.textures, slot, context.texture);
+        let batch = &self.batches[slot];
+        let bind_group = batch.bind_groups.get(&context.texture).expect("the texture is bound before encoding");
+        encode_mesh_buffers(
+            context.queue,
+            encoder,
+            target,
+            model,
+            view_projection * model,
+            self.lighting,
             (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
@@ -317,7 +396,8 @@ impl TexturedCubeRenderer {
         context: DrawContext<'_>,
         encoder: &mut wgpu::CommandEncoder,
         target: (&wgpu::TextureView, &DepthTarget),
-        model_view_projection: Mat4,
+        model: Mat4,
+        view_projection: Mat4,
         request: CachedMeshRequest<'_>,
     ) {
         let slot = self.reserve(context.device);
@@ -339,7 +419,9 @@ impl TexturedCubeRenderer {
             context.queue,
             encoder,
             target,
-            model_view_projection,
+            model,
+            view_projection * model,
+            self.lighting,
             (&batch.uniform, &self.pipeline, bind_group),
             mesh,
             "Sindri cached textured mesh pass",
@@ -363,11 +445,38 @@ impl TexturedCubeRenderer {
     }
 }
 
+fn cube_uniform(model: Mat4, model_view_projection: Mat4, lighting: WorldLighting) -> CubeUniform {
+    CubeUniform {
+        model_view_projection: model_view_projection.to_cols_array_2d(),
+        model: model.to_cols_array_2d(),
+        ambient: [
+            lighting.ambient_color[0],
+            lighting.ambient_color[1],
+            lighting.ambient_color[2],
+            lighting.ambient_intensity,
+        ],
+        directional_direction: [
+            lighting.directional_direction[0],
+            lighting.directional_direction[1],
+            lighting.directional_direction[2],
+            lighting.directional_intensity,
+        ],
+        directional_color: [
+            lighting.directional_color[0],
+            lighting.directional_color[1],
+            lighting.directional_color[2],
+            0.0,
+        ],
+    }
+}
+
 fn encode_mesh_buffers(
     queue: &wgpu::Queue,
     encoder: &mut wgpu::CommandEncoder,
     target: (&wgpu::TextureView, &DepthTarget),
+    model: Mat4,
     model_view_projection: Mat4,
+    lighting: WorldLighting,
     state: (&wgpu::Buffer, &wgpu::RenderPipeline, &wgpu::BindGroup),
     mesh: &MeshBuffers,
     label: &str,
@@ -376,9 +485,7 @@ fn encode_mesh_buffers(
     queue.write_buffer(
         uniform,
         0,
-        bytemuck::bytes_of(&CubeUniform {
-            model_view_projection: model_view_projection.to_cols_array_2d(),
-        }),
+        bytemuck::bytes_of(&cube_uniform(model, model_view_projection, lighting)),
     );
     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some(label),

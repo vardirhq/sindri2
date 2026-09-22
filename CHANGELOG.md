@@ -36,6 +36,8 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- `sindri.environment` now authors ambient and directional world lighting. Textured 3D geometry and Voxel Lab terrain respond to the same sun direction, colour, and intensity in editor and browser rendering.
+
 - Cached voxel sections outside the current camera frustum are no longer
   submitted for drawing or uploaded merely because they remain resident. Their
   compiled CPU geometry stays cached and becomes drawable when the camera can

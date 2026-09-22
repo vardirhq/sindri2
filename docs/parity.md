@@ -192,7 +192,7 @@ the gap is legible, not because it is scheduled.
 | Cameras, depth, cube primitive, inline textured surface mesh | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | Causeway derives one smoothed terrain chunk from its voxel generator as a prototype; meshes are inline, rebuilt into GPU buffers per draw, and have no asset/import pipeline yet |
 | **glTF / model import** | ❌ | ❌ | ❌ | ❌ | **Absent** | `tools/isometric-baker` renders models to 2D sprites offline, in three views; that is not runtime 3D |
 | **Materials** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
-| **Lighting** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
+| **Lighting** | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | One authored ambient contribution plus one directional world light shade textured 3D geometry and voxel terrain in editor viewports and Voxel Lab. No local lights, shadows, PBR materials, normal maps, or Decay control yet. |
 | **Skeletal animation** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | **3D physics** | 🟡 | ❌ | ❌ | ❌ | **Absent** | A Sindri-owned data model exists; no runtime |
 

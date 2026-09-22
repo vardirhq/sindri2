@@ -8,6 +8,7 @@ mod depth;
 mod encode;
 mod frame;
 mod glyph;
+mod lighting;
 mod mesh;
 mod offscreen;
 mod shape;
@@ -37,6 +38,7 @@ pub use frame::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     PreparedFrame, RenderLayer, RenderStage, Viewport,
 };
+pub use lighting::WorldLighting;
 pub use glyph::{
     EDGE, FIELD_PER_RASTER_PIXEL, GlyphAtlas, GlyphDrawError, GlyphInstance, GlyphRenderer,
     GlyphSlot, RASTER_EM,

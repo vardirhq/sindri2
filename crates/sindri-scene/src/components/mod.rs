@@ -26,7 +26,10 @@ pub use camera::{
     CameraBehaviorComponent, CameraBounds, CameraComponent, CameraFit, CameraFollow, CameraShake,
     add_camera_trauma, update_camera_behaviors,
 };
-pub use environment::{EnvironmentBloom, EnvironmentComponent, EnvironmentError, environment_of};
+pub use environment::{
+    EnvironmentBloom, EnvironmentComponent, EnvironmentDirectionalLight, EnvironmentError,
+    environment_of,
+};
 pub use grid::{
     GridNavigationComponent, GridOccupantComponent, GridPlacementComponent, GridWallDocument,
 };
