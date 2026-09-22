@@ -308,6 +308,32 @@ mod behavior_tests {
     }
 
     #[test]
+    fn default_shake_matches_an_empty_authored_shake() {
+        let authored: CameraShake = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(CameraShake::default(), authored);
+    }
+
+    #[test]
+    fn shake_does_not_accumulate_into_camera_position() {
+        let mut world = World::default();
+        let mut camera = entity([2.0, -1.0, 5.0]);
+        camera.components.insert(CameraBehaviorComponent::TYPE_NAME.into(), json!({
+            "shake": { "trauma": 1.0, "strength": 1.0, "decay": 0.0, "frequency": 1.0, "phase": 0.0 }
+        }));
+        let camera = world.spawn(camera);
+        update_camera_behaviors(&mut world, 0.25);
+        update_camera_behaviors(&mut world, 0.25);
+        let data = world.get(camera).unwrap();
+        let behavior: CameraBehaviorComponent =
+            serde_json::from_value(data.components[CameraBehaviorComponent::TYPE_NAME].clone())
+                .unwrap();
+        let expected = shake_offset(&behavior.shake);
+        let position = data.transform_3d.unwrap().position;
+        assert!((position[0] - (2.0 + expected[0])).abs() < f32::EPSILON);
+        assert!((position[1] - (-1.0 + expected[1])).abs() < f32::EPSILON);
+    }
+
+    #[test]
     fn shake_decays_and_is_deterministic() {
         let mut world = World::default();
         let mut camera = entity([0.0, 0.0, 5.0]);
