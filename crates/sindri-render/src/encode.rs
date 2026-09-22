@@ -306,6 +306,7 @@ fn encode_passes<'p>(
         textures,
     } = renderers;
     for pass in passes {
+        cube_renderer.set_camera_position(pass.camera.position);
         match &pass.command {
             FrameCommand::TexturedCube { model, texture } => cube_renderer.encode_world(
                 DrawContext {

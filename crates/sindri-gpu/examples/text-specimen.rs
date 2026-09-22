@@ -132,6 +132,7 @@ async fn run(path: &Path) -> Result<(), Box<dyn Error>> {
         RenderStage::Overlay,
         RenderLayer::OVERLAY,
         FrameCamera {
+            position: glam::Vec3::ZERO,
             view_projection: orthographic_projection(
                 -half_width,
                 half_width,

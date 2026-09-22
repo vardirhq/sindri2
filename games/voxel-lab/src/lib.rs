@@ -217,6 +217,7 @@ pub fn camera(turn: f32) -> FrameCamera {
         ) * distance;
     let aspect = aspect_ratio();
     FrameCamera {
+        position: eye,
         view_projection: orthographic_projection(
             -ZOOM * aspect,
             ZOOM * aspect,
@@ -241,6 +242,7 @@ fn world_camera(turn: f32) -> FrameCamera {
     let zoom = 22.0;
     let aspect = aspect_ratio();
     FrameCamera {
+        position: eye,
         view_projection: orthographic_projection(
             -zoom * aspect,
             zoom * aspect,

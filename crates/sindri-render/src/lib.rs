@@ -7,6 +7,7 @@ mod cube;
 mod depth;
 mod encode;
 mod frame;
+mod fog;
 mod glyph;
 mod lighting;
 mod mesh;
@@ -35,6 +36,7 @@ pub use encode::{
     FrameEncodeError, FrameRenderers, FrameTarget, Lighting, encode_lit_frame,
     encode_prepared_frame,
 };
+pub use fog::FogSettings;
 pub use frame::{
     ClearOperations, ExtractedFrame, FrameCamera, FrameCommand, FramePass, FramePlanError,
     PreparedFrame, RenderLayer, RenderStage, Viewport,

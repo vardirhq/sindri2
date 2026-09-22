@@ -123,6 +123,7 @@ impl SceneExtractor {
             .expect("every resolved view includes screen-space projection");
         let camera = FrameCamera {
             view_projection: overlay.view_projection,
+            position: glam::Vec3::ZERO,
         };
 
         // Ordered so the frame's passes come out layer by layer, and within a
@@ -212,6 +213,7 @@ impl SceneExtractor {
                 RenderLayer(layer),
                 FrameCamera {
                     view_projection: camera.view_projection,
+                    position: glam::Vec3::ZERO,
                 },
                 FrameCommand::Shapes {
                     blend: if additive {

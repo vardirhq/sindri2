@@ -142,6 +142,11 @@ impl RuntimeViewport {
                 .map(EnvironmentComponent::shadow_settings)
                 .unwrap_or_default(),
         );
+        renderers.cube.set_fog(
+            environment
+                .map(EnvironmentComponent::fog_settings)
+                .unwrap_or_default(),
+        );
         renderers
             .cube
             .set_ambient_occlusion(environment.map_or(0.0, |environment| {

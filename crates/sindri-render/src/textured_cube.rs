@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 
-use glam::Mat4;
+use glam::{Mat4, Vec3};
 use wgpu::util::DeviceExt;
 
 use crate::{
-    CachedMeshId, DepthTarget, MeshBuffers, ShadowSettings, TextureId, TextureRegistry,
+    CachedMeshId, DepthTarget, FogSettings, MeshBuffers, ShadowSettings, TextureId, TextureRegistry,
     TexturedMeshCacheStats, TexturedVertex, WorldLighting,
     shadow::{ShadowMap, create_shadow_pipeline},
     textured_mesh_cache::TexturedMeshCache,
@@ -27,6 +27,9 @@ struct CubeUniform {
     directional_color: [f32; 4],
     light_view_projection: [[f32; 4]; 4],
     shadow: [f32; 4],
+    fog_color: [f32; 4],
+    fog_params: [f32; 4],
+    camera_position: [f32; 4],
 }
 
 fn create_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
@@ -140,6 +143,8 @@ pub struct TexturedCubeRenderer {
     shadow_pipeline: wgpu::RenderPipeline,
     shadow_view_projection: Mat4,
     ambient_occlusion_strength: f32,
+    fog: FogSettings,
+    camera_position: Vec3,
 }
 
 /// GPU state owned by one textured-mesh draw in a submission.
@@ -180,6 +185,8 @@ impl TexturedCubeRenderer {
             shadow_pipeline,
             shadow_view_projection: Mat4::IDENTITY,
             ambient_occlusion_strength: 0.0,
+            fog: FogSettings::default(),
+            camera_position: Vec3::ZERO,
         }
     }
 
@@ -200,6 +207,15 @@ impl TexturedCubeRenderer {
     /// Sets how strongly mesh-authored ambient occlusion darkens world geometry.
     pub fn set_ambient_occlusion(&mut self, strength: f32) {
         self.ambient_occlusion_strength = strength.clamp(0.0, 1.0);
+    }
+
+    /// Sets atmosphere applied to subsequent opaque world draws.
+    pub fn set_fog(&mut self, fog: FogSettings) {
+        self.fog = fog;
+    }
+
+    pub fn set_camera_position(&mut self, position: Vec3) {
+        self.camera_position = position;
     }
 
     pub(crate) const fn shadows_enabled(&self) -> bool {
@@ -224,6 +240,8 @@ impl TexturedCubeRenderer {
                     Mat4::IDENTITY,
                     ShadowSettings::default(),
                     0.0,
+                    FogSettings::default(),
+                    Vec3::ZERO,
                 )),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
@@ -322,6 +340,8 @@ impl TexturedCubeRenderer {
             self.shadow_view_projection,
             self.shadow_settings,
             self.ambient_occlusion_strength,
+            self.fog,
+            self.camera_position,
             (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
@@ -355,6 +375,8 @@ impl TexturedCubeRenderer {
             self.shadow_view_projection,
             self.shadow_settings,
             self.ambient_occlusion_strength,
+            self.fog,
+            self.camera_position,
             (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
@@ -396,6 +418,8 @@ impl TexturedCubeRenderer {
             self.shadow_view_projection,
             self.shadow_settings,
             self.ambient_occlusion_strength,
+            self.fog,
+            self.camera_position,
             (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
@@ -435,6 +459,8 @@ impl TexturedCubeRenderer {
             self.shadow_view_projection,
             self.shadow_settings,
             self.ambient_occlusion_strength,
+            self.fog,
+            self.camera_position,
             (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
@@ -477,6 +503,8 @@ impl TexturedCubeRenderer {
             self.shadow_view_projection,
             self.shadow_settings,
             self.ambient_occlusion_strength,
+            self.fog,
+            self.camera_position,
             (&batch.uniform, &self.pipeline, bind_group),
             mesh,
             "Sindri cached textured mesh pass",
@@ -507,6 +535,8 @@ fn cube_uniform(
     light_view_projection: Mat4,
     shadows: ShadowSettings,
     ambient_occlusion_strength: f32,
+    fog: FogSettings,
+    camera_position: Vec3,
 ) -> CubeUniform {
     CubeUniform {
         model_view_projection: model_view_projection.to_cols_array_2d(),
@@ -540,6 +570,9 @@ fn cube_uniform(
             ambient_occlusion_strength,
             0.0,
         ],
+        fog_color: [fog.color[0], fog.color[1], fog.color[2], if fog.enabled { 1.0 } else { 0.0 }],
+        fog_params: [fog.start, fog.distance, fog.density, fog.height],
+        camera_position: [camera_position.x, camera_position.y, camera_position.z, fog.height_falloff],
     }
 }
 
@@ -554,6 +587,8 @@ fn encode_mesh_buffers(
     light_view_projection: Mat4,
     shadows: ShadowSettings,
     ambient_occlusion_strength: f32,
+    fog: FogSettings,
+    camera_position: Vec3,
     state: (&wgpu::Buffer, &wgpu::RenderPipeline, &wgpu::BindGroup),
     mesh: &MeshBuffers,
     label: &str,
@@ -569,6 +604,8 @@ fn encode_mesh_buffers(
             light_view_projection,
             shadows,
             ambient_occlusion_strength,
+            fog,
+            camera_position,
         )),
     );
     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {

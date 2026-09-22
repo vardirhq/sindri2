@@ -69,10 +69,8 @@ impl SceneExtractor {
                 RenderStage::Opaque3d,
                 RenderLayer(mesh.layer),
                 FrameCamera {
-                    view_projection: cameras
-                        .world
-                        .ok_or(SceneExtractError::MissingWorldCamera)?
-                        .view_projection,
+                    view_projection: cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?.view_projection,
+                    position: cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?.view.inverse().transform_point3(glam::Vec3::ZERO),
                 },
                 command,
             ));

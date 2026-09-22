@@ -31,7 +31,7 @@ pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
     CameraBehaviorComponent, CameraBounds, CameraComponent, CameraFit, CameraFollow, CameraShake,
     EnvironmentAmbientOcclusion, EnvironmentBloom, EnvironmentComponent,
-    EnvironmentDirectionalLight, EnvironmentError, EnvironmentPostProcess, EnvironmentShadows,
+    EnvironmentDirectionalLight, EnvironmentError, EnvironmentFog, EnvironmentPostProcess, EnvironmentShadows,
     EnvironmentToneMapping, GridNavigationComponent, GridOccupantComponent, GridPlacementComponent,
     GridWallDocument, MeshComponent, MeshPrimitive, ShapeComponent, ShapeGeometry,
     SpriteColorTransform, SpriteComponent, TileCellDocument, TileDraw, TileGridComponent,

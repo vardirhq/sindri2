@@ -72,6 +72,7 @@ impl SceneExtractor {
                 RenderLayer(layer),
                 FrameCamera {
                     view_projection: overlay.view_projection,
+                    position: glam::Vec3::ZERO,
                 },
                 FrameCommand::Text { instances },
             ));

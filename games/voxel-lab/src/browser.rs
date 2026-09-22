@@ -22,8 +22,11 @@ use crate::{
 };
 
 const SCENE_JSON: &str = include_str!("../assets/voxel-lab.scene.json");
-const CAUSEWAY_TOPS: &[u8] = include_bytes!("../../../game/assets/textures/blocks-top.png");
-const CAUSEWAY_SIDES: &[u8] = include_bytes!("../../../game/assets/textures/blocks-side.png");
+const USER_TOP: &[u8] = include_bytes!("../assets/textures/user-top.png");
+const USER_SIDE_A: &[u8] = include_bytes!("../assets/textures/user-side-a.png");
+const USER_DIRT: &[u8] = include_bytes!("../assets/textures/user-dirt.png");
+const WORLD_TOPS: &[u8] = include_bytes!("../assets/textures/world-blocks-top.png");
+const WORLD_SIDES: &[u8] = include_bytes!("../assets/textures/world-blocks-side.png");
 
 pub(super) fn run() {
     console_error_panic_hook::set_once();
@@ -54,7 +57,7 @@ enum VoxelLabError {
 struct VoxelLabApp {
     lab: VoxelLabRuntime,
     textures: TextureRegistry,
-    material_textures: [TextureId; 2],
+    material_textures: BrowserMaterials,
     depth: DepthTarget,
     cubes: TexturedCubeRenderer,
     sprites: SpriteBatchRenderer,
@@ -71,7 +74,7 @@ impl DesktopApp for VoxelLabApp {
 
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let mut textures = TextureRegistry::new(context.device(), context.queue());
-        let material_textures = load_causeway_atlases(context, &mut textures)?;
+        let material_textures = load_authored_materials(context, &mut textures)?;
         let document =
             SceneDocument::from_json(SCENE_JSON).expect("embedded Voxel Lab scene parses");
         let world = World::from_scene(&document)
@@ -166,6 +169,7 @@ impl DesktopApp for VoxelLabApp {
                     label: Some("Voxel Lab browser encoder"),
                 });
         self.cubes.set_lighting(self.environment.world_lighting());
+        self.cubes.set_fog(self.environment.fog_settings());
         self.cubes
             .set_shadows(context.device(), self.environment.shadow_settings());
         self.cubes
@@ -230,21 +234,39 @@ impl VoxelLabApp {
     }
 }
 
-fn load_causeway_atlases(
-    context: &AppContext<'_>,
-    textures: &mut TextureRegistry,
-) -> Result<[TextureId; 2], VoxelLabError> {
-    let top = causeway_atlas(context, textures, "textures/blocks-top.png", CAUSEWAY_TOPS)?;
-    let side = causeway_atlas(
-        context,
-        textures,
-        "textures/blocks-side.png",
-        CAUSEWAY_SIDES,
-    )?;
-    Ok([top, side])
+#[derive(Clone, Copy)]
+struct BrowserMaterials {
+    grass_top: TextureId,
+    grass_side: TextureId,
+    dirt: TextureId,
+    world_top: TextureId,
+    world_side: TextureId,
 }
 
-fn causeway_atlas(
+fn load_authored_materials(
+    context: &AppContext<'_>,
+    textures: &mut TextureRegistry,
+) -> Result<BrowserMaterials, VoxelLabError> {
+    Ok(BrowserMaterials {
+        grass_top: load_texture(context, textures, "textures/user-top.png", USER_TOP)?,
+        grass_side: load_texture(context, textures, "textures/user-side-a.png", USER_SIDE_A)?,
+        dirt: load_texture(context, textures, "textures/user-dirt.png", USER_DIRT)?,
+        world_top: load_texture(
+            context,
+            textures,
+            "textures/world-blocks-top.png",
+            WORLD_TOPS,
+        )?,
+        world_side: load_texture(
+            context,
+            textures,
+            "textures/world-blocks-side.png",
+            WORLD_SIDES,
+        )?,
+    })
+}
+
+fn load_texture(
     context: &AppContext<'_>,
     textures: &mut TextureRegistry,
     label: &str,
@@ -252,21 +274,13 @@ fn causeway_atlas(
 ) -> Result<TextureId, VoxelLabError> {
     let id = label.parse::<AssetId>()?;
     let asset = TextureAssetDecoder.decode(AssetBytes::new(id, bytes.to_vec()))?;
-    let mut rgba = asset.rgba8().to_vec();
-    for pixel in rgba.chunks_exact_mut(4) {
-        // These atlases were authored for Causeway's sprite path, where a few
-        // transparent edge texels are harmless. A voxel face is an opaque 3D
-        // surface: preserving those texels literally punches holes through
-        // terrain and reveals buried faces.
-        pixel[3] = u8::MAX;
-    }
     Ok(textures.insert(Texture2D::from_rgba8(
         context.device(),
         context.queue(),
         label,
         asset.width(),
         asset.height(),
-        &rgba,
+        asset.rgba8(),
     )?))
 }
 
@@ -281,20 +295,25 @@ fn atlas_rect(column: u32, width: u32) -> Result<UvRect, UvRectError> {
     )
 }
 
-fn browser_texture(textures: [TextureId; 2], voxel: VoxelId, face: VoxelFace) -> VoxelTexture {
-    let top = face == VoxelFace::Top;
-    let column = match voxel.value() {
-        1 => 0,
-        2 => 4,
-        _ => 6,
-    };
-    let (texture, width) = if top {
-        (textures[0], 1196)
-    } else {
-        (textures[1], 1144)
-    };
-    let uv = atlas_rect(column, width).expect("Causeway atlas columns are valid");
-    VoxelTexture::new(texture, uv)
+fn browser_texture(
+    textures: BrowserMaterials,
+    voxel: VoxelId,
+    face: VoxelFace,
+) -> VoxelTexture {
+    match (voxel.value(), face) {
+        (0, _) => unreachable!("air never produces block faces"),
+        (1, VoxelFace::Top) => VoxelTexture::new(textures.grass_top, UvRect::FULL),
+        (1, _) => VoxelTexture::new(textures.grass_side, UvRect::FULL),
+        (2, _) => VoxelTexture::new(textures.dirt, UvRect::FULL),
+        (_, VoxelFace::Top | VoxelFace::Bottom) => {
+            let uv = atlas_rect(6, 1196).expect("world top atlas stone column is valid");
+            VoxelTexture::new(textures.world_top, uv)
+        }
+        (_, _) => {
+            let uv = atlas_rect(6, 1144).expect("world side atlas stone column is valid");
+            VoxelTexture::new(textures.world_side, uv)
+        }
+    }
 }
 
 #[allow(clippy::cast_precision_loss)]
@@ -308,6 +327,7 @@ fn camera(context: &AppContext<'_>, camera: LabCamera) -> FrameCamera {
     let aspect = context.width() as f32 / context.height().max(1) as f32;
     let zoom = camera.half_height;
     FrameCamera {
+        position: eye,
         view_projection: orthographic_projection(
             -zoom * aspect,
             zoom * aspect,

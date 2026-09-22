@@ -1,4 +1,4 @@
-use glam::Mat4;
+use glam::{Mat4, Vec3};
 use thiserror::Error;
 
 use crate::{
@@ -67,6 +67,8 @@ impl RenderLayer {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FrameCamera {
     pub view_projection: Mat4,
+    /// World-space eye position used by distance-based world effects.
+    pub position: Vec3,
 }
 
 #[derive(Clone, Debug)]
@@ -225,6 +227,7 @@ mod tests {
             layer,
             FrameCamera {
                 view_projection: Mat4::IDENTITY,
+                position: Vec3::ZERO,
             },
             FrameCommand::TexturedCube {
                 model: Mat4::IDENTITY,
