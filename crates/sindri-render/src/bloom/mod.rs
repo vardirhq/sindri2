@@ -505,10 +505,12 @@ mod tests {
     #[test]
     fn neutral_post_process_is_a_real_passthrough() {
         assert!(!PostProcessSettings::default().is_active());
-        assert!(PostProcessSettings {
-            tone_mapping: ToneMapping::Aces,
-            ..PostProcessSettings::default()
-        }
-        .is_active());
+        assert!(
+            PostProcessSettings {
+                tone_mapping: ToneMapping::Aces,
+                ..PostProcessSettings::default()
+            }
+            .is_active()
+        );
     }
 }
