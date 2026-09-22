@@ -6,11 +6,11 @@ use sindri_core::{AssetId, SceneDocument, World};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{InputEvent, Key};
 use sindri_render::{
-    Bloom, ClearOperations, DepthTarget, ExtractedFrame, FrameCamera,
-    FrameEncodeError, FramePass, FramePlanError, FrameRenderers, FrameTarget, GlyphRenderer,
-    Lighting, RenderLayer, RenderStage, ShapeRenderer, SpriteBatchRenderer, TextRenderer,
-    Texture2D, TextureError, TextureId, TextureRegistry, TexturedCubeRenderer, UvRect, UvRectError,
-    Viewport, encode_lit_frame, encode_prepared_frame, look_at, orthographic_projection,
+    Bloom, ClearOperations, DepthTarget, ExtractedFrame, FrameCamera, FrameEncodeError, FramePass,
+    FramePlanError, FrameRenderers, FrameTarget, GlyphRenderer, Lighting, RenderLayer, RenderStage,
+    ShapeRenderer, SpriteBatchRenderer, TextRenderer, Texture2D, TextureError, TextureId,
+    TextureRegistry, TexturedCubeRenderer, UvRect, UvRectError, Viewport, encode_lit_frame,
+    encode_prepared_frame, look_at, orthographic_projection,
 };
 use sindri_scene::{EnvironmentComponent, VoxelRenderError, VoxelTexture, environment_of};
 use sindri_voxel::{SectionCoord, VoxelCoord, VoxelFace, VoxelId};
