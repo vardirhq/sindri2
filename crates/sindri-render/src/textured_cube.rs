@@ -516,7 +516,7 @@ impl TexturedCubeRenderer {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn encode_mesh_buffers(
     queue: &wgpu::Queue,
     encoder: &mut wgpu::CommandEncoder,
