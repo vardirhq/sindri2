@@ -6,8 +6,9 @@ use sindri_core::{AssetId, SceneDocument, World};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{InputEvent, Key};
 use sindri_render::{
-    Bloom, BloomSettings, ClearOperations, DepthTarget, ExtractedFrame, FrameCamera, FrameEncodeError,
-    FramePass, FramePlanError, FrameRenderers, FrameTarget, GlyphRenderer, Lighting, RenderLayer,
+    Bloom, BloomSettings, ClearOperations, DepthTarget, ExtractedFrame, FrameCamera,
+    FrameEncodeError, FramePass, FramePlanError, FrameRenderers, FrameTarget, GlyphRenderer, Lighting,
+    RenderLayer,
     RenderStage, ShapeRenderer, SpriteBatchRenderer, TextRenderer, Texture2D, TextureError,
     TextureId, TextureRegistry, TexturedCubeRenderer, UvRect, UvRectError, Viewport,
     encode_lit_frame, encode_prepared_frame, look_at, orthographic_projection,
