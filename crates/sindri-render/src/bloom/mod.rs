@@ -454,7 +454,7 @@ fn glow_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 
 #[cfg(test)]
 mod tests {
-    use super::{BloomSettings, PostProcessSettings, ToneMapping, MAX_PASSES};
+    use super::{BloomSettings, MAX_PASSES, PostProcessSettings, ToneMapping};
 
     /// Every setting that would draw something other than a glow is clamped
     /// rather than refused.
@@ -506,10 +506,12 @@ mod tests {
     #[test]
     fn neutral_post_process_is_a_real_passthrough() {
         assert!(PostProcessSettings::default().is_neutral());
-        assert!(!PostProcessSettings {
-            tone_mapping: ToneMapping::Aces,
-            ..PostProcessSettings::default()
-        }
-        .is_neutral());
+        assert!(
+            !PostProcessSettings {
+                tone_mapping: ToneMapping::Aces,
+                ..PostProcessSettings::default()
+            }
+            .is_neutral()
+        );
     }
 }
