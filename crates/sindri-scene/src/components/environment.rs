@@ -117,6 +117,10 @@ impl EnvironmentComponent {
         {
             return Err(EnvironmentError::InvalidDirectionalLight);
         }
+        self.validate_bloom()?;
+        Ok(self)
+    }
+    fn validate_bloom(self) -> Result<(), EnvironmentError> {
         if !self.bloom.threshold.is_finite()
             || self.bloom.threshold < 0.0
             || !self.bloom.knee.is_finite()
@@ -127,8 +131,9 @@ impl EnvironmentComponent {
         {
             return Err(EnvironmentError::InvalidBloom);
         }
-        Ok(self)
+        Ok(())
     }
+
 }
 
 /// Finds the single authored environment in a world.
