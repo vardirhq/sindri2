@@ -91,6 +91,7 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 
 ### `Camera`
 
+- `add_trauma(f32)` → `unit`
 - `pan_x`: `f32`
 - `pan_y`: `f32`
 - `pan_z`: `f32`
