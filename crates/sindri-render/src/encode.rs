@@ -11,10 +11,10 @@
 //! an example to draw anything at all.
 
 use crate::{
-    Bloom, DepthTarget, DrawContext, FrameCommand, FramePass, GlyphDrawError,
-    GlyphRenderer, PreparedFrame, RenderStage, ShapeDrawError, ShapeRenderer, SpriteBatchError,
-    SpriteBatchRenderer, SpriteBatchStats, TextError, TextRenderer, TextureRegistry,
-    TexturedCubeRenderer, encode_clear, textured_cube::CachedMeshRequest, PostProcessSettings,
+    Bloom, DepthTarget, DrawContext, FrameCommand, FramePass, GlyphDrawError, GlyphRenderer,
+    PostProcessSettings, PreparedFrame, RenderStage, ShapeDrawError, ShapeRenderer,
+    SpriteBatchError, SpriteBatchRenderer, SpriteBatchStats, TextError, TextRenderer,
+    TextureRegistry, TexturedCubeRenderer, encode_clear, textured_cube::CachedMeshRequest,
 };
 use thiserror::Error;
 
