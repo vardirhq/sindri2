@@ -132,6 +132,12 @@ fn register_environment(components: &mut ComponentSchemaRegistry) -> Result<(), 
                 "color": [1.0, 0.95, 0.86],
                 "intensity": 0.85
             },
+            "shadows": {
+                "enabled": true,
+                "distance": 48.0,
+                "map_size": 1024,
+                "bias": 0.002
+            },
             "bloom": {
                 "enabled": false,
                 "threshold": 0.65,
