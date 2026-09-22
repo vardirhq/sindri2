@@ -160,14 +160,14 @@ impl PostProcessSettings {
     }
 
     #[must_use]
-    pub fn is_neutral(self) -> bool {
+    pub fn is_active(self) -> bool {
         let sane = self.sane();
-        sane.exposure.abs() <= f32::EPSILON
-            && (sane.contrast - 1.0).abs() <= f32::EPSILON
-            && (sane.saturation - 1.0).abs() <= f32::EPSILON
-            && sane.tone_mapping == ToneMapping::None
-            && sane.vignette <= f32::EPSILON
-            && !sane.bloom.enabled
+        sane.exposure.abs() > f32::EPSILON
+            || (sane.contrast - 1.0).abs() > f32::EPSILON
+            || (sane.saturation - 1.0).abs() > f32::EPSILON
+            || sane.tone_mapping != ToneMapping::None
+            || sane.vignette > f32::EPSILON
+            || sane.bloom.enabled
     }
 }
 
@@ -504,13 +504,13 @@ mod tests {
 
     #[test]
     fn neutral_post_process_is_a_real_passthrough() {
-        assert!(PostProcessSettings::default().is_neutral());
+        assert!(!PostProcessSettings::default().is_active());
         assert!(
             !PostProcessSettings {
                 tone_mapping: ToneMapping::Aces,
                 ..PostProcessSettings::default()
             }
-            .is_neutral()
+            .is_active()
         );
     }
 }
