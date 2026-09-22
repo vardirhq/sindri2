@@ -140,11 +140,16 @@ impl BlockMeshPart {
                 ambient_occlusion,
             });
         }
-        if ambient_occlusion[0] + ambient_occlusion[2]
-            > ambient_occlusion[1] + ambient_occlusion[3]
+        if ambient_occlusion[0] + ambient_occlusion[2] > ambient_occlusion[1] + ambient_occlusion[3]
         {
-            self.indices
-                .extend_from_slice(&[base, base + 1, base + 3, base + 1, base + 2, base + 3]);
+            self.indices.extend_from_slice(&[
+                base,
+                base + 1,
+                base + 3,
+                base + 1,
+                base + 2,
+                base + 3,
+            ]);
         } else {
             self.indices
                 .extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
@@ -263,14 +268,8 @@ pub fn mesh_block_section_with_materials(
                             .material(neighbour)
                             .blocks_face(neighbour, voxel_id);
                     if visible {
-                        let ambient_occlusion = face_ambient_occlusion(
-                            source,
-                            materials,
-                            voxel,
-                            voxel_id,
-                            face,
-                            local,
-                        );
+                        let ambient_occlusion =
+                            face_ambient_occlusion(source, materials, voxel, voxel_id, face, local);
                         mesh.part_mut(material.render_class).push_face(
                             local,
                             voxel_id,
@@ -284,7 +283,6 @@ pub fn mesh_block_section_with_materials(
     }
     mesh
 }
-
 
 fn face_ambient_occlusion(
     source: &impl VoxelSource,
@@ -315,7 +313,10 @@ fn face_ambient_occlusion(
                 base[1] + offset[1],
                 base[2] + offset[2],
             ));
-            !neighbour.is_air() && materials.material(neighbour).blocks_face(neighbour, voxel_id)
+            !neighbour.is_air()
+                && materials
+                    .material(neighbour)
+                    .blocks_face(neighbour, voxel_id)
         };
         let side_a = occupied(tangents[0]);
         let side_b = occupied(tangents[1]);
