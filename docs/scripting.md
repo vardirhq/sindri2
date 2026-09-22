@@ -1172,6 +1172,12 @@ host guessing which camera controls gameplay.
 A script writes the offset it wants; the host applies it to the authored camera
 without changing the scene's authored transform.
 
+| Call | Returns |
+| --- | --- |
+| `Camera.add_trauma(amount)` | unit |
+
+`Camera.add_trauma` adds a finite, non-negative amount to the authored gameplay camera's shake trauma, clamped by the engine to one. Decay decides when an impact happens; `sindri.camera.behavior` owns the waveform, strength, frequency, and decay. The call requires exactly one authored `sindri.camera` carrying `sindri.camera.behavior`; ambiguity or absence is a runtime error rather than a silently ignored camera effect.
+
 | Path | Type |
 | --- | --- |
 | `Pointer.x` | `f32` |
