@@ -216,7 +216,7 @@ mod tests {
         }
         let camera = engine
             .world()
-            .entity_for_source_id(&scene_id("camera"))
+            .entity_for_source_id(&sindri_core::SceneEntityId::new("camera").unwrap())
             .unwrap();
         let x = engine
             .world()
@@ -249,7 +249,9 @@ mod tests {
             [CameraBehaviorComponent::TYPE_NAME]["shake"]["trauma"]
             .as_f64()
             .unwrap();
-        assert!(trauma > 0.0 && trauma < 1.0, "Decay should add trauma before camera decay, got {trauma}");
+        assert!(
+            trauma > 0.0 && trauma < 1.0,
+            "Decay should add trauma before camera decay, got {trauma}"
+        );
     }
-
 }
