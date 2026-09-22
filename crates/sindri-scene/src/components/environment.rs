@@ -102,7 +102,9 @@ pub enum EnvironmentError {
     MultipleEnvironments,
     #[error("the environment payload does not match the authored schema")]
     InvalidPayload,
-    #[error("environment colours and ambient intensity must be finite, with non-negative intensity")]
+    #[error(
+        "environment colours and ambient intensity must be finite, with non-negative intensity"
+    )]
     InvalidColourOrIntensity,
     #[error("environment bloom settings are outside their supported ranges")]
     InvalidBloom,
@@ -121,9 +123,6 @@ mod tests {
     fn non_finite_bloom_is_rejected() {
         let mut environment = EnvironmentComponent::default();
         environment.bloom.intensity = f32::NAN;
-        assert_eq!(
-            environment.validate(),
-            Err(EnvironmentError::InvalidBloom)
-        );
+        assert_eq!(environment.validate(), Err(EnvironmentError::InvalidBloom));
     }
 }
