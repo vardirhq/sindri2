@@ -264,12 +264,7 @@ impl SceneExtractor {
             });
             if !fresh {
                 if let Some(mut previous) = runtimes.remove(&entity) {
-                    push_commands(
-                        previous.release_all(),
-                        component.layer,
-                        camera,
-                        frame,
-                    );
+                    push_commands(previous.release_all(), component.layer, camera, frame);
                 }
                 runtimes.insert(
                     entity,
