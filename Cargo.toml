@@ -20,6 +20,7 @@ members = [
     "tools/sindri-capabilities",
     "examples/triangle",
     "examples/cube",
+    "examples/camera",
     "game",
     "games/orbital-last-stand",
     "games/orbital-baked",
