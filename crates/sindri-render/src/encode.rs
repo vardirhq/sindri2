@@ -289,6 +289,7 @@ struct Renderers<'a, 'r> {
 }
 
 /// Draws some of a frame's passes to one target.
+#[allow(clippy::too_many_lines)]
 fn encode_passes<'p>(
     renderers: &mut Renderers<'_, '_>,
     device: &wgpu::Device,
