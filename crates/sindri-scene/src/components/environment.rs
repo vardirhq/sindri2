@@ -108,7 +108,11 @@ impl EnvironmentComponent {
             .iter()
             .map(|value| value * value)
             .sum::<f32>();
-        if !self.directional.direction.iter().all(|value| value.is_finite())
+        if !self
+            .directional
+            .direction
+            .iter()
+            .all(|value| value.is_finite())
             || direction_length_squared <= f32::EPSILON
         {
             return Err(EnvironmentError::InvalidDirectionalLight);
