@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use serde_json::Value;
-use sindri_core::{FixedStepConfig, SceneComponent, SceneDocument, SceneEntityId, World};
+use sindri_core::{ComponentSchemaRegistry, FixedStepConfig, SceneComponent, SceneDocument, World};
+use sindri_decay::{ScriptComponent, ScriptFrame, ScriptSources, Scripts};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
-use sindri_platform::{EngineHost, FrameContext, Game, InputEvent, InputState, Key};
+use sindri_platform::{EngineHost, FrameContext, Game, InputEvent, Key};
 use sindri_render::{
     DepthTarget, FrameEncodeError, FrameRenderers, FrameTarget, GlyphRenderer, ShapeRenderer,
     SpriteBatchRenderer, TextRenderer, TextureRegistry, TexturedCubeRenderer, Viewport,
@@ -16,57 +16,48 @@ use sindri_scene::{
 use thiserror::Error;
 
 const SCENE_JSON: &str = include_str!("../assets/demo.scene.json");
-const TARGET_SPEED: f32 = 5.0;
+const DEMO_SCRIPT: &str = include_str!("../assets/camera-demo.decay");
 
-#[derive(Default)]
-struct CameraGame;
+struct CameraGame {
+    scripts: Scripts,
+    sources: ScriptSources,
+    components: ComponentSchemaRegistry,
+}
+
+impl CameraGame {
+    fn new(components: ComponentSchemaRegistry) -> Self {
+        let mut sources = ScriptSources::new();
+        sources.insert("camera-demo.decay", DEMO_SCRIPT);
+        Self {
+            scripts: Scripts::new(),
+            sources,
+            components,
+        }
+    }
+}
 
 impl Game for CameraGame {
     type Error = DemoError;
 
     fn fixed_update(&mut self, context: &mut FrameContext<'_>) -> Result<(), Self::Error> {
         let dt = context.time.delta.as_secs_f32();
-        move_target(context.world, context.input, dt)?;
-        if context.input.key_pressed(Key::Space) {
-            add_trauma(context.world, 1.0)?;
+        let report = self.scripts.advance(
+            context.world,
+            &self.components,
+            ScriptFrame::new(&self.sources, context.input, dt),
+        );
+        if !report.failures.is_empty() {
+            return Err(DemoError::Script(format!("{:?}", report.failures)));
         }
         update_camera_behaviors(context.world, dt);
         Ok(())
     }
 }
 
-fn move_target(world: &mut World, input: &InputState, dt: f32) -> Result<(), DemoError> {
-    let target = world
-        .entity_for_source_id(&scene_id("target"))
-        .ok_or(DemoError::Missing("target"))?;
-    let data = world.get_mut(target).ok_or(DemoError::Missing("target"))?;
-    let mut transform = data.transform_3d.unwrap_or_default();
-    transform.position[0] += input.axis(Key::ArrowLeft, Key::ArrowRight) * TARGET_SPEED * dt;
-    transform.position[1] += input.axis(Key::ArrowDown, Key::ArrowUp) * TARGET_SPEED * dt;
-    data.transform_3d = Some(transform);
-    Ok(())
-}
-
-fn add_trauma(world: &mut World, amount: f32) -> Result<(), DemoError> {
-    let camera = world
-        .entity_for_source_id(&scene_id("camera"))
-        .ok_or(DemoError::Missing("camera"))?;
-    let data = world.get_mut(camera).ok_or(DemoError::Missing("camera"))?;
-    let payload = data
-        .components
-        .get_mut(CameraBehaviorComponent::TYPE_NAME)
-        .ok_or(DemoError::Missing("camera behavior"))?;
-    let trauma = payload
-        .get_mut("shake")
-        .and_then(Value::as_object_mut)
-        .and_then(|shake| shake.get_mut("trauma"))
-        .ok_or(DemoError::Missing("shake trauma"))?;
-    *trauma = Value::from((trauma.as_f64().unwrap_or(0.0) + f64::from(amount)).min(1.0));
-    Ok(())
-}
-
-fn scene_id(value: &str) -> SceneEntityId {
-    SceneEntityId::new(value).expect("demo scene IDs are valid")
+fn demo_extractor() -> Result<SceneExtractor, DemoError> {
+    let mut extractor = SceneExtractor::new()?;
+    extractor.register::<ScriptComponent>("Script")?;
+    Ok(extractor)
 }
 
 struct CameraApp {
@@ -85,10 +76,11 @@ impl DesktopApp for CameraApp {
     type Error = DemoError;
 
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
-        let extractor = SceneExtractor::new()?;
+        let extractor = demo_extractor()?;
+        let components = extractor.components().clone();
         let document = SceneDocument::from_json(SCENE_JSON)?;
         extractor.validate(&document, sindri_core::UnknownComponentPolicy::Reject)?;
-        let mut engine = EngineHost::new(CameraGame, FixedStepConfig::default())
+        let mut engine = EngineHost::new(CameraGame::new(components), FixedStepConfig::default())
             .map_err(|error| DemoError::Host(error.to_string()))?;
         *engine.world_mut() = World::from_scene(&document)?.world;
         engine
@@ -182,8 +174,8 @@ enum DemoError {
     Host(String),
     #[error(transparent)]
     Registry(#[from] sindri_core::ComponentRegistryError),
-    #[error("camera demo is missing its {0}")]
-    Missing(&'static str),
+    #[error("camera demo Decay failed: {0}")]
+    Script(String),
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen::prelude::wasm_bindgen(start))]
@@ -210,7 +202,12 @@ mod tests {
     #[test]
     fn camera_follows_the_authored_target_on_the_fixed_step_path() {
         let document = SceneDocument::from_json(SCENE_JSON).unwrap();
-        let mut engine = EngineHost::new(CameraGame, FixedStepConfig::default()).unwrap();
+        let extractor = demo_extractor().unwrap();
+        let mut engine = EngineHost::new(
+            CameraGame::new(extractor.components().clone()),
+            FixedStepConfig::default(),
+        )
+        .unwrap();
         *engine.world_mut() = World::from_scene(&document).unwrap().world;
         engine.start().unwrap();
         engine.queue_input(InputEvent::KeyPressed(Key::ArrowRight));
@@ -232,17 +229,27 @@ mod tests {
     }
 
     #[test]
-    fn space_adds_trauma_and_the_behavior_consumes_it() {
+    fn space_adds_trauma_through_decay_and_the_behavior_consumes_it() {
         let document = SceneDocument::from_json(SCENE_JSON).unwrap();
-        let mut world = World::from_scene(&document).unwrap().world;
-        add_trauma(&mut world, 1.0).unwrap();
-        let camera = world.entity_for_source_id(&scene_id("camera")).unwrap();
-        let before = world.get(camera).unwrap().components[CameraBehaviorComponent::TYPE_NAME]
-            ["shake"]["trauma"].as_f64().unwrap();
-        assert!((before - 1.0).abs() < f64::EPSILON);
-        update_camera_behaviors(&mut world, 1.0 / 60.0);
-        let after = world.get(camera).unwrap().components[CameraBehaviorComponent::TYPE_NAME]
-            ["shake"]["trauma"].as_f64().unwrap();
-        assert!(after < before);
+        let extractor = demo_extractor().unwrap();
+        let mut engine = EngineHost::new(
+            CameraGame::new(extractor.components().clone()),
+            FixedStepConfig::default(),
+        )
+        .unwrap();
+        *engine.world_mut() = World::from_scene(&document).unwrap().world;
+        engine.start().unwrap();
+        engine.queue_input(InputEvent::KeyPressed(Key::Space));
+        engine.advance(Duration::from_secs_f32(1.0 / 60.0)).unwrap();
+        let camera = engine
+            .world()
+            .entity_for_source_id(&sindri_core::SceneEntityId::new("camera").unwrap())
+            .unwrap();
+        let trauma = engine.world().get(camera).unwrap().components
+            [CameraBehaviorComponent::TYPE_NAME]["shake"]["trauma"]
+            .as_f64()
+            .unwrap();
+        assert!(trauma > 0.0 && trauma < 1.0, "Decay should add trauma before camera decay, got {trauma}");
     }
+
 }
