@@ -129,7 +129,7 @@ pub struct CameraBounds {
     pub max: [f32; 2],
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CameraShake {
     #[serde(default)]
     pub trauma: f32,
@@ -151,6 +151,18 @@ const fn default_shake_decay() -> f32 {
 }
 const fn default_shake_frequency() -> f32 {
     57.0
+}
+
+impl Default for CameraShake {
+    fn default() -> Self {
+        Self {
+            trauma: 0.0,
+            strength: default_shake_strength(),
+            decay: default_shake_decay(),
+            frequency: default_shake_frequency(),
+            phase: 0.0,
+        }
+    }
 }
 
 impl SceneComponent for CameraBehaviorComponent {
