@@ -11,7 +11,7 @@ impl EditorApp {
     /// The Scene view puts it in the world, where panning and zooming reach it.
     /// The Game view *is* the screen, so there the overlay is the viewport and
     /// no camera can move it — which is what makes a HUD a HUD.
-    fn canvas_for(&self, editing: bool) -> UiCanvas {
+    pub(super) fn canvas_for(&self, editing: bool) -> UiCanvas {
         if editing {
             UiCanvas::InScene {
                 aspect: self.canvas_aspect(),
@@ -27,7 +27,7 @@ impl EditorApp {
     /// there are any and what the string came out as where there are not. It is
     /// the one way to see what a wrap width does without retyping it and
     /// looking.
-    fn paint_text_rect(
+    pub(super) fn paint_text_rect(
         &self,
         ui: &egui::Ui,
         rect: Rect,
@@ -56,7 +56,7 @@ impl EditorApp {
     /// Only in the Scene view, and only because the canvas is in the scene
     /// there: in the Game view the canvas *is* the viewport and its edge is the
     /// viewport's border, which is already drawn.
-    fn paint_canvas_outline(&self, ui: &egui::Ui, rect: Rect, camera: CameraView) {
+    pub(super) fn paint_canvas_outline(&self, ui: &egui::Ui, rect: Rect, camera: CameraView) {
         let aspect = rect.width() / rect.height().max(1.0);
         let Ok(Some(world)) = self
             .scene
