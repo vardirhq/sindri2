@@ -181,7 +181,7 @@ The ordered work required to close these gaps is tracked in
 | **Nine-slice sprites** | ❌ | ❌ | — | — | **Absent** | Every UI panel that resizes needs it |
 | **Sprite masking / stencil** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | Sorting and draw order | ✅ | ✅ | 🟡 | ✅ | **Par** | Layers plus the ground anchor |
-| **Camera follow / confine / shake** | ✅ | 🟡 | ❌ | 🟡 | **Behind** | `sindri.camera.behavior` provides stable-target follow with offset/dead zone/smoothing/max speed, XY confinement, and deterministic trauma shake. `examples/camera` now proves the authored component and fixed-step update path on native and browser/WebGPU, including interactive target movement and impact trauma. The generic inspector can author the component, but the richer acceptance UI (dead-zone/boundary visualization, independent behavior toggles, exposed values), a Decay control surface, dedicated authoring UX/gizmos, and Orbital migration remain. |
+| **Camera follow / confine / shake** | ✅ | 🟡 | 🟡 | 🟡 | **Behind** | `sindri.camera.behavior` provides stable-target follow with offset/dead zone/smoothing/max speed, XY confinement, and deterministic trauma shake. `examples/camera` now drives target movement and impact trauma from Decay through the same fixed-step behavior path on native/browser architecture; `Camera.add_trauma` is the first typed behavior control. The richer acceptance UI, broader Decay camera-mode controls, dedicated authoring UX/gizmos, and Orbital migration remain. |
 
 ## 3D rendering
 
