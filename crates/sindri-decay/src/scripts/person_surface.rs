@@ -8,9 +8,9 @@
 use decay_semantic::{Environment, FunctionType, HostType, Type};
 
 use crate::surface::{
-    AIM, AIM_VALUES, AimValue, CAMERA, CAMERA_CALLS, CAMERA_VALUES, GESTURE, GESTURE_VALUES, GestureValue,
-    POINTER, POINTER_QUERIES, POINTER_VALUES, PointerValue, STICK, STICK_VALUES, StickValue, TOUCH,
-    TOUCH_CALLS, TOUCH_COUNT, VIEWPORT, VIEWPORT_VALUES,
+    AIM, AIM_VALUES, AimValue, CAMERA, CAMERA_CALLS, CAMERA_VALUES, GESTURE, GESTURE_VALUES,
+    GestureValue, POINTER, POINTER_QUERIES, POINTER_VALUES, PointerValue, STICK, STICK_VALUES,
+    StickValue, TOUCH, TOUCH_CALLS, TOUCH_COUNT, VIEWPORT, VIEWPORT_VALUES,
 };
 
 /// The shape of the screen the host is drawing into.
