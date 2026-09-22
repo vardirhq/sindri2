@@ -37,7 +37,7 @@ pub use components::{
     TilemapError, UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiShapeBlend, UiShapeComponent,
     UiShapeKind, UiTextAutoSize, UiTextCase, UiTextComponent, UiTextLineAlign, UiTextOutline,
     UiTextShadow, UiTextWrap, VoxelGeneratorDocument, VoxelMaterialDocument, VoxelWorldComponent,
-    cell_to_local_in, ui_text_template, update_camera_behaviors,
+    add_camera_trauma, cell_to_local_in, ui_text_template, update_camera_behaviors,
 };
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{
