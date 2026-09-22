@@ -36,6 +36,8 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Added authored ambient and directional world lighting to `sindri.environment`; textured 3D and voxel geometry now share the same renderer lighting in editor and browser Voxel Lab, while scenes without it retain the previous unlit appearance.
+
 - `sindri.environment` now authors ambient and directional world lighting. Textured 3D geometry and Voxel Lab terrain respond to the same sun direction, colour, and intensity in editor and browser rendering.
 
 - Cached voxel sections outside the current camera frustum are no longer
