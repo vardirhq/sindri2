@@ -181,7 +181,9 @@ pub fn add_camera_trauma(world: &mut World, amount: f32) -> bool {
         .entities()
         .filter_map(|(entity, data)| {
             (data.components.contains_key(CameraComponent::TYPE_NAME)
-                && data.components.contains_key(CameraBehaviorComponent::TYPE_NAME))
+                && data
+                    .components
+                    .contains_key(CameraBehaviorComponent::TYPE_NAME))
             .then_some(entity)
         })
         .collect();
@@ -194,7 +196,8 @@ pub fn add_camera_trauma(world: &mut World, amount: f32) -> bool {
     else {
         return false;
     };
-    let Ok(mut behavior) = serde_json::from_value::<CameraBehaviorComponent>(payload.clone()) else {
+    let Ok(mut behavior) = serde_json::from_value::<CameraBehaviorComponent>(payload.clone())
+    else {
         return false;
     };
     behavior.shake.trauma = (behavior.shake.trauma.max(0.0) + amount).min(1.0);
