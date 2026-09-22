@@ -38,9 +38,10 @@ pub(crate) use names::{
     TILEMAP_COMPONENT, TIME, TOUCH, TRANSFORM, UI, UI_IMAGE, VIEWPORT, WORLD,
 };
 pub(crate) use person::{
-    AIM_VALUES, AimValue, CAMERA_CALLS, CAMERA_VALUES, CameraCall, CameraValue, GESTURE_VALUES, GestureValue, INPUT_QUERIES,
-    InputQuery, POINTER_QUERIES, POINTER_VALUES, PointerQuery, PointerValue, STICK_VALUES,
-    StickValue, TOUCH_CALLS, TOUCH_COUNT, TouchCall, VIEWPORT_VALUES, ViewportValue,
+    AIM_VALUES, AimValue, CAMERA_CALLS, CAMERA_VALUES, CameraCall, CameraValue, GESTURE_VALUES,
+    GestureValue, INPUT_QUERIES, InputQuery, POINTER_QUERIES, POINTER_VALUES, PointerQuery,
+    PointerValue, STICK_VALUES, StickValue, TOUCH_CALLS, TOUCH_COUNT, TouchCall, VIEWPORT_VALUES,
+    ViewportValue,
 };
 
 use serde_json::Value as Json;
