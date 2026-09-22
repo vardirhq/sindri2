@@ -28,17 +28,6 @@ pub(crate) const FUNCTIONS: &[(&str, HostFunction)] = &[
 /// The name a script calls to say something into the host's log.
 pub(crate) const PRINT: &str = "print";
 
-/// Gameplay control of the authored world camera behavior.
-///
-/// The engine owns follow, confinement, and shake math. Decay only expresses
-/// gameplay intent, so a hit can add trauma without reimplementing the camera.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum CameraCall {
-    AddTrauma,
-}
-
-pub(crate) const CAMERA_CALLS: &[(&str, CameraCall)] = &[("add_trauma", CameraCall::AddTrauma)];
-
 /// A note left on the board shared by every script in the world.
 ///
 /// The smallest thing that lets two scripts cooperate. Decay has no value that
