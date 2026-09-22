@@ -175,7 +175,7 @@ The ordered work required to close these gaps is tracked in
 | **Tilemap collision** | ❌ | ❌ | ❌ | ❌ | **Absent** | Grid walls serve pathfinding, not physics. A tilemap generates no colliders |
 | **2D lights and shadows** | ❌ | ❌ | ❌ | ❌ | **Absent** | URP 2D lights, Godot's CanvasModulate + Light2D. Nothing here |
 | **Custom shaders / materials** | ❌ | ❌ | ❌ | ❌ | **Absent** | No material asset, no shader authoring. The single biggest ceiling on visual identity |
-| **3D directional + ambient lighting** | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | `sindri.environment` authors ambient fill plus one directional light, shared by textured world and voxel geometry in editor and browser Voxel Lab. Shadows, local lights, materials, and shipped-game proof remain. |
+| **3D directional + ambient lighting** | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | `sindri.environment` authors ambient fill plus one directional light and one bounded shadow map, shared by textured world and voxel geometry in editor and browser Voxel Lab. Local lights, materials, cascaded shadow quality, and shipped-game proof remain. |
 | Bloom | ✅ | ✅ | ❌ | 🟡 | **Behind** | `sindri.environment` authors bloom and the shared renderer applies it in editor viewports and browser Voxel Lab. Voxel Lab is acceptance proof, not yet a shipped-game proof; Decay control is intentionally absent until gameplay needs it. |
 | **Post-processing stack** | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | The authored environment reaches bloom end to end, but exposure, tone mapping, colour grading, vignette, and the general ordered stack remain. |
 | **Nine-slice sprites** | ❌ | ❌ | — | — | **Absent** | Every UI panel that resizes needs it |
@@ -193,7 +193,7 @@ the gap is legible, not because it is scheduled.
 | Cameras, depth, cube primitive, inline textured surface mesh | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | Causeway derives one smoothed terrain chunk from its voxel generator as a prototype; meshes are inline, rebuilt into GPU buffers per draw, and have no asset/import pipeline yet |
 | **glTF / model import** | ❌ | ❌ | ❌ | ❌ | **Absent** | `tools/isometric-baker` renders models to 2D sprites offline, in three views; that is not runtime 3D |
 | **Materials** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
-| **Lighting** | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | One authored ambient contribution plus one directional world light shade textured 3D geometry and voxel terrain in editor viewports and Voxel Lab. No local lights, shadows, PBR materials, normal maps, or Decay control yet. |
+| **Lighting** | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | One authored ambient contribution plus one directional world light shade textured 3D geometry and voxel terrain in editor viewports and Voxel Lab, with one bounded directional shadow map. No local lights, PBR materials, normal maps, cascaded shadows, or Decay control yet. |
 | **Skeletal animation** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | **3D physics** | 🟡 | ❌ | ❌ | ❌ | **Absent** | A Sindri-owned data model exists; no runtime |
 
