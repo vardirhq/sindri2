@@ -1,7 +1,7 @@
 //! Authored world presentation shared by games, the editor, and browser builds.
 
 use serde::{Deserialize, Serialize};
-use sindri_core::SceneComponent;
+use sindri_core::{SceneComponent, World};
 
 /// Scene-wide visual environment.
 ///
@@ -79,8 +79,29 @@ impl EnvironmentComponent {
     }
 }
 
+/// Finds the single authored environment in a world.
+pub fn environment_of(world: &World) -> Result<Option<EnvironmentComponent>, EnvironmentError> {
+    let mut found = None;
+    for (_, data) in world.entities() {
+        let Some(payload) = data.components.get(EnvironmentComponent::TYPE_NAME) else {
+            continue;
+        };
+        if found.is_some() {
+            return Err(EnvironmentError::MultipleEnvironments);
+        }
+        let environment: EnvironmentComponent = serde_json::from_value(payload.clone())
+            .map_err(|_| EnvironmentError::InvalidPayload)?;
+        found = Some(environment.validate()?);
+    }
+    Ok(found)
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum EnvironmentError {
+    #[error("the scene contains more than one environment")]
+    MultipleEnvironments,
+    #[error("the environment payload does not match the authored schema")]
+    InvalidPayload,
     #[error("environment colours and ambient intensity must be finite, with non-negative intensity")]
     InvalidColourOrIntensity,
     #[error("environment bloom settings are outside their supported ranges")]
