@@ -138,6 +138,10 @@ fn register_environment(components: &mut ComponentSchemaRegistry) -> Result<(), 
                 "map_size": 1024,
                 "bias": 0.002
             },
+            "ambient_occlusion": {
+                "enabled": true,
+                "strength": 0.65
+            },
             "bloom": {
                 "enabled": false,
                 "threshold": 0.65,

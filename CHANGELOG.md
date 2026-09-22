@@ -36,6 +36,8 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Added mesh-time ambient occlusion for voxel corners and contacts, with authored environment strength and Voxel Lab proof.
+
 - Added authored directional shadows for textured world and voxel geometry, with environment controls for coverage distance, map resolution, and bias.
 
 - Added authored ambient and directional world lighting to `sindri.environment`; textured 3D and voxel geometry now share the same renderer lighting in editor and browser Voxel Lab, while scenes without it retain the previous unlit appearance.

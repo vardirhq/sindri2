@@ -168,6 +168,12 @@ impl DesktopApp for VoxelLabApp {
         self.cubes.set_lighting(self.environment.world_lighting());
         self.cubes
             .set_shadows(context.device(), self.environment.shadow_settings());
+        self.cubes
+            .set_ambient_occlusion(if self.environment.ambient_occlusion.enabled {
+                self.environment.ambient_occlusion.strength
+            } else {
+                0.0
+            });
         let renderers = FrameRenderers {
             cube: &mut self.cubes,
             sprites: &mut self.sprites,

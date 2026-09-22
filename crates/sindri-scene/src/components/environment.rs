@@ -17,6 +17,7 @@ pub struct EnvironmentComponent {
     pub ambient_intensity: f32,
     pub directional: EnvironmentDirectionalLight,
     pub shadows: EnvironmentShadows,
+    pub ambient_occlusion: EnvironmentAmbientOcclusion,
     pub bloom: EnvironmentBloom,
 }
 
@@ -32,6 +33,7 @@ impl Default for EnvironmentComponent {
             ambient_intensity: 1.0,
             directional: EnvironmentDirectionalLight::default(),
             shadows: EnvironmentShadows::default(),
+            ambient_occlusion: EnvironmentAmbientOcclusion::default(),
             bloom: EnvironmentBloom::default(),
         }
     }
@@ -72,6 +74,22 @@ impl Default for EnvironmentShadows {
             distance: 48.0,
             map_size: 1024,
             bias: 0.002,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct EnvironmentAmbientOcclusion {
+    pub enabled: bool,
+    pub strength: f32,
+}
+
+impl Default for EnvironmentAmbientOcclusion {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            strength: 0.65,
         }
     }
 }
@@ -157,6 +175,11 @@ impl EnvironmentComponent {
         {
             return Err(EnvironmentError::InvalidShadows);
         }
+        if !self.ambient_occlusion.strength.is_finite()
+            || !(0.0..=1.0).contains(&self.ambient_occlusion.strength)
+        {
+            return Err(EnvironmentError::InvalidAmbientOcclusion);
+        }
         self.validate_bloom()?;
         Ok(self)
     }
@@ -206,6 +229,8 @@ pub enum EnvironmentError {
     InvalidDirectionalLight,
     #[error("environment shadow settings are outside their supported ranges")]
     InvalidShadows,
+    #[error("environment ambient-occlusion settings are outside their supported ranges")]
+    InvalidAmbientOcclusion,
     #[error("environment bloom settings are outside their supported ranges")]
     InvalidBloom,
 }
@@ -246,6 +271,7 @@ mod tests {
         .expect("legacy environment should deserialize");
         assert!(environment.directional.intensity.abs() < f32::EPSILON);
         assert!(!environment.shadows.enabled);
+        assert!(!environment.ambient_occlusion.enabled);
     }
 
     #[test]
@@ -255,6 +281,16 @@ mod tests {
         assert_eq!(
             environment.validate(),
             Err(EnvironmentError::InvalidShadows)
+        );
+    }
+
+    #[test]
+    fn invalid_ambient_occlusion_strength_is_rejected() {
+        let mut environment = EnvironmentComponent::default();
+        environment.ambient_occlusion.strength = 1.5;
+        assert_eq!(
+            environment.validate(),
+            Err(EnvironmentError::InvalidAmbientOcclusion)
         );
     }
 

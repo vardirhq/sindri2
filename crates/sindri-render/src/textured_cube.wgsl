@@ -26,12 +26,14 @@ var shadow_sampler: sampler_comparison;
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) uv: vec2<f32>,
+    @location(14) ambient_occlusion: f32,
 }
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) uv: vec2<f32>,
     @location(1) world_position: vec3<f32>,
+    @location(2) ambient_occlusion: f32,
 }
 
 @vertex
@@ -40,6 +42,7 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     output.position = uniforms.model_view_projection * vec4<f32>(input.position, 1.0);
     output.world_position = (uniforms.model * vec4<f32>(input.position, 1.0)).xyz;
     output.uv = input.uv;
+    output.ambient_occlusion = input.ambient_occlusion;
     return output;
 }
 
@@ -69,5 +72,6 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let visibility = select(1.0, sampled_visibility, receives_shadow);
     let directional = uniforms.directional_color.rgb
         * uniforms.directional_direction.a * diffuse * visibility;
-    return vec4<f32>(sampled.rgb * (ambient + directional), sampled.a);
+    let contact_visibility = mix(1.0, input.ambient_occlusion, uniforms.shadow.z);
+    return vec4<f32>(sampled.rgb * (ambient + directional) * contact_visibility, sampled.a);
 }

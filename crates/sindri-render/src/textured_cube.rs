@@ -99,7 +99,7 @@ fn create_pipeline(
         vertex: wgpu::VertexState {
             module: &shader,
             entry_point: Some("vs_main"),
-            buffers: &[Some(TexturedVertex::layout())],
+            buffers: &[Some(TexturedVertex::ambient_occlusion_layout())],
             compilation_options: wgpu::PipelineCompilationOptions::default(),
         },
         fragment: Some(wgpu::FragmentState {
@@ -139,6 +139,7 @@ pub struct TexturedCubeRenderer {
     shadow_bind_group_layout: wgpu::BindGroupLayout,
     shadow_pipeline: wgpu::RenderPipeline,
     shadow_view_projection: Mat4,
+    ambient_occlusion_strength: f32,
 }
 
 /// GPU state owned by one textured-mesh draw in a submission.
@@ -178,6 +179,7 @@ impl TexturedCubeRenderer {
             shadow_bind_group_layout,
             shadow_pipeline,
             shadow_view_projection: Mat4::IDENTITY,
+            ambient_occlusion_strength: 0.0,
         }
     }
 
@@ -193,6 +195,11 @@ impl TexturedCubeRenderer {
                 batch.bind_groups.clear();
             }
         }
+    }
+
+    /// Sets how strongly mesh-authored ambient occlusion darkens world geometry.
+    pub fn set_ambient_occlusion(&mut self, strength: f32) {
+        self.ambient_occlusion_strength = strength.clamp(0.0, 1.0);
     }
 
     pub(crate) const fn shadows_enabled(&self) -> bool {
@@ -216,6 +223,7 @@ impl TexturedCubeRenderer {
                     WorldLighting::default(),
                     Mat4::IDENTITY,
                     ShadowSettings::default(),
+                    0.0,
                 )),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
@@ -313,6 +321,7 @@ impl TexturedCubeRenderer {
             self.lighting,
             self.shadow_view_projection,
             self.shadow_settings,
+            self.ambient_occlusion_strength,
             (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
@@ -345,6 +354,7 @@ impl TexturedCubeRenderer {
             self.lighting,
             self.shadow_view_projection,
             self.shadow_settings,
+            self.ambient_occlusion_strength,
             (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
@@ -385,6 +395,7 @@ impl TexturedCubeRenderer {
             self.lighting,
             self.shadow_view_projection,
             self.shadow_settings,
+            self.ambient_occlusion_strength,
             (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
@@ -423,6 +434,7 @@ impl TexturedCubeRenderer {
             self.lighting,
             self.shadow_view_projection,
             self.shadow_settings,
+            self.ambient_occlusion_strength,
             (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
@@ -464,6 +476,7 @@ impl TexturedCubeRenderer {
             self.lighting,
             self.shadow_view_projection,
             self.shadow_settings,
+            self.ambient_occlusion_strength,
             (&batch.uniform, &self.pipeline, bind_group),
             mesh,
             "Sindri cached textured mesh pass",
@@ -493,6 +506,7 @@ fn cube_uniform(
     lighting: WorldLighting,
     light_view_projection: Mat4,
     shadows: ShadowSettings,
+    ambient_occlusion_strength: f32,
 ) -> CubeUniform {
     CubeUniform {
         model_view_projection: model_view_projection.to_cols_array_2d(),
@@ -523,7 +537,7 @@ fn cube_uniform(
             } else {
                 0.0
             },
-            0.0,
+            ambient_occlusion_strength,
             0.0,
         ],
     }
@@ -539,6 +553,7 @@ fn encode_mesh_buffers(
     lighting: WorldLighting,
     light_view_projection: Mat4,
     shadows: ShadowSettings,
+    ambient_occlusion_strength: f32,
     state: (&wgpu::Buffer, &wgpu::RenderPipeline, &wgpu::BindGroup),
     mesh: &MeshBuffers,
     label: &str,
@@ -553,6 +568,7 @@ fn encode_mesh_buffers(
             lighting,
             light_view_projection,
             shadows,
+            ambient_occlusion_strength,
         )),
     );
     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
