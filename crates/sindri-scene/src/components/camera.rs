@@ -267,7 +267,7 @@ fn shake_offset(shake: &CameraShake) -> [f32; 2] {
     let amplitude = trauma * trauma * shake.strength.max(0.0);
     [
         shake.phase.sin() * amplitude,
-        (shake.phase * 1.37).cos() * amplitude,
+        (shake.phase * 1.37).sin() * amplitude,
     ]
 }
 
