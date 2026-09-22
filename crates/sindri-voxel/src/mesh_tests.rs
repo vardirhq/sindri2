@@ -209,7 +209,6 @@ fn face_uvs_use_a_top_left_texture_origin() {
     }
 }
 
-
 #[test]
 fn voxel_corner_ao_samples_neighbours_outside_the_exposed_face() {
     struct Corner;
