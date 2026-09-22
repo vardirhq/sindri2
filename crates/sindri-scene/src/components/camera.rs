@@ -96,7 +96,7 @@ impl CameraComponent {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CameraBehaviorComponent {
     #[serde(default)]
     pub follow: Option<CameraFollow>,
@@ -106,7 +106,7 @@ pub struct CameraBehaviorComponent {
     pub shake: CameraShake,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CameraFollow {
     pub target: SceneEntityId,
     #[serde(default)]
@@ -201,7 +201,7 @@ fn update_camera_behavior(
     let mut position = current.position;
     position[0] -= previous_shake[0];
     position[1] -= previous_shake[1];
-    apply_follow(world, behavior.follow, &mut position, dt);
+    apply_follow(world, behavior.follow.as_ref(), &mut position, dt);
     apply_confine(behavior.confine, &mut position);
     advance_shake(&mut behavior.shake, dt);
     let shake = shake_offset(&behavior.shake);
@@ -213,14 +213,14 @@ fn update_camera_behavior(
             position,
             ..current
         });
-        if let Ok(value) = serde_json::to_value(*behavior) {
+        if let Ok(value) = serde_json::to_value(&*behavior) {
             data.components
                 .insert(CameraBehaviorComponent::TYPE_NAME.into(), value);
         }
     }
 }
 
-fn apply_follow(world: &World, follow: Option<CameraFollow>, position: &mut [f32; 3], dt: f32) {
+fn apply_follow(world: &World, follow: Option<&CameraFollow>, position: &mut [f32; 3], dt: f32) {
     let Some(follow) = follow else {
         return;
     };
