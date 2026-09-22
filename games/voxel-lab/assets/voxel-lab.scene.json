@@ -130,15 +130,15 @@
             },
             {
               "voxel": 2,
-              "top": "textures/user-dirt.png",
-              "side": "textures/user-dirt.png",
-              "bottom": "textures/user-dirt.png"
+              "top": "textures/world-blocks-top.png#earth-0",
+              "side": "textures/world-blocks-side.png#earth-0",
+              "bottom": "textures/world-blocks-top.png#earth-0"
             },
             {
               "voxel": 3,
-              "top": "textures/block-tops.png#stone",
-              "side": "textures/block-sides.png#stone",
-              "bottom": "textures/block-tops.png#stone"
+              "top": "textures/world-blocks-top.png#stone-0",
+              "side": "textures/world-blocks-side.png#stone-0",
+              "bottom": "textures/world-blocks-top.png#stone-0"
             }
           ],
           "focus": [
