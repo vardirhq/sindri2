@@ -23,7 +23,7 @@ mod voxel_world;
 
 pub use camera::{
     CameraBehaviorComponent, CameraBounds, CameraComponent, CameraFit, CameraFollow, CameraShake,
-    update_camera_behaviors,
+    add_camera_trauma, update_camera_behaviors,
 };
 pub use grid::{
     GridNavigationComponent, GridOccupantComponent, GridPlacementComponent, GridWallDocument,

@@ -313,6 +313,7 @@ compiled.
 - Runtime `EntityId` handles are not serialized `SceneEntityId` values.
 - Scenes are versioned, canonical, and preserve unknown component payloads.
 - Gameplay writes the world; `sindri-scene` derives renderer/navigation state.
+- Gameplay rules and decisions belong in Decay, including gameplay demos and shipped games. Rust implements engine capabilities, host/runtime plumbing, and low-level engine/platform/render examples; do not put bespoke movement, combat, camera triggers, scoring, or similar game rules in a Rust `Game` implementation.
 - Project fonts are assets, never operating-system lookups.
 - Asset loading is genuinely asynchronous; never fake synchronous browser I/O.
 - Browser and native loops share semantics, not identical plumbing.

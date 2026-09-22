@@ -8,9 +8,9 @@
 use decay_semantic::{Environment, FunctionType, HostType, Type};
 
 use crate::surface::{
-    AIM, AIM_VALUES, AimValue, CAMERA, CAMERA_VALUES, GESTURE, GESTURE_VALUES, GestureValue,
-    POINTER, POINTER_QUERIES, POINTER_VALUES, PointerValue, STICK, STICK_VALUES, StickValue, TOUCH,
-    TOUCH_CALLS, TOUCH_COUNT, VIEWPORT, VIEWPORT_VALUES,
+    AIM, AIM_VALUES, AimValue, CAMERA, CAMERA_CALLS, CAMERA_VALUES, GESTURE, GESTURE_VALUES,
+    GestureValue, POINTER, POINTER_QUERIES, POINTER_VALUES, PointerValue, STICK, STICK_VALUES,
+    StickValue, TOUCH, TOUCH_CALLS, TOUCH_COUNT, VIEWPORT, VIEWPORT_VALUES,
 };
 
 /// The shape of the screen the host is drawing into.
@@ -44,6 +44,15 @@ pub(super) fn add_camera_surface(environment: &mut Environment) {
     let mut camera = HostType::new();
     for (name, _) in CAMERA_VALUES {
         camera = camera.with_value(*name, Type::F32);
+    }
+    for (name, _) in CAMERA_CALLS {
+        camera = camera.with_function(
+            *name,
+            FunctionType {
+                params: vec![Type::F32],
+                return_type: Type::Unit,
+            },
+        );
     }
     environment.add_type(CAMERA, camera);
     environment.add_value(CAMERA, Type::Named(CAMERA.to_owned()));

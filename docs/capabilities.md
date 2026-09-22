@@ -1334,6 +1334,14 @@ analyzer accepts to assert the host answers it.
 
 A failing script reports itself and does not stop the others.
 
+**Camera impacts are gameplay, not Rust glue.** Decay exposes
+`Camera.add_trauma(amount)`, which adds impact trauma to the one authored world
+camera carrying `sindri.camera.behavior`. Decay decides when the impact occurs;
+the engine-owned camera behavior remains responsible for shake strength,
+waveform, frequency, decay, and the resulting transform. The camera acceptance
+demo uses this call directly, so its movement and Space-triggered impact are
+Decay gameplay rather than bespoke Rust rules.
+
 **A whole game's rules are written in it.** The companion game's moving,
 gathering, counting and winning are four Decay scripts and no Rust — see "The
 companion game" below.

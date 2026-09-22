@@ -9,8 +9,10 @@ use decay_ir::Path;
 use decay_runtime::{RuntimeError, Value};
 
 use super::WorldHost;
-use super::convert::number;
-use crate::surface::{AimValue, CameraValue, GestureValue, PointerValue, StickValue, TouchCall};
+use super::convert::{as_f32, number};
+use crate::surface::{
+    AimValue, CameraCall, CameraValue, GestureValue, PointerValue, StickValue, TouchCall,
+};
 
 impl WorldHost<'_> {
     /// What the steering finger is asking for.
@@ -60,6 +62,33 @@ impl WorldHost<'_> {
             CameraValue::PanY => pan[1],
             CameraValue::PanZ => pan[2],
         }))
+    }
+
+    /// Applies gameplay intent to the authored world camera behavior.
+    pub(super) fn camera_call(
+        &mut self,
+        call: CameraCall,
+        path: &Path,
+        args: &[Value],
+    ) -> Result<Value, RuntimeError> {
+        let amount = number(path, args.first().unwrap_or(&Value::Null))?;
+        if !amount.is_finite() || amount < 0.0 {
+            return Err(RuntimeError::Host(format!(
+                "{} takes a finite, non-negative trauma amount",
+                path.dotted()
+            )));
+        }
+        match call {
+            CameraCall::AddTrauma => {
+                if !sindri_scene::add_camera_trauma(self.world, as_f32(amount)) {
+                    return Err(RuntimeError::Host(format!(
+                        "{} needs exactly one authored camera with sindri.camera.behavior",
+                        path.dotted()
+                    )));
+                }
+                Ok(Value::Unit)
+            }
+        }
     }
 
     /// What the person just did.

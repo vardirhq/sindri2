@@ -12,10 +12,10 @@ use decay_ir::Path;
 use decay_runtime::{RuntimeError, Value};
 
 use crate::surface::{
-    ANIMATION, ANIMATION_CALLS, EFFECTS, EFFECTS_CALLS, GAME, GAME_CALLS, GRID, GRID_CALLS,
-    GameCall, INPUT, INPUT_QUERIES, InputQuery, PHYSICS, PHYSICS_CALLS, POINTER, POINTER_QUERIES,
-    PROFILE_CALLS, PROFILES, PointerQuery, RANDOM, RANDOM_CALLS, SAVE, SAVE_CALLS, SCENE,
-    SCENE_CALLS, TOUCH, TOUCH_CALLS, UI, UI_CALLS, WORLD, WORLD_CALLS,
+    ANIMATION, ANIMATION_CALLS, CAMERA, CAMERA_CALLS, EFFECTS, EFFECTS_CALLS, GAME, GAME_CALLS,
+    GRID, GRID_CALLS, GameCall, INPUT, INPUT_QUERIES, InputQuery, PHYSICS, PHYSICS_CALLS, POINTER,
+    POINTER_QUERIES, PROFILE_CALLS, PROFILES, PointerQuery, RANDOM, RANDOM_CALLS, SAVE, SAVE_CALLS,
+    SCENE, SCENE_CALLS, TOUCH, TOUCH_CALLS, UI, UI_CALLS, WORLD, WORLD_CALLS,
 };
 
 use super::WorldHost;
@@ -38,6 +38,7 @@ impl WorldHost<'_> {
         args: &[Value],
     ) -> Option<Result<Value, RuntimeError>> {
         match namespace {
+            CAMERA => named(CAMERA_CALLS, name).map(|call| self.camera_call(call, path, args)),
             GAME => named(GAME_CALLS, name).map(|call| self.game_call(call, path, args)),
             WORLD => named(WORLD_CALLS, name).map(|call| self.world_call(call, path, args)),
             PROFILES => named(PROFILE_CALLS, name).map(|call| self.profile_call(call, path, args)),

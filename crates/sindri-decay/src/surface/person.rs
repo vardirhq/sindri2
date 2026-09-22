@@ -159,6 +159,17 @@ pub(crate) const CAMERA_VALUES: &[(&str, CameraValue)] = &[
     ("pan_z", CameraValue::PanZ),
 ];
 
+/// Gameplay control of the authored world camera behavior.
+///
+/// The engine owns follow, confinement, and shake math. Decay only expresses
+/// gameplay intent, so a hit can add trauma without reimplementing the camera.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum CameraCall {
+    AddTrauma,
+}
+
+pub(crate) const CAMERA_CALLS: &[(&str, CameraCall)] = &[("add_trauma", CameraCall::AddTrauma)];
+
 /// What the person just did, as a gesture rather than as a button.
 ///
 /// Each gesture has a question before its numbers, for the reason `Aim.hit`

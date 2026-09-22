@@ -360,6 +360,14 @@
     {
       "members": [
         {
+          "kind": "function",
+          "name": "add_trauma",
+          "parameters": [
+            "f32"
+          ],
+          "returns": "unit"
+        },
+        {
           "kind": "value",
           "name": "pan_x",
           "type": "f32"
