@@ -1,10 +1,9 @@
-use std::convert::Infallible;
 use std::time::Duration;
 
 use serde_json::Value;
 use sindri_core::{FixedStepConfig, SceneComponent, SceneDocument, SceneEntityId, World};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
-use sindri_platform::{EngineHost, FrameContext, Game, HostError, InputEvent, Key};
+use sindri_platform::{EngineHost, FrameContext, Game, InputEvent, InputState, Key};
 use sindri_render::{
     DepthTarget, FrameEncodeError, FrameRenderers, FrameTarget, GlyphRenderer, ShapeRenderer,
     SpriteBatchRenderer, TextRenderer, TextureRegistry, TexturedCubeRenderer, Viewport,
@@ -28,7 +27,7 @@ impl Game for CameraGame {
     fn fixed_update(&mut self, context: &mut FrameContext<'_>) -> Result<(), Self::Error> {
         let dt = context.time.delta.as_secs_f32();
         move_target(context.world, context.input, dt)?;
-        if context.input.just_pressed(Key::Space) {
+        if context.input.key_pressed(Key::Space) {
             add_trauma(context.world, 1.0)?;
         }
         update_camera_behaviors(context.world, dt);
@@ -38,7 +37,7 @@ impl Game for CameraGame {
 
 fn move_target(
     world: &mut World,
-    input: &sindri_core::InputState,
+    input: &InputState,
     dt: f32,
 ) -> Result<(), DemoError> {
     let target = world
@@ -93,9 +92,12 @@ impl DesktopApp for CameraApp {
         let extractor = SceneExtractor::new()?;
         let document = SceneDocument::from_json(SCENE_JSON)?;
         extractor.validate(&document, sindri_core::UnknownComponentPolicy::Reject)?;
-        let mut engine = EngineHost::new(CameraGame, FixedStepConfig::default())?;
+        let mut engine = EngineHost::new(CameraGame, FixedStepConfig::default())
+            .map_err(|error| DemoError::Host(error.to_string()))?;
         *engine.world_mut() = World::from_scene(&document)?.world;
-        engine.start()?;
+        engine
+            .start()
+            .map_err(|error| DemoError::Host(error.to_string()))?;
         Ok(Self {
             engine,
             extractor,
@@ -117,7 +119,9 @@ impl DesktopApp for CameraApp {
         if self.engine.input().key_down(Key::Escape) {
             return Ok(Flow::Exit);
         }
-        self.engine.advance(delta)?;
+        self.engine
+            .advance(delta)
+            .map_err(|error| DemoError::Host(error.to_string()))?;
         Ok(Flow::Continue)
     }
 
@@ -178,8 +182,8 @@ enum DemoError {
     Extract(#[from] SceneExtractError),
     #[error(transparent)]
     Frame(#[from] FrameEncodeError),
-    #[error(transparent)]
-    Host(#[from] HostError<DemoError>),
+    #[error("engine host failed: {0}")]
+    Host(String),
     #[error(transparent)]
     Registry(#[from] sindri_core::ComponentRegistryError),
     #[error("camera demo is missing its {0}")]
