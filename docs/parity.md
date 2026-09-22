@@ -105,7 +105,6 @@ written the row.
 
 | Capability | State | Why it is stranded |
 | --- | --- | --- |
-| **Bloom / post-processing** | No longer stranded: `sindri.environment` authors bloom and editor/Voxel Lab render it | The wider post-processing stack is still incomplete; see the rendering table below. |
 | **Input actions** | `crates/sindri-platform/src/input/action/` parses an action document, binds named actions to keys, pointer axes and scroll | No scene component, no editor surface, no Decay binding. Games poll raw keys instead. |
 | **Scroll input** | `Source::ScrollX/ScrollY` are bound and parsed | Never surfaced to Decay, so no game can use a wheel. |
 | **Gamepad bindings** | `"gamepad.South"` parses as a binding *name* | `Source::from_name` returns `None` for it — an explicit, tested hole. A gamepad is unimplemented, not merely unbound. |
