@@ -52,20 +52,21 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let light_direction = normalize(uniforms.directional_direction.xyz);
     let diffuse = max(dot(normal, -light_direction), 0.0);
     let ambient = uniforms.ambient.rgb * uniforms.ambient.a;
-    var visibility = 1.0;
-    if uniforms.shadow.y > 0.5 && diffuse > 0.0 {
-        let shadow_clip = uniforms.light_view_projection * vec4<f32>(input.world_position, 1.0);
-        let shadow_ndc = shadow_clip.xyz / shadow_clip.w;
-        let shadow_uv = vec2<f32>(shadow_ndc.x * 0.5 + 0.5, 0.5 - shadow_ndc.y * 0.5);
-        if all(shadow_uv >= vec2<f32>(0.0)) && all(shadow_uv <= vec2<f32>(1.0)) {
-            visibility = textureSampleCompare(
-                shadow_map,
-                shadow_sampler,
-                shadow_uv,
-                shadow_ndc.z - uniforms.shadow.x,
-            );
-        }
-    }
+    let shadow_clip = uniforms.light_view_projection * vec4<f32>(input.world_position, 1.0);
+    let shadow_ndc = shadow_clip.xyz / shadow_clip.w;
+    let shadow_uv = vec2<f32>(shadow_ndc.x * 0.5 + 0.5, 0.5 - shadow_ndc.y * 0.5);
+    let sampled_visibility = textureSampleCompare(
+        shadow_map,
+        shadow_sampler,
+        shadow_uv,
+        shadow_ndc.z - uniforms.shadow.x,
+    );
+    let inside_shadow_map = all(shadow_uv >= vec2<f32>(0.0))
+        && all(shadow_uv <= vec2<f32>(1.0))
+        && shadow_ndc.z >= 0.0
+        && shadow_ndc.z <= 1.0;
+    let receives_shadow = uniforms.shadow.y > 0.5 && diffuse > 0.0 && inside_shadow_map;
+    let visibility = select(1.0, sampled_visibility, receives_shadow);
     let directional = uniforms.directional_color.rgb
         * uniforms.directional_direction.a * diffuse * visibility;
     return vec4<f32>(sampled.rgb * (ambient + directional), sampled.a);
