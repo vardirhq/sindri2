@@ -1481,7 +1481,7 @@ the README.
 
 ### World presentation
 
-`sindri.environment` is authored scene state for background, ambient fill, one directional light, and bloom. The scene seam validates direction/colour/intensity and translates lighting into renderer-owned `WorldLighting`; textured cubes, authored meshes, and cached voxel meshes share that model in editor and browser rendering. Voxel Lab is the acceptance surface. Directional shadows, AO, fog, sky, local lights, materials, and the broader post stack remain follow-up capabilities.
+`sindri.environment` is authored scene state for background, ambient fill, one directional light, directional shadows, and bloom. The scene seam validates direction/colour/intensity and translates lighting into renderer-owned `WorldLighting`; textured cubes, authored meshes, and cached voxel meshes share that model in editor and browser rendering. Voxel Lab is the acceptance surface. Directional shadows use one bounded depth map with authored coverage, 256–2048 resolution, and bias controls; both transient world meshes and persistent voxel meshes cast and receive them. AO, fog, sky, local lights, materials, cascaded shadow quality, and the broader post stack remain follow-up capabilities.
 
 ### Not yet
 
