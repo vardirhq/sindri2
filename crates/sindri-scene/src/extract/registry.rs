@@ -120,9 +120,7 @@ fn register_cameras(components: &mut ComponentSchemaRegistry) -> Result<(), Scen
 }
 
 /// Scene-wide presentation defaults exposed by the component catalogue.
-fn register_environment(
-    components: &mut ComponentSchemaRegistry,
-) -> Result<(), SceneExtractError> {
+fn register_environment(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
     components.register_with_default::<EnvironmentComponent>(
         "Environment",
         serde_json::json!({
