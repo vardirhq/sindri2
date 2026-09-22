@@ -376,6 +376,7 @@ impl TexturedCubeRenderer {
     ///
     /// This remains the transient path for authored surface meshes. Generated
     /// terrain should use [`Self::encode_cached_mesh`].
+    #[allow(clippy::too_many_lines)]
     pub fn encode_mesh(
         &mut self,
         context: DrawContext<'_>,
