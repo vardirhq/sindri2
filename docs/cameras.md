@@ -41,10 +41,11 @@ changes camera state.
 ### Camera demo acceptance surface
 
 The first dedicated camera demo now lives in `examples/camera`. It is a shared
-native/browser proof that authors a real `sindri.camera.behavior` component,
-moves its stable-ID target from fixed-step input, advances
-`update_camera_behaviors` on that same simulation path, and lets Space inject
-trauma into the authored shake state. The world grid and moving target make
+native/browser proof that authors a real `sindri.camera.behavior` component and
+runs its gameplay through Decay. The demo script moves the stable-ID follow
+target from typed input and calls `Camera.add_trauma` when Space is pressed;
+the Rust host only advances scripts and the engine-owned
+`update_camera_behaviors` system. The world grid and moving target make
 follow, smoothing, confinement, and shake observable without replacing the
 engine behavior with demo-only camera math.
 
@@ -57,9 +58,11 @@ implementation.
 
 The remaining integration proof is Orbital Last Stand. Its current script-owned
 camera shake should migrate only when the engine behavior has the control surface
-the game needs. Decay does not yet expose a dedicated camera-behavior API, and
-the editor still relies on generic component authoring rather than dedicated
-camera-behavior controls or gizmos.
+the game needs. Decay now exposes the first camera-behavior gameplay operation,
+`Camera.add_trauma`, but follow targets, behavior toggles, and other camera-mode
+changes do not yet have a dedicated scripting surface. The editor still relies
+on generic component authoring rather than dedicated camera-behavior controls
+or gizmos.
 
 ## Screen-space UI and overlays
 
