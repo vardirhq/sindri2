@@ -165,6 +165,7 @@ impl DesktopApp for VoxelLabApp {
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Voxel Lab browser encoder"),
                 });
+        self.cubes.set_lighting(self.environment.world_lighting());
         let renderers = FrameRenderers {
             cube: &mut self.cubes,
             sprites: &mut self.sprites,

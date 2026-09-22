@@ -8,6 +8,7 @@ mod depth;
 mod encode;
 mod frame;
 mod glyph;
+mod lighting;
 mod mesh;
 mod offscreen;
 mod shape;
@@ -41,6 +42,7 @@ pub use glyph::{
     EDGE, FIELD_PER_RASTER_PIXEL, GlyphAtlas, GlyphDrawError, GlyphInstance, GlyphRenderer,
     GlyphSlot, RASTER_EM,
 };
+pub use lighting::WorldLighting;
 pub use mesh::{ColoredVertex, MeshBuffers, TexturedVertex};
 pub use offscreen::{OffscreenError, OffscreenReadback, OffscreenTarget};
 pub use shape::{

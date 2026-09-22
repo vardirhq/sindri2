@@ -182,6 +182,19 @@
           "knee": 0.2,
           "passes": 3,
           "threshold": 0.65
+        },
+        "directional": {
+          "color": [
+            1.0,
+            0.95,
+            0.86
+          ],
+          "direction": [
+            -0.45,
+            -1.0,
+            -0.35
+          ],
+          "intensity": 0.85
         }
       },
       "display_name": "Environment",
@@ -204,6 +217,19 @@
           "knee": 0.2,
           "passes": 3,
           "threshold": 0.65
+        },
+        "directional": {
+          "color": [
+            1.0,
+            0.95,
+            0.86
+          ],
+          "direction": [
+            -0.45,
+            -1.0,
+            -0.35
+          ],
+          "intensity": 0.85
         }
       },
       "meanings": {},

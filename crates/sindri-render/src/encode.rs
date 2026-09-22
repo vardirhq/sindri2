@@ -228,7 +228,7 @@ fn encode_passes<'p>(
     } = renderers;
     for pass in passes {
         match &pass.command {
-            FrameCommand::TexturedCube { model, texture } => cube_renderer.encode(
+            FrameCommand::TexturedCube { model, texture } => cube_renderer.encode_world(
                 DrawContext {
                     device,
                     queue,
@@ -238,14 +238,15 @@ fn encode_passes<'p>(
                 encoder,
                 target.color,
                 target.depth,
-                pass.camera.view_projection * *model,
+                *model,
+                pass.camera.view_projection,
             ),
             FrameCommand::TexturedMesh {
                 model,
                 texture,
                 vertices,
                 indices,
-            } => cube_renderer.encode_mesh(
+            } => cube_renderer.encode_mesh_world(
                 DrawContext {
                     device,
                     queue,
@@ -254,7 +255,8 @@ fn encode_passes<'p>(
                 },
                 encoder,
                 (target.color, target.depth),
-                pass.camera.view_projection * *model,
+                *model,
+                pass.camera.view_projection,
                 vertices,
                 indices,
             ),
@@ -356,7 +358,8 @@ fn encode_cached_textured_mesh(
         },
         encoder,
         (target.color, target.depth),
-        pass.camera.view_projection * *model,
+        *model,
+        pass.camera.view_projection,
         CachedMeshRequest {
             id: *cache,
             revision: *revision,

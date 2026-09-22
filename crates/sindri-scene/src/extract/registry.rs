@@ -119,19 +119,19 @@ fn register_cameras(components: &mut ComponentSchemaRegistry) -> Result<(), Scen
     Ok(())
 }
 
-/// Everything a scene puts on the screen.
-fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
-    // Each default is what a freshly added component of that type looks
-    // like, and is what makes the type addable at all. They are chosen to
-    // be visible rather than neutral: a sprite added to an entity should
-    // appear, or the author is left wondering whether the click worked.
-    register_cameras(components)?;
+/// Scene-wide presentation defaults exposed by the component catalogue.
+fn register_environment(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
     components.register_with_default::<EnvironmentComponent>(
         "Environment",
         serde_json::json!({
             "background": [0.035, 0.045, 0.065, 1.0],
             "ambient_color": [1.0, 1.0, 1.0],
             "ambient_intensity": 1.0,
+            "directional": {
+                "direction": [-0.45, -1.0, -0.35],
+                "color": [1.0, 0.95, 0.86],
+                "intensity": 0.85
+            },
             "bloom": {
                 "enabled": false,
                 "threshold": 0.65,
@@ -141,6 +141,17 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             }
         }),
     )?;
+    Ok(())
+}
+
+/// Everything a scene puts on the screen.
+fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    // Each default is what a freshly added component of that type looks
+    // like, and is what makes the type addable at all. They are chosen to
+    // be visible rather than neutral: a sprite added to an entity should
+    // appear, or the author is left wondering whether the click worked.
+    register_cameras(components)?;
+    register_environment(components)?;
     components.register_with_default::<MeshComponent>(
         "Mesh",
         serde_json::json!({

@@ -1479,6 +1479,10 @@ The whole workspace compiles for `wasm32-unknown-unknown`, which its CI checks.
 `decay/examples/player.decay` is executed by a test rather than only shown in
 the README.
 
+### World presentation
+
+`sindri.environment` is authored scene state for background, ambient fill, one directional light, and bloom. The scene seam validates direction/colour/intensity and translates lighting into renderer-owned `WorldLighting`; textured cubes, authored meshes, and cached voxel meshes share that model in editor and browser rendering. Voxel Lab is the acceptance surface. Directional shadows, AO, fog, sky, local lights, materials, and the broader post stack remain follow-up capabilities.
+
 ### Not yet
 
 - No ranges, so `for` walks a collection and nothing else. `while` and `for`
@@ -1670,5 +1674,5 @@ the player walks in continuous coordinates and has to test the cell it is about
 to enter. Nothing new was added to the engine for either.
 ## World presentation
 
-Scenes can author `sindri.environment` as the scene-wide presentation contract. The first slice owns background colour, forward-compatible ambient colour/intensity, and bloom controls. The editor Scene/Game viewports and the browser Voxel Lab resolve bloom from that authored component; Voxel Lab is the acceptance lab for the wider presentation track in `docs/world-presentation-plan.md`. Directional lighting, shadows, ambient occlusion, fog, sky, environment profiles/volumes, local lights, weather, water, and advanced post effects remain future slices.
+Scenes can author `sindri.environment` as the scene-wide presentation contract. It owns background colour, ambient colour/intensity, one directional world light, and bloom controls. Textured 3D geometry, including engine-owned voxel meshes, is shaded from the same ambient and directional settings in editor viewports and browser Voxel Lab; the default renderer lighting preserves the previous unlit appearance for scenes without an environment. Voxel Lab is the acceptance lab for the wider presentation track in `docs/world-presentation-plan.md`. Shadows, ambient occlusion, fog, sky, environment profiles/volumes, local lights, weather, water, and advanced post effects remain future slices.
 

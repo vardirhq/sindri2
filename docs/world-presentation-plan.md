@@ -40,7 +40,9 @@ Exit criteria:
 
 ### 2. Directional and ambient lighting
 
-Add a world directional light and ambient contribution. Voxel materials and suitable world geometry respond to the same engine-owned lighting model. Environment owns the default sun/ambient setup rather than Voxel Lab hard-coding face brightness.
+**Implemented.** `sindri.environment` authors ambient colour/intensity and one directional light with direction, colour, and intensity. Textured world geometry and engine-owned voxel meshes use the same renderer-owned lighting model in editor viewports and browser Voxel Lab. Scenes without authored lighting retain the previous full-white ambient appearance.
+
+The next slice adds shadows from this same directional light rather than inventing a second sun.
 
 ### 3. Shadows
 

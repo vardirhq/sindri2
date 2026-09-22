@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use sindri_core::{SceneComponent, World};
+use sindri_render::WorldLighting;
 
 /// Scene-wide visual environment.
 ///
@@ -14,6 +15,7 @@ pub struct EnvironmentComponent {
     pub background: [f32; 4],
     pub ambient_color: [f32; 3],
     pub ambient_intensity: f32,
+    pub directional: EnvironmentDirectionalLight,
     pub bloom: EnvironmentBloom,
 }
 
@@ -27,7 +29,27 @@ impl Default for EnvironmentComponent {
             background: [0.035, 0.045, 0.065, 1.0],
             ambient_color: [1.0, 1.0, 1.0],
             ambient_intensity: 1.0,
+            directional: EnvironmentDirectionalLight::default(),
             bloom: EnvironmentBloom::default(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct EnvironmentDirectionalLight {
+    /// Direction light travels from its source toward the world.
+    pub direction: [f32; 3],
+    pub color: [f32; 3],
+    pub intensity: f32,
+}
+
+impl Default for EnvironmentDirectionalLight {
+    fn default() -> Self {
+        Self {
+            direction: [-0.45, -1.0, -0.35],
+            color: [1.0, 0.95, 0.86],
+            intensity: 0.85,
         }
     }
 }
@@ -55,6 +77,18 @@ impl Default for EnvironmentBloom {
 }
 
 impl EnvironmentComponent {
+    /// Converts authored environment light into renderer-neutral frame state.
+    #[must_use]
+    pub const fn world_lighting(self) -> WorldLighting {
+        WorldLighting {
+            ambient_color: self.ambient_color,
+            ambient_intensity: self.ambient_intensity,
+            directional_direction: self.directional.direction,
+            directional_color: self.directional.color,
+            directional_intensity: self.directional.intensity,
+        }
+    }
+
     /// Refuses authored values that would make the renderer's behaviour
     /// surprising or non-finite.
     pub fn validate(self) -> Result<Self, EnvironmentError> {
@@ -62,9 +96,31 @@ impl EnvironmentComponent {
             || !self.ambient_color.iter().all(|value| value.is_finite())
             || !self.ambient_intensity.is_finite()
             || self.ambient_intensity < 0.0
+            || !self.directional.color.iter().all(|value| value.is_finite())
+            || !self.directional.intensity.is_finite()
+            || self.directional.intensity < 0.0
         {
             return Err(EnvironmentError::InvalidColourOrIntensity);
         }
+        let direction_length_squared = self
+            .directional
+            .direction
+            .iter()
+            .map(|value| value * value)
+            .sum::<f32>();
+        if !self
+            .directional
+            .direction
+            .iter()
+            .all(|value| value.is_finite())
+            || direction_length_squared <= f32::EPSILON
+        {
+            return Err(EnvironmentError::InvalidDirectionalLight);
+        }
+        self.validate_bloom()?;
+        Ok(self)
+    }
+    fn validate_bloom(self) -> Result<(), EnvironmentError> {
         if !self.bloom.threshold.is_finite()
             || self.bloom.threshold < 0.0
             || !self.bloom.knee.is_finite()
@@ -75,7 +131,7 @@ impl EnvironmentComponent {
         {
             return Err(EnvironmentError::InvalidBloom);
         }
-        Ok(self)
+        Ok(())
     }
 }
 
@@ -106,6 +162,8 @@ pub enum EnvironmentError {
         "environment colours and ambient intensity must be finite, with non-negative intensity"
     )]
     InvalidColourOrIntensity,
+    #[error("environment directional light needs a finite, non-zero direction")]
+    InvalidDirectionalLight,
     #[error("environment bloom settings are outside their supported ranges")]
     InvalidBloom,
 }
@@ -117,6 +175,16 @@ mod tests {
     #[test]
     fn default_environment_is_valid() {
         assert!(EnvironmentComponent::default().validate().is_ok());
+    }
+
+    #[test]
+    fn zero_directional_light_direction_is_rejected() {
+        let mut environment = EnvironmentComponent::default();
+        environment.directional.direction = [0.0; 3];
+        assert_eq!(
+            environment.validate(),
+            Err(EnvironmentError::InvalidDirectionalLight)
+        );
     }
 
     #[test]

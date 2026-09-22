@@ -10,7 +10,7 @@ use sindri_render::{
     SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport, ViewportTarget,
     encode_lit_frame, encode_prepared_frame,
 };
-use sindri_scene::{CameraView, SceneRuntime, UiCanvas, environment_of};
+use sindri_scene::{CameraView, EnvironmentComponent, SceneRuntime, UiCanvas, environment_of};
 use weave::Viewport as WeaveViewport;
 
 use super::block_pointer::TileVolumeHover;
@@ -130,6 +130,12 @@ impl RuntimeViewport {
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Sindri editor runtime viewport encoder"),
                 });
+        let environment = environment_of(source.world).map_err(|error| error.to_string())?;
+        renderers.cube.set_lighting(
+            environment
+                .map(EnvironmentComponent::world_lighting)
+                .unwrap_or_default(),
+        );
         let frame_renderers = FrameRenderers {
             cube: &mut renderers.cube,
             sprites: &mut renderers.sprites,
@@ -142,7 +148,6 @@ impl RuntimeViewport {
             color: self.target.attachment(),
             depth: self.target.depth(),
         };
-        let environment = environment_of(source.world).map_err(|error| error.to_string())?;
         if let Some(environment) = environment.filter(|environment| environment.bloom.enabled) {
             let authored = environment.bloom;
             encode_lit_frame(
