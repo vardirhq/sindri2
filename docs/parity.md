@@ -178,7 +178,7 @@ The ordered work required to close these gaps is tracked in
 | **3D directional + ambient lighting** | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | `sindri.environment` authors ambient fill plus one directional light and one bounded shadow map, shared by textured world and voxel geometry in editor and browser Voxel Lab. Local lights, materials, cascaded shadow quality, and shipped-game proof remain. |
 | **Voxel ambient occlusion / contact depth** | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | Engine block meshing samples neighbouring cells around exposed corners, flips face diagonals to preserve the AO gradient, and carries the result into the shared textured renderer. `sindri.environment` authors the effect strength and Voxel Lab exercises it in editor and browser rendering. This is deterministic mesh-time voxel AO, not general SSAO for arbitrary geometry. |
 | Bloom | ✅ | ✅ | ❌ | 🟡 | **Behind** | `sindri.environment` authors bloom and the shared renderer applies it in editor viewports and browser Voxel Lab. Voxel Lab is acceptance proof, not yet a shipped-game proof; Decay control is intentionally absent until gameplay needs it. |
-| **Post-processing stack** | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | The authored environment reaches bloom end to end, but exposure, tone mapping, colour grading, vignette, and the general ordered stack remain. |
+| **Post-processing stack** | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | `sindri.environment` authors exposure, tone mapping, contrast, saturation, bloom, and vignette through one ordered world path in editor and browser Voxel Lab, with overlay/UI rendered crisply afterward. LUT grading and advanced cinematic effects remain absent, and Voxel Lab is acceptance proof rather than shipped-game proof. |
 | **Nine-slice sprites** | ❌ | ❌ | — | — | **Absent** | Every UI panel that resizes needs it |
 | **Sprite masking / stencil** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | Sorting and draw order | ✅ | ✅ | 🟡 | ✅ | **Par** | Layers plus the ground anchor |
@@ -463,7 +463,7 @@ were native gaps. Treat these rows as close to automatic.
 | --- | --- | --- |
 | **TextMeshPro** | Text quality, rich text | **Absent** — no rich text |
 | **Cinemachine** | Camera follow, framing, confining, shake | **Absent** — hand-rolled per game |
-| **Post Processing Stack** | Bloom, colour grading, vignette | **Behind** — bloom exists and is stranded |
+| **Post Processing Stack** | Bloom, colour grading, vignette | **Behind** — an authored world stack now covers exposure, tone mapping, contrast, saturation, bloom, and vignette; LUT grading and advanced cinematic effects remain |
 | **Shader Graph** | Shader authoring without code | **Absent** — no materials at all |
 | **Input System** | Action mapping, rebinding, gamepad | **Behind** — action layer stranded, gamepad unimplemented |
 | **Addressables** | Asset streaming and release | **Absent** — not urgent at our scale |
@@ -541,7 +541,7 @@ output of the file; everything above is evidence.
    authoring, and compound pieces made that worse.
 10. **Multiple scenes and additive loading.** A menu plus a level is the normal
     shape of a game.
-11. **Un-strand bloom.** Built, working, unreachable.
+11. ~~**Un-strand bloom.**~~ **Done.** Bloom now lives inside the authored world post stack used by editor and browser rendering.
 12. **Camera follow, confine, and shake.** Every game re-implements it.
 13. **Autotiling.** The daily cost of painting tilemaps by hand.
 14. **Profiler view.** Needed before performance work is anything but guessing.

@@ -24,7 +24,7 @@ mod transparency;
 mod triangle;
 mod uv_rect;
 
-pub use bloom::{Bloom, BloomSettings};
+pub use bloom::{Bloom, BloomSettings, PostProcessSettings, ToneMapping};
 pub use camera::{
     OrthographicCamera, PerspectiveCamera, look_at, orthographic_projection, perspective_projection,
 };

@@ -19,8 +19,8 @@ use sindri_core::{AssetId, SpriteSheetDocument, sheet_id_for};
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 use sindri_render::{
     Bloom, BloomSettings, DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, Lighting,
-    OffscreenTarget, ShapeRenderer, SpriteBatchRenderer, TextRenderer, Texture2D, TextureRegistry,
-    TexturedCubeRenderer, Viewport, encode_lit_frame,
+    OffscreenTarget, PostProcessSettings, ShapeRenderer, SpriteBatchRenderer, TextRenderer,
+    Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport, encode_lit_frame,
 };
 use sindri_scene::{CameraView, SceneRuntime, TextureBindings, UiCanvas, WorldProjection};
 
@@ -237,7 +237,10 @@ async fn capture(
         &prepared,
         Lighting {
             bloom: &mut bloom,
-            settings: BloomSettings::default(),
+            settings: PostProcessSettings {
+                bloom: BloomSettings::default(),
+                ..PostProcessSettings::default()
+            },
         },
     )?;
     let readback = target.copy_to_buffer(&gpu.device, &mut encoder)?;

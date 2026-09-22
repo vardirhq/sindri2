@@ -200,6 +200,13 @@
           ],
           "intensity": 0.85
         },
+        "post_process": {
+          "contrast": 1.0,
+          "exposure": 0.0,
+          "saturation": 1.0,
+          "tone_mapping": "none",
+          "vignette": 0.0
+        },
         "shadows": {
           "bias": 0.002,
           "distance": 48.0,
@@ -244,6 +251,13 @@
             -0.35
           ],
           "intensity": 0.85
+        },
+        "post_process": {
+          "contrast": 1.0,
+          "exposure": 0.0,
+          "saturation": 1.0,
+          "tone_mapping": "none",
+          "vignette": 0.0
         },
         "shadows": {
           "bias": 0.002,

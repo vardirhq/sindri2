@@ -36,6 +36,10 @@ requests, commit history, and subsystem documentation rather than this file.
 
 ### Added
 
+- Added an authored world post-processing stack with exposure, tone mapping,
+  contrast, saturation, bloom, and vignette. World effects resolve before
+  overlay/UI rendering so interface content remains crisp; Voxel Lab now uses
+  the complete stack as its presentation acceptance surface.
 - Added mesh-time ambient occlusion for voxel corners and contacts, with authored environment strength and Voxel Lab proof.
 
 - Added authored directional shadows for textured world and voxel geometry, with environment controls for coverage distance, map resolution, and bias.

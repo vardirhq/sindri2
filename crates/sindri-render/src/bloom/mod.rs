@@ -12,13 +12,13 @@
 //! straight to its surface and pays nothing.
 //!
 //! ```no_run
-//! # use sindri_render::{Bloom, BloomSettings};
+//! # use sindri_render::{Bloom, PostProcessSettings};
 //! # fn wrap(device: &wgpu::Device, queue: &wgpu::Queue,
 //! #         encoder: &mut wgpu::CommandEncoder, surface: &wgpu::TextureView) {
 //! let mut bloom = Bloom::new(device, wgpu::TextureFormat::Rgba8UnormSrgb);
 //! bloom.resize(device, 1920, 1080);
 //! // Draw the frame into `bloom.scene_view()` instead of the surface, then:
-//! bloom.resolve(device, queue, encoder, surface, BloomSettings::default());
+//! bloom.resolve(device, queue, encoder, surface, PostProcessSettings::default());
 //! # }
 //! ```
 
@@ -31,6 +31,8 @@ use chain::Chain;
 /// How much light, from how bright, and how far.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BloomSettings {
+    /// Whether the bloom stages run at all.
+    pub enabled: bool,
     /// How bright a colour has to be before it glows at all, on the linear 0-1
     /// scale the shader works in.
     ///
@@ -62,6 +64,7 @@ impl Default for BloomSettings {
         // is the tell — because a colour already near the top of the 0-1 range
         // has nowhere to go but grey when light is added to it.
         Self {
+            enabled: true,
             threshold: 0.65,
             knee: 0.20,
             intensity: 0.45,
@@ -81,11 +84,90 @@ impl BloomSettings {
     #[must_use]
     fn sane(self) -> Self {
         Self {
+            enabled: self.enabled,
             threshold: self.threshold.max(0.0),
             knee: self.knee.clamp(1.0e-4, 1.0),
             intensity: self.intensity.max(0.0),
             passes: self.passes.clamp(1, MAX_PASSES),
         }
+    }
+}
+
+/// Tone curve applied to the world before bloom and vignette.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum ToneMapping {
+    /// Preserve the scene's linear colour without a tone curve.
+    #[default]
+    None,
+    /// A cheap, gentle shoulder suitable for ordinary scenes.
+    Reinhard,
+    /// A filmic approximation with a stronger highlight shoulder.
+    Aces,
+}
+
+impl ToneMapping {
+    const fn shader_value(self) -> f32 {
+        match self {
+            Self::None => 0.0,
+            Self::Reinhard => 1.0,
+            Self::Aces => 2.0,
+        }
+    }
+}
+
+/// Ordered world post-processing applied before overlay/UI rendering.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PostProcessSettings {
+    /// Exposure in photographic stops. One stop doubles linear brightness.
+    pub exposure: f32,
+    /// Mid-grey contrast where 1.0 preserves the source.
+    pub contrast: f32,
+    /// Colour saturation where 0.0 is greyscale and 1.0 preserves the source.
+    pub saturation: f32,
+    pub tone_mapping: ToneMapping,
+    /// Edge darkening strength from 0.0 to 1.0.
+    pub vignette: f32,
+    pub bloom: BloomSettings,
+}
+
+impl Default for PostProcessSettings {
+    fn default() -> Self {
+        Self {
+            exposure: 0.0,
+            contrast: 1.0,
+            saturation: 1.0,
+            tone_mapping: ToneMapping::None,
+            vignette: 0.0,
+            bloom: BloomSettings {
+                enabled: false,
+                ..BloomSettings::default()
+            },
+        }
+    }
+}
+
+impl PostProcessSettings {
+    #[must_use]
+    fn sane(self) -> Self {
+        Self {
+            exposure: self.exposure.clamp(-8.0, 8.0),
+            contrast: self.contrast.clamp(0.0, 4.0),
+            saturation: self.saturation.clamp(0.0, 4.0),
+            tone_mapping: self.tone_mapping,
+            vignette: self.vignette.clamp(0.0, 1.0),
+            bloom: self.bloom.sane(),
+        }
+    }
+
+    #[must_use]
+    pub fn is_active(self) -> bool {
+        let sane = self.sane();
+        sane.exposure.abs() > f32::EPSILON
+            || (sane.contrast - 1.0).abs() > f32::EPSILON
+            || (sane.saturation - 1.0).abs() > f32::EPSILON
+            || sane.tone_mapping != ToneMapping::None
+            || sane.vignette > f32::EPSILON
+            || sane.bloom.enabled
     }
 }
 
@@ -258,25 +340,30 @@ impl Bloom {
         queue: &wgpu::Queue,
         encoder: &mut wgpu::CommandEncoder,
         target: &wgpu::TextureView,
-        settings: BloomSettings,
+        settings: PostProcessSettings,
     ) {
         let Some(chain) = self.chain.as_ref() else {
             return;
         };
         let settings = settings.sane();
 
-        // Bright pass: the scene at full size into the chain at a quarter of it.
-        // One draw does both the threshold and the downsample, because a
-        // filtered read at a quarter size *is* the downsample.
-        chain.run(
-            device,
-            queue,
-            encoder,
-            &self.pipelines,
-            &self.sampler,
-            chain::Step::Bright(settings),
-        );
-        for pass in 0..settings.passes {
+        if settings.bloom.enabled {
+            // Bright pass: grading is applied before thresholding, so bloom
+            // responds to the same world colour that reaches the player.
+            chain.run(
+                device,
+                queue,
+                encoder,
+                &self.pipelines,
+                &self.sampler,
+                chain::Step::Bright(settings),
+            );
+        }
+        for pass in 0..if settings.bloom.enabled {
+            settings.bloom.passes
+        } else {
+            0
+        } {
             // Each sweep reaches twice as far as the last, so a few passes cover
             // a wide glow without a kernel wide enough to need one tap per texel
             // of it.
@@ -309,10 +396,7 @@ impl Bloom {
             encoder,
             &self.pipelines,
             &self.sampler,
-            chain::Step::Composite {
-                target,
-                intensity: settings.intensity,
-            },
+            chain::Step::Composite { target, settings },
         );
     }
 }
@@ -369,7 +453,7 @@ fn glow_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 
 #[cfg(test)]
 mod tests {
-    use super::{BloomSettings, MAX_PASSES};
+    use super::{BloomSettings, MAX_PASSES, PostProcessSettings, ToneMapping};
 
     /// Every setting that would draw something other than a glow is clamped
     /// rather than refused.
@@ -382,6 +466,7 @@ mod tests {
     #[test]
     fn settings_that_would_not_draw_a_glow_are_clamped() {
         let absurd = BloomSettings {
+            enabled: true,
             threshold: -3.0,
             knee: 0.0,
             intensity: -1.0,
@@ -415,5 +500,17 @@ mod tests {
         assert!(settings.threshold < 0.9, "{settings:?}");
         assert!(settings.passes >= 1);
         assert!(settings.intensity > 0.0);
+    }
+
+    #[test]
+    fn neutral_post_process_is_a_real_passthrough() {
+        assert!(!PostProcessSettings::default().is_active());
+        assert!(
+            PostProcessSettings {
+                tone_mapping: ToneMapping::Aces,
+                ..PostProcessSettings::default()
+            }
+            .is_active()
+        );
     }
 }

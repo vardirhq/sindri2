@@ -58,7 +58,9 @@ This intentionally chooses mesh-time voxel AO over SSAO for the first permanent 
 
 ### 5. Post-processing stack
 
-Generalize the bloom path into an ordered world post stack. Initial effects are exposure, tone mapping, contrast, saturation/colour treatment, bloom, and vignette. World processing happens before crisp overlay/UI rendering.
+**Implemented.** The former bloom-only offscreen path is now the ordered world post stack. `sindri.environment.post_process` authors exposure, contrast, saturation, tone mapping (`none`, `reinhard`, or `aces`), and vignette; the existing bloom controls run inside the same chain. Grading is applied before bloom thresholding, vignette is applied after the bloom composite, and overlay/UI rendering remains outside the stack so it stays crisp.
+
+The cheap path is still real: a neutral post-process plus disabled bloom draws directly to the frame target. Older environments deserialize to those neutral values. Voxel Lab deliberately enables ACES, a small exposure/contrast/saturation lift, bloom, and a restrained vignette as the visual proof.
 
 ### 6. Fog and atmosphere
 

@@ -5,7 +5,7 @@
 //! a blur cannot read and write the same texture, and a sweep that tried would
 //! be reading texels it had already changed.
 
-use super::{BloomSettings, Pipelines};
+use super::{Pipelines, PostProcessSettings};
 
 /// One texture and the view of it.
 struct Target {
@@ -131,15 +131,11 @@ impl Chain {
                 &pipelines.bright,
                 &self.scene.view,
                 write,
-                Params {
-                    source: [
-                        self.texel[0],
-                        self.texel[1],
-                        settings.threshold,
-                        settings.knee,
-                    ],
-                    blur: [0.0; 4],
-                },
+                Params::for_post(
+                    self.texel,
+                    settings,
+                    [0.0, 0.0, settings.bloom.threshold, settings.bloom.knee],
+                ),
             ),
             Step::Blur { direction } => (
                 &pipelines.blur,
@@ -148,16 +144,19 @@ impl Chain {
                 Params {
                     source: [self.texel[0], self.texel[1], 0.0, 0.0],
                     blur: [direction[0], direction[1], 0.0, 0.0],
+                    grade: [0.0; 4],
+                    tone: [0.0; 4],
                 },
             ),
-            Step::Composite { target, intensity } => (
+            Step::Composite { target, settings } => (
                 &pipelines.composite,
                 &self.scene.view,
                 target,
-                Params {
-                    source: [self.texel[0], self.texel[1], 0.0, 0.0],
-                    blur: [0.0, 0.0, intensity, 0.0],
-                },
+                Params::for_post(
+                    self.texel,
+                    settings,
+                    [0.0, 0.0, settings.bloom.intensity, 0.0],
+                ),
             ),
         };
         queue.write_buffer(&self.uniform, 0, bytemuck::bytes_of(&params));
@@ -231,13 +230,13 @@ impl Chain {
 #[derive(Clone, Copy)]
 pub(super) enum Step<'a> {
     /// Keep what is bright enough, at a quarter size.
-    Bright(BloomSettings),
+    Bright(PostProcessSettings),
     /// Spread it, one axis at a time.
     Blur { direction: [f32; 2] },
     /// Add it back over the scene, into somewhere that is not the chain.
     Composite {
         target: &'a wgpu::TextureView,
-        intensity: f32,
+        settings: PostProcessSettings,
     },
 }
 
@@ -246,4 +245,29 @@ pub(super) enum Step<'a> {
 struct Params {
     source: [f32; 4],
     blur: [f32; 4],
+    // x exposure, y contrast, z saturation, w vignette.
+    grade: [f32; 4],
+    // x tone-map mode, y bloom enabled, zw reserved.
+    tone: [f32; 4],
+}
+
+impl Params {
+    fn for_post(texel: [f32; 2], settings: PostProcessSettings, blur: [f32; 4]) -> Self {
+        Self {
+            source: [texel[0], texel[1], blur[2], blur[3]],
+            blur,
+            grade: [
+                settings.exposure,
+                settings.contrast,
+                settings.saturation,
+                settings.vignette,
+            ],
+            tone: [
+                settings.tone_mapping.shader_value(),
+                if settings.bloom.enabled { 1.0 } else { 0.0 },
+                0.0,
+                0.0,
+            ],
+        }
+    }
 }

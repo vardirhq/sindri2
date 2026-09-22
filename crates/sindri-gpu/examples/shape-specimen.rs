@@ -13,8 +13,8 @@ use glam::{Mat4, Quat, Vec3};
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 use sindri_render::{
     Bloom, BloomSettings, ClearOperations, DepthTarget, ExtractedFrame, FrameCamera, FrameCommand,
-    FramePass, FrameRenderers, FrameTarget, GlyphRenderer, OffscreenTarget, RenderLayer,
-    RenderStage, Shape, ShapeBlend, ShapeInstance, ShapeRenderer, SpriteBatchRenderer,
+    FramePass, FrameRenderers, FrameTarget, GlyphRenderer, OffscreenTarget, PostProcessSettings,
+    RenderLayer, RenderStage, Shape, ShapeBlend, ShapeInstance, ShapeRenderer, SpriteBatchRenderer,
     TextRenderer, TextureRegistry, TexturedCubeRenderer, Viewport, encode_prepared_frame,
     orthographic_projection,
 };
@@ -278,7 +278,10 @@ async fn run(path: &Path) -> Result<(), Box<dyn Error>> {
         &gpu.queue,
         &mut encoder,
         target.view(),
-        BloomSettings::default(),
+        PostProcessSettings {
+            bloom: BloomSettings::default(),
+            ..PostProcessSettings::default()
+        },
     );
     let readback = target.copy_to_buffer(&gpu.device, &mut encoder)?;
     gpu.queue.submit([encoder.finish()]);

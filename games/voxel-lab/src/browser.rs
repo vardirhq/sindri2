@@ -6,11 +6,11 @@ use sindri_core::{AssetId, SceneDocument, World};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{InputEvent, Key};
 use sindri_render::{
-    Bloom, BloomSettings, ClearOperations, DepthTarget, ExtractedFrame, FrameCamera,
-    FrameEncodeError, FramePass, FramePlanError, FrameRenderers, FrameTarget, GlyphRenderer,
-    Lighting, RenderLayer, RenderStage, ShapeRenderer, SpriteBatchRenderer, TextRenderer,
-    Texture2D, TextureError, TextureId, TextureRegistry, TexturedCubeRenderer, UvRect, UvRectError,
-    Viewport, encode_lit_frame, encode_prepared_frame, look_at, orthographic_projection,
+    Bloom, ClearOperations, DepthTarget, ExtractedFrame, FrameCamera, FrameEncodeError, FramePass,
+    FramePlanError, FrameRenderers, FrameTarget, GlyphRenderer, Lighting, RenderLayer, RenderStage,
+    ShapeRenderer, SpriteBatchRenderer, TextRenderer, Texture2D, TextureError, TextureId,
+    TextureRegistry, TexturedCubeRenderer, UvRect, UvRectError, Viewport, encode_lit_frame,
+    encode_prepared_frame, look_at, orthographic_projection,
 };
 use sindri_scene::{EnvironmentComponent, VoxelRenderError, VoxelTexture, environment_of};
 use sindri_voxel::{SectionCoord, VoxelCoord, VoxelFace, VoxelId};
@@ -186,8 +186,8 @@ impl DesktopApp for VoxelLabApp {
             color: view,
             depth: &self.depth,
         };
-        if self.environment.bloom.enabled {
-            let authored = self.environment.bloom;
+        let post_process = self.environment.post_process_settings();
+        if post_process.is_active() {
             encode_lit_frame(
                 renderers,
                 context.device(),
@@ -197,12 +197,7 @@ impl DesktopApp for VoxelLabApp {
                 &prepared,
                 Lighting {
                     bloom: &mut self.bloom,
-                    settings: BloomSettings {
-                        threshold: authored.threshold,
-                        knee: authored.knee,
-                        intensity: authored.intensity,
-                        passes: authored.passes,
-                    },
+                    settings: post_process,
                 },
             )?;
         } else {
