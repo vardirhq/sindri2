@@ -4,8 +4,8 @@ use glam::{Mat4, Vec3};
 use wgpu::util::DeviceExt;
 
 use crate::{
-    CachedMeshId, DepthTarget, FogSettings, MeshBuffers, ShadowSettings, TextureId, TextureRegistry,
-    TexturedMeshCacheStats, TexturedVertex, WorldLighting,
+    CachedMeshId, DepthTarget, FogSettings, MeshBuffers, ShadowSettings, TextureId,
+    TextureRegistry, TexturedMeshCacheStats, TexturedVertex, WorldLighting,
     shadow::{ShadowMap, create_shadow_pipeline},
     textured_mesh_cache::TexturedMeshCache,
 };
@@ -570,9 +570,19 @@ fn cube_uniform(
             ambient_occlusion_strength,
             0.0,
         ],
-        fog_color: [fog.color[0], fog.color[1], fog.color[2], if fog.enabled { 1.0 } else { 0.0 }],
+        fog_color: [
+            fog.color[0],
+            fog.color[1],
+            fog.color[2],
+            if fog.enabled { 1.0 } else { 0.0 },
+        ],
         fog_params: [fog.start, fog.distance, fog.density, fog.height],
-        camera_position: [camera_position.x, camera_position.y, camera_position.z, fog.height_falloff],
+        camera_position: [
+            camera_position.x,
+            camera_position.y,
+            camera_position.z,
+            fog.height_falloff,
+        ],
     }
 }
 
