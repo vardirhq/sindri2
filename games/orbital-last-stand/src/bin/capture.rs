@@ -192,7 +192,10 @@ async fn capture(
         &prepared,
         Lighting {
             bloom: &mut bloom,
-            settings: BloomSettings::default(),
+            settings: PostProcessSettings {
+                bloom: BloomSettings::default(),
+                ..PostProcessSettings::default()
+            },
         },
     )?;
     let readback = target.copy_to_buffer(&gpu.device, &mut encoder)?;
