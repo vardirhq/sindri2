@@ -9,10 +9,7 @@ use sindri_render::{
     SpriteBatchRenderer, TextRenderer, TextureRegistry, TexturedCubeRenderer, Viewport,
     encode_prepared_frame,
 };
-use sindri_scene::{
-    SceneExtractError, SceneExtractor, TextureBindings,
-    update_camera_behaviors,
-};
+use sindri_scene::{SceneExtractError, SceneExtractor, TextureBindings, update_camera_behaviors};
 use thiserror::Error;
 
 const SCENE_JSON: &str = include_str!("../assets/demo.scene.json");
