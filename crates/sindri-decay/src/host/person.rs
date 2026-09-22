@@ -10,7 +10,9 @@ use decay_runtime::{RuntimeError, Value};
 
 use super::WorldHost;
 use super::convert::{as_f32, number};
-use crate::surface::{AimValue, CameraCall, CameraValue, GestureValue, PointerValue, StickValue, TouchCall};
+use crate::surface::{
+    AimValue, CameraCall, CameraValue, GestureValue, PointerValue, StickValue, TouchCall,
+};
 
 impl WorldHost<'_> {
     /// What the steering finger is asking for.
