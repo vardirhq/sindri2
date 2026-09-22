@@ -133,7 +133,7 @@ struct VertexInput { @location(0) position: vec3<f32>, @location(1) uv: vec2<f32
 @vertex fn vs_main(input: VertexInput) -> @builtin(position) vec4<f32> {
     return shadow.light_model_view_projection * vec4<f32>(input.position, 1.0);
 }
-"#;
+";
 
 pub(crate) fn create_shadow_pipeline(
     device: &wgpu::Device,
