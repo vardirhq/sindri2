@@ -197,10 +197,16 @@ fn update_camera_behavior(
     let Some(current) = world.get(entity).and_then(|data| data.transform_3d) else {
         return;
     };
+    let previous_shake = shake_offset(&behavior.shake);
     let mut position = current.position;
+    position[0] -= previous_shake[0];
+    position[1] -= previous_shake[1];
     apply_follow(world, behavior.follow, &mut position, dt);
     apply_confine(behavior.confine, &mut position);
-    apply_shake(&mut behavior.shake, &mut position, dt);
+    advance_shake(&mut behavior.shake, dt);
+    let shake = shake_offset(&behavior.shake);
+    position[0] += shake[0];
+    position[1] += shake[1];
 
     if let Some(data) = world.get_mut(entity) {
         data.transform_3d = Some(Transform3D {
@@ -250,13 +256,19 @@ fn apply_confine(bounds: Option<CameraBounds>, position: &mut [f32; 3]) {
     position[1] = position[1].clamp(bounds.min[1], bounds.max[1]);
 }
 
-fn apply_shake(shake: &mut CameraShake, position: &mut [f32; 3], dt: f32) {
+fn advance_shake(shake: &mut CameraShake, dt: f32) {
     shake.phase += dt * shake.frequency.max(0.0);
     let trauma = shake.trauma.clamp(0.0, 1.0);
-    let amplitude = trauma * trauma * shake.strength.max(0.0);
-    position[0] += shake.phase.sin() * amplitude;
-    position[1] += (shake.phase * 1.37).cos() * amplitude;
     shake.trauma = (trauma - shake.decay.max(0.0) * dt).max(0.0);
+}
+
+fn shake_offset(shake: &CameraShake) -> [f32; 2] {
+    let trauma = shake.trauma.clamp(0.0, 1.0);
+    let amplitude = trauma * trauma * shake.strength.max(0.0);
+    [
+        shake.phase.sin() * amplitude,
+        (shake.phase * 1.37).cos() * amplitude,
+    ]
 }
 
 impl SceneComponent for CameraComponent {
