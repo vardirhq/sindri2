@@ -26,7 +26,7 @@ var shadow_sampler: sampler_comparison;
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) uv: vec2<f32>,
-    @location(2) ambient_occlusion: f32,
+    @location(14) ambient_occlusion: f32,
 }
 
 struct VertexOutput {
