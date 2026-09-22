@@ -457,6 +457,7 @@ impl TexturedCubeRenderer {
 
     /// Draws a persistent textured mesh, replacing its GPU buffers only when a
     /// newer revision supplies geometry.
+    #[allow(clippy::too_many_lines)]
     pub(crate) fn encode_cached_mesh(
         &mut self,
         context: DrawContext<'_>,
