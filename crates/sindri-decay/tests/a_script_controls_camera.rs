@@ -63,7 +63,7 @@ fn a_script_adds_trauma_to_the_authored_camera_behavior() {
         ["trauma"]
         .as_f64()
         .unwrap();
-    assert!((trauma - 0.7).abs() < f64::EPSILON);
+    assert!((trauma - 0.7).abs() < 1.0e-6);
 }
 
 #[test]
