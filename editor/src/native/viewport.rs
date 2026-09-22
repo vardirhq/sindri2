@@ -142,13 +142,15 @@ impl RuntimeViewport {
                 .map(EnvironmentComponent::shadow_settings)
                 .unwrap_or_default(),
         );
-        renderers.cube.set_ambient_occlusion(environment.map_or(0.0, |environment| {
-            if environment.ambient_occlusion.enabled {
-                environment.ambient_occlusion.strength
-            } else {
-                0.0
-            }
-        }));
+        renderers
+            .cube
+            .set_ambient_occlusion(environment.map_or(0.0, |environment| {
+                if environment.ambient_occlusion.enabled {
+                    environment.ambient_occlusion.strength
+                } else {
+                    0.0
+                }
+            }));
         let frame_renderers = FrameRenderers {
             cube: &mut renderers.cube,
             sprites: &mut renderers.sprites,
