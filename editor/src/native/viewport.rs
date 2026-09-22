@@ -10,9 +10,7 @@ use sindri_render::{
     SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport, ViewportTarget,
     encode_lit_frame, encode_prepared_frame,
 };
-use sindri_scene::{
-    CameraView, EnvironmentComponent, SceneRuntime, UiCanvas, environment_of,
-};
+use sindri_scene::{CameraView, EnvironmentComponent, SceneRuntime, UiCanvas, environment_of};
 use weave::Viewport as WeaveViewport;
 
 use super::block_pointer::TileVolumeHover;
