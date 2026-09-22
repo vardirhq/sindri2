@@ -1479,6 +1479,10 @@ The whole workspace compiles for `wasm32-unknown-unknown`, which its CI checks.
 `decay/examples/player.decay` is executed by a test rather than only shown in
 the README.
 
+### World presentation
+
+`sindri.environment` is authored scene state for background, ambient fill, one directional light, and bloom. The scene seam validates direction/colour/intensity and translates lighting into renderer-owned `WorldLighting`; textured cubes, authored meshes, and cached voxel meshes share that model in editor and browser rendering. Voxel Lab is the acceptance surface. Directional shadows, AO, fog, sky, local lights, materials, and the broader post stack remain follow-up capabilities.
+
 ### Not yet
 
 - No ranges, so `for` walks a collection and nothing else. `while` and `for`
