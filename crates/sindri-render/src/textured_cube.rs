@@ -14,23 +14,11 @@ const SHADER: &str = include_str!("textured_cube.wgsl");
 
 mod geometry;
 mod shadow_pass;
+mod uniform;
+
+use uniform::{CubeUniform, cube_uniform};
 
 use geometry::{INDICES, VERTICES};
-
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct CubeUniform {
-    model_view_projection: [[f32; 4]; 4],
-    model: [[f32; 4]; 4],
-    ambient: [f32; 4],
-    directional_direction: [f32; 4],
-    directional_color: [f32; 4],
-    light_view_projection: [[f32; 4]; 4],
-    shadow: [f32; 4],
-    fog_color: [f32; 4],
-    fog_params: [f32; 4],
-    camera_position: [f32; 4],
-}
 
 fn create_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -525,64 +513,6 @@ impl TexturedCubeRenderer {
     #[must_use]
     pub fn batch_slots(&self) -> usize {
         self.batches.len()
-    }
-}
-
-fn cube_uniform(
-    model: Mat4,
-    model_view_projection: Mat4,
-    lighting: WorldLighting,
-    light_view_projection: Mat4,
-    shadows: ShadowSettings,
-    ambient_occlusion_strength: f32,
-    fog: FogSettings,
-    camera_position: Vec3,
-) -> CubeUniform {
-    CubeUniform {
-        model_view_projection: model_view_projection.to_cols_array_2d(),
-        model: model.to_cols_array_2d(),
-        ambient: [
-            lighting.ambient_color[0],
-            lighting.ambient_color[1],
-            lighting.ambient_color[2],
-            lighting.ambient_intensity,
-        ],
-        directional_direction: [
-            lighting.directional_direction[0],
-            lighting.directional_direction[1],
-            lighting.directional_direction[2],
-            lighting.directional_intensity,
-        ],
-        directional_color: [
-            lighting.directional_color[0],
-            lighting.directional_color[1],
-            lighting.directional_color[2],
-            0.0,
-        ],
-        light_view_projection: light_view_projection.to_cols_array_2d(),
-        shadow: [
-            shadows.bias,
-            if shadows.enabled && lighting.directional_intensity > 0.0 {
-                1.0
-            } else {
-                0.0
-            },
-            ambient_occlusion_strength,
-            0.0,
-        ],
-        fog_color: [
-            fog.color[0],
-            fog.color[1],
-            fog.color[2],
-            if fog.enabled { 1.0 } else { 0.0 },
-        ],
-        fog_params: [fog.start, fog.distance, fog.density, fog.height],
-        camera_position: [
-            camera_position.x,
-            camera_position.y,
-            camera_position.z,
-            fog.height_falloff,
-        ],
     }
 }
 
