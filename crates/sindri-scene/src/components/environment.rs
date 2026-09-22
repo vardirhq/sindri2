@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use sindri_core::{SceneComponent, World};
-use sindri_render::WorldLighting;
+use sindri_render::{ShadowSettings, WorldLighting};
 
 /// Scene-wide visual environment.
 ///
@@ -16,6 +16,7 @@ pub struct EnvironmentComponent {
     pub ambient_color: [f32; 3],
     pub ambient_intensity: f32,
     pub directional: EnvironmentDirectionalLight,
+    pub shadows: EnvironmentShadows,
     pub bloom: EnvironmentBloom,
 }
 
@@ -30,6 +31,7 @@ impl Default for EnvironmentComponent {
             ambient_color: [1.0, 1.0, 1.0],
             ambient_intensity: 1.0,
             directional: EnvironmentDirectionalLight::default(),
+            shadows: EnvironmentShadows::default(),
             bloom: EnvironmentBloom::default(),
         }
     }
@@ -49,7 +51,27 @@ impl Default for EnvironmentDirectionalLight {
         Self {
             direction: [-0.45, -1.0, -0.35],
             color: [1.0, 0.95, 0.86],
-            intensity: 0.85,
+            intensity: 0.0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct EnvironmentShadows {
+    pub enabled: bool,
+    pub distance: f32,
+    pub map_size: u32,
+    pub bias: f32,
+}
+
+impl Default for EnvironmentShadows {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            distance: 48.0,
+            map_size: 1024,
+            bias: 0.002,
         }
     }
 }
@@ -89,6 +111,16 @@ impl EnvironmentComponent {
         }
     }
 
+    #[must_use]
+    pub const fn shadow_settings(self) -> ShadowSettings {
+        ShadowSettings {
+            enabled: self.shadows.enabled,
+            distance: self.shadows.distance,
+            map_size: self.shadows.map_size,
+            bias: self.shadows.bias,
+        }
+    }
+
     /// Refuses authored values that would make the renderer's behaviour
     /// surprising or non-finite.
     pub fn validate(self) -> Result<Self, EnvironmentError> {
@@ -116,6 +148,14 @@ impl EnvironmentComponent {
             || direction_length_squared <= f32::EPSILON
         {
             return Err(EnvironmentError::InvalidDirectionalLight);
+        }
+        if !self.shadows.distance.is_finite()
+            || self.shadows.distance < 1.0
+            || !matches!(self.shadows.map_size, 256 | 512 | 1024 | 2048)
+            || !self.shadows.bias.is_finite()
+            || !(0.0..=0.05).contains(&self.shadows.bias)
+        {
+            return Err(EnvironmentError::InvalidShadows);
         }
         self.validate_bloom()?;
         Ok(self)
@@ -164,6 +204,8 @@ pub enum EnvironmentError {
     InvalidColourOrIntensity,
     #[error("environment directional light needs a finite, non-zero direction")]
     InvalidDirectionalLight,
+    #[error("environment shadow settings are outside their supported ranges")]
+    InvalidShadows,
     #[error("environment bloom settings are outside their supported ranges")]
     InvalidBloom,
 }
@@ -185,6 +227,32 @@ mod tests {
             environment.validate(),
             Err(EnvironmentError::InvalidDirectionalLight)
         );
+    }
+
+    #[test]
+    fn legacy_environment_does_not_gain_directional_light_or_shadows() {
+        let environment: EnvironmentComponent = serde_json::from_value(serde_json::json!({
+            "background": [0.0, 0.0, 0.0, 1.0],
+            "ambient_color": [1.0, 1.0, 1.0],
+            "ambient_intensity": 1.0,
+            "bloom": {
+                "enabled": false,
+                "threshold": 0.65,
+                "knee": 0.2,
+                "intensity": 0.45,
+                "passes": 3
+            }
+        }))
+        .expect("legacy environment should deserialize");
+        assert_eq!(environment.directional.intensity, 0.0);
+        assert!(!environment.shadows.enabled);
+    }
+
+    #[test]
+    fn invalid_shadow_map_size_is_rejected() {
+        let mut environment = EnvironmentComponent::default();
+        environment.shadows.map_size = 4096;
+        assert_eq!(environment.validate(), Err(EnvironmentError::InvalidShadows));
     }
 
     #[test]
