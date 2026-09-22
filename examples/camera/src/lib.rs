@@ -35,11 +35,7 @@ impl Game for CameraGame {
     }
 }
 
-fn move_target(
-    world: &mut World,
-    input: &InputState,
-    dt: f32,
-) -> Result<(), DemoError> {
+fn move_target(world: &mut World, input: &InputState, dt: f32) -> Result<(), DemoError> {
     let target = world
         .entity_for_source_id(&scene_id("target"))
         .ok_or(DemoError::Missing("target"))?;
