@@ -28,7 +28,7 @@ pub use camera::{
 };
 pub use environment::{
     EnvironmentBloom, EnvironmentComponent, EnvironmentDirectionalLight, EnvironmentError,
-    environment_of,
+    EnvironmentShadows, environment_of,
 };
 pub use grid::{
     GridNavigationComponent, GridOccupantComponent, GridPlacementComponent, GridWallDocument,
