@@ -2,17 +2,17 @@ use std::time::Duration;
 
 use glam::Vec3;
 use sindri_assets::{AssetBytes, AssetDecoder, TextureAssetDecoder};
-use sindri_core::AssetId;
+use sindri_core::{AssetId, SceneDocument, World};
 use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{InputEvent, Key};
 use sindri_render::{
-    ClearOperations, DepthTarget, ExtractedFrame, FrameCamera, FrameEncodeError, FramePass,
-    FramePlanError, FrameRenderers, FrameTarget, GlyphRenderer, RenderLayer, RenderStage,
-    ShapeRenderer, SpriteBatchRenderer, TextRenderer, Texture2D, TextureError, TextureId,
-    TextureRegistry, TexturedCubeRenderer, UvRect, UvRectError, Viewport, encode_prepared_frame,
-    look_at, orthographic_projection,
+    Bloom, BloomSettings, ClearOperations, DepthTarget, ExtractedFrame, FrameCamera, FrameEncodeError,
+    FramePass, FramePlanError, FrameRenderers, FrameTarget, GlyphRenderer, Lighting, RenderLayer,
+    RenderStage, ShapeRenderer, SpriteBatchRenderer, TextRenderer, Texture2D, TextureError,
+    TextureId, TextureRegistry, TexturedCubeRenderer, UvRect, UvRectError, Viewport,
+    encode_lit_frame, encode_prepared_frame, look_at, orthographic_projection,
 };
-use sindri_scene::{VoxelRenderError, VoxelTexture};
+use sindri_scene::{EnvironmentComponent, VoxelRenderError, VoxelTexture, environment_of};
 use sindri_voxel::{SectionCoord, VoxelCoord, VoxelFace, VoxelId};
 use thiserror::Error;
 
@@ -21,6 +21,7 @@ use crate::{
     camera_control::{CameraControls, LabCamera},
 };
 
+const SCENE_JSON: &str = include_str!("../assets/voxel-lab.scene.json");
 const CAUSEWAY_TOPS: &[u8] = include_bytes!("../../../game/assets/textures/blocks-top.png");
 const CAUSEWAY_SIDES: &[u8] = include_bytes!("../../../game/assets/textures/blocks-side.png");
 
@@ -60,6 +61,8 @@ struct VoxelLabApp {
     text: TextRenderer,
     glyphs: GlyphRenderer,
     shapes: ShapeRenderer,
+    bloom: Bloom,
+    environment: EnvironmentComponent,
     camera: CameraControls,
 }
 
@@ -69,6 +72,13 @@ impl DesktopApp for VoxelLabApp {
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let mut textures = TextureRegistry::new(context.device(), context.queue());
         let material_textures = load_causeway_atlases(context, &mut textures)?;
+        let document = SceneDocument::from_json(SCENE_JSON).expect("embedded Voxel Lab scene parses");
+        let world = World::from_scene(&document).expect("embedded Voxel Lab scene loads").world;
+        let environment = environment_of(&world)
+            .expect("Voxel Lab environment is valid")
+            .expect("Voxel Lab authors an environment");
+        let mut bloom = Bloom::new(context.device(), context.format());
+        bloom.resize(context.device(), context.width(), context.height());
         let mut camera = CameraControls::default();
         camera.set_viewport_height(context.height());
         Ok(Self {
@@ -76,11 +86,13 @@ impl DesktopApp for VoxelLabApp {
             textures,
             material_textures,
             depth: DepthTarget::new(context.device(), context.width(), context.height()),
-            cubes: TexturedCubeRenderer::new(context.device(), context.format()),
-            sprites: SpriteBatchRenderer::new(context.device(), context.format()),
+            cubes: TexturedCubeRenderer::new(context.device(), Bloom::SCENE_FORMAT),
+            sprites: SpriteBatchRenderer::new(context.device(), Bloom::SCENE_FORMAT),
             text: TextRenderer::new(),
-            glyphs: GlyphRenderer::new(context.device(), context.format()),
-            shapes: ShapeRenderer::new(context.device(), context.format()),
+            glyphs: GlyphRenderer::new(context.device(), Bloom::SCENE_FORMAT),
+            shapes: ShapeRenderer::new(context.device(), Bloom::SCENE_FORMAT),
+            bloom,
+            environment,
             camera,
         })
     }
@@ -101,6 +113,8 @@ impl DesktopApp for VoxelLabApp {
     fn resize(&mut self, context: &AppContext<'_>) -> Result<(), Self::Error> {
         self.camera.set_viewport_height(context.height());
         self.depth
+            .resize(context.device(), context.width(), context.height());
+        self.bloom
             .resize(context.device(), context.width(), context.height());
         Ok(())
     }
@@ -129,7 +143,7 @@ impl DesktopApp for VoxelLabApp {
         let mut extracted = ExtractedFrame::new(
             Viewport::new(context.width(), context.height()),
             ClearOperations {
-                color: [0.035, 0.045, 0.065, 1.0],
+                color: self.environment.background.map(f64::from),
                 depth: 1.0,
             },
         );
@@ -148,24 +162,47 @@ impl DesktopApp for VoxelLabApp {
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Voxel Lab browser encoder"),
                 });
-        encode_prepared_frame(
-            FrameRenderers {
-                cube: &mut self.cubes,
-                sprites: &mut self.sprites,
-                text: &mut self.text,
-                glyphs: &mut self.glyphs,
-                shapes: &mut self.shapes,
-                textures: &self.textures,
-            },
-            context.device(),
-            context.queue(),
-            &mut encoder,
-            FrameTarget {
-                color: view,
-                depth: &self.depth,
-            },
-            &prepared,
-        )?;
+        let renderers = FrameRenderers {
+            cube: &mut self.cubes,
+            sprites: &mut self.sprites,
+            text: &mut self.text,
+            glyphs: &mut self.glyphs,
+            shapes: &mut self.shapes,
+            textures: &self.textures,
+        };
+        let target = FrameTarget {
+            color: view,
+            depth: &self.depth,
+        };
+        if self.environment.bloom.enabled {
+            let authored = self.environment.bloom;
+            encode_lit_frame(
+                renderers,
+                context.device(),
+                context.queue(),
+                &mut encoder,
+                target,
+                &prepared,
+                Lighting {
+                    bloom: &mut self.bloom,
+                    settings: BloomSettings {
+                        threshold: authored.threshold,
+                        knee: authored.knee,
+                        intensity: authored.intensity,
+                        passes: authored.passes,
+                    },
+                },
+            )?;
+        } else {
+            encode_prepared_frame(
+                renderers,
+                context.device(),
+                context.queue(),
+                &mut encoder,
+                target,
+                &prepared,
+            )?;
+        }
         context.queue().submit([encoder.finish()]);
         Ok(())
     }
