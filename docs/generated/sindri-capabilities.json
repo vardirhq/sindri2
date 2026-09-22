@@ -86,6 +86,35 @@
     {
       "addable": true,
       "default_payload": {
+        "confine": null,
+        "follow": null,
+        "shake": {
+          "decay": 2.8,
+          "frequency": 57.0,
+          "phase": 0.0,
+          "strength": 0.12,
+          "trauma": 0.0
+        }
+      },
+      "display_name": "Camera Behavior",
+      "fields": {
+        "confine": null,
+        "follow": null,
+        "shake": {
+          "decay": 2.8,
+          "frequency": 57.0,
+          "phase": 0.0,
+          "strength": 0.12,
+          "trauma": 0.0
+        }
+      },
+      "meanings": {},
+      "schema_version": 1,
+      "type_name": "sindri.camera.behavior"
+    },
+    {
+      "addable": true,
+      "default_payload": {
         "count": 12,
         "drag": 0.25,
         "fade": true,

@@ -23,10 +23,10 @@ use sindri_core::{ComponentSchemaRegistry, TagsComponent};
 use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
-    CameraComponent, GridNavigationComponent, GridOccupantComponent, GridPlacementComponent,
-    MeshComponent, ShapeComponent, SpriteComponent, TileGridComponent, TileVolumeComponent,
-    TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind,
-    UiTextComponent, VoxelWorldComponent,
+    CameraBehaviorComponent, CameraComponent, GridNavigationComponent, GridOccupantComponent,
+    GridPlacementComponent, MeshComponent, ShapeComponent, SpriteComponent, TileGridComponent,
+    TileVolumeComponent, TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent,
+    UiShapeKind, UiTextComponent, VoxelWorldComponent,
 };
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
@@ -92,12 +92,7 @@ fn register_shapes(components: &mut ComponentSchemaRegistry) -> Result<(), Scene
     Ok(())
 }
 
-/// Everything a scene puts on the screen.
-fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
-    // Each default is what a freshly added component of that type looks
-    // like, and is what makes the type addable at all. They are chosen to
-    // be visible rather than neutral: a sprite added to an entity should
-    // appear, or the author is left wondering whether the click worked.
+fn register_cameras(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
     components.register_with_default::<CameraComponent>(
         "Camera",
         serde_json::json!({
@@ -107,6 +102,30 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "far": CameraComponent::DEFAULT_FAR
         }),
     )?;
+    components.register_with_default::<CameraBehaviorComponent>(
+        "Camera Behavior",
+        serde_json::json!({
+            "follow": null,
+            "confine": null,
+            "shake": {
+                "trauma": 0.0,
+                "strength": 0.12,
+                "decay": 2.8,
+                "frequency": 57.0,
+                "phase": 0.0
+            }
+        }),
+    )?;
+    Ok(())
+}
+
+/// Everything a scene puts on the screen.
+fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    // Each default is what a freshly added component of that type looks
+    // like, and is what makes the type addable at all. They are chosen to
+    // be visible rather than neutral: a sprite added to an entity should
+    // appear, or the author is left wondering whether the click worked.
+    register_cameras(components)?;
     components.register_with_default::<MeshComponent>(
         "Mesh",
         serde_json::json!({
