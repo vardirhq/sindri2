@@ -9,6 +9,7 @@ mod encode;
 mod frame;
 mod glyph;
 mod lighting;
+mod shadow;
 mod mesh;
 mod offscreen;
 mod shape;
@@ -43,6 +44,7 @@ pub use glyph::{
     GlyphSlot, RASTER_EM,
 };
 pub use lighting::WorldLighting;
+pub use shadow::ShadowSettings;
 pub use mesh::{ColoredVertex, MeshBuffers, TexturedVertex};
 pub use offscreen::{OffscreenError, OffscreenReadback, OffscreenTarget};
 pub use shape::{
