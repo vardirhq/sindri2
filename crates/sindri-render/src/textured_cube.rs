@@ -358,6 +358,7 @@ impl TexturedCubeRenderer {
     }
 
     /// Draws caller-provided textured triangles with world-space lighting.
+    #[allow(clippy::too_many_arguments)]
     pub fn encode_mesh_world(
         &mut self,
         context: DrawContext<'_>,
@@ -473,6 +474,7 @@ fn cube_uniform(model: Mat4, model_view_projection: Mat4, lighting: WorldLightin
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn encode_mesh_buffers(
     queue: &wgpu::Queue,
     encoder: &mut wgpu::CommandEncoder,
