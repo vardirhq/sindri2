@@ -7,11 +7,10 @@ use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{InputEvent, Key};
 use sindri_render::{
     Bloom, BloomSettings, ClearOperations, DepthTarget, ExtractedFrame, FrameCamera,
-    FrameEncodeError, FramePass, FramePlanError, FrameRenderers, FrameTarget, GlyphRenderer, Lighting,
-    RenderLayer,
-    RenderStage, ShapeRenderer, SpriteBatchRenderer, TextRenderer, Texture2D, TextureError,
-    TextureId, TextureRegistry, TexturedCubeRenderer, UvRect, UvRectError, Viewport,
-    encode_lit_frame, encode_prepared_frame, look_at, orthographic_projection,
+    FrameEncodeError, FramePass, FramePlanError, FrameRenderers, FrameTarget, GlyphRenderer,
+    Lighting, RenderLayer, RenderStage, ShapeRenderer, SpriteBatchRenderer, TextRenderer,
+    Texture2D, TextureError, TextureId, TextureRegistry, TexturedCubeRenderer, UvRect, UvRectError,
+    Viewport, encode_lit_frame, encode_prepared_frame, look_at, orthographic_projection,
 };
 use sindri_scene::{EnvironmentComponent, VoxelRenderError, VoxelTexture, environment_of};
 use sindri_voxel::{SectionCoord, VoxelCoord, VoxelFace, VoxelId};
@@ -73,8 +72,11 @@ impl DesktopApp for VoxelLabApp {
     fn create(context: &AppContext<'_>) -> Result<Self, Self::Error> {
         let mut textures = TextureRegistry::new(context.device(), context.queue());
         let material_textures = load_causeway_atlases(context, &mut textures)?;
-        let document = SceneDocument::from_json(SCENE_JSON).expect("embedded Voxel Lab scene parses");
-        let world = World::from_scene(&document).expect("embedded Voxel Lab scene loads").world;
+        let document =
+            SceneDocument::from_json(SCENE_JSON).expect("embedded Voxel Lab scene parses");
+        let world = World::from_scene(&document)
+            .expect("embedded Voxel Lab scene loads")
+            .world;
         let environment = environment_of(&world)
             .expect("Voxel Lab environment is valid")
             .expect("Voxel Lab authors an environment");
