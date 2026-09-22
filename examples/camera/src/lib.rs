@@ -239,7 +239,7 @@ mod tests {
         let camera = world.entity_for_source_id(&scene_id("camera")).unwrap();
         let before = world.get(camera).unwrap().components[CameraBehaviorComponent::TYPE_NAME]
             ["shake"]["trauma"].as_f64().unwrap();
-        assert_eq!(before, 1.0);
+        assert!((before - 1.0).abs() < f64::EPSILON);
         update_camera_behaviors(&mut world, 1.0 / 60.0);
         let after = world.get(camera).unwrap().components[CameraBehaviorComponent::TYPE_NAME]
             ["shake"]["trauma"].as_f64().unwrap();
