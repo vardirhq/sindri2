@@ -315,6 +315,8 @@ mod behavior_tests {
 
     #[test]
     fn shake_does_not_accumulate_into_camera_position() {
+        const TOLERANCE: f32 = 1.0e-6;
+
         let mut world = World::default();
         let mut camera = entity([2.0, -1.0, 5.0]);
         camera.components.insert(CameraBehaviorComponent::TYPE_NAME.into(), json!({
@@ -329,7 +331,6 @@ mod behavior_tests {
                 .unwrap();
         let expected = shake_offset(&behavior.shake);
         let position = data.transform_3d.unwrap().position;
-        const TOLERANCE: f32 = 1.0e-6;
         assert!((position[0] - (2.0 + expected[0])).abs() < TOLERANCE);
         assert!((position[1] - (-1.0 + expected[1])).abs() < TOLERANCE);
     }
