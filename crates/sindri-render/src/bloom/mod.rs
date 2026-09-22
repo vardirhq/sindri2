@@ -97,11 +97,11 @@ impl BloomSettings {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum ToneMapping {
     /// Preserve the scene's linear colour without a tone curve.
+    #[default]
     None,
     /// A cheap, gentle shoulder suitable for ordinary scenes.
     Reinhard,
     /// A filmic approximation with a stronger highlight shoulder.
-    #[default]
     Aces,
 }
 
@@ -505,12 +505,10 @@ mod tests {
     #[test]
     fn neutral_post_process_is_a_real_passthrough() {
         assert!(!PostProcessSettings::default().is_active());
-        assert!(
-            !PostProcessSettings {
-                tone_mapping: ToneMapping::Aces,
-                ..PostProcessSettings::default()
-            }
-            .is_active()
-        );
+        assert!(PostProcessSettings {
+            tone_mapping: ToneMapping::Aces,
+            ..PostProcessSettings::default()
+        }
+        .is_active());
     }
 }
