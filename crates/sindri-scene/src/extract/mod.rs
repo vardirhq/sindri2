@@ -43,8 +43,8 @@ use self::tile_volume::BakedVolume;
 use crate::Effects2d;
 use crate::screen_ui::UiHierarchy;
 use crate::{
-    AnimationError, EnvironmentError, SpriteAnimations, TextureBindings, TileGridError, TileSetBindings,
-    TileVolumeError, TilemapError,
+    AnimationError, EnvironmentError, SpriteAnimations, TextureBindings, TileGridError,
+    TileSetBindings, TileVolumeError, TilemapError,
 };
 use sindri_core::TileSetError;
 
