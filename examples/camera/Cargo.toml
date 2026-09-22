@@ -1,0 +1,33 @@
+[package]
+name = "sindri-camera-demo"
+description = "Shared native and browser gameplay camera behavior proof for Sindri"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+log.workspace = true
+serde_json.workspace = true
+sindri-core = { path = "../../crates/sindri-core" }
+sindri-desktop = { path = "../../crates/sindri-desktop" }
+sindri-platform = { path = "../../crates/sindri-platform" }
+sindri-render = { path = "../../crates/sindri-render" }
+sindri-scene = { path = "../../crates/sindri-scene" }
+thiserror.workspace = true
+wgpu.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = "0.11"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1"
+console_log = "1"
+wasm-bindgen.workspace = true
+
+[lints]
+workspace = true

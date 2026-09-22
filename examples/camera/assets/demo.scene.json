@@ -1,0 +1,73 @@
+{
+  "format_version": 9,
+  "metadata": { "name": "Camera behavior acceptance demo" },
+  "entities": [
+    {
+      "id": "camera",
+      "name": "Gameplay Camera",
+      "transform_3d": {
+        "position": [0.0, 0.0, 10.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "components": {
+        "sindri.camera": {
+          "projection": "orthographic",
+          "vertical_size": 8.0,
+          "near": 0.1,
+          "far": 100.0,
+          "fit": "height"
+        },
+        "sindri.camera.behavior": {
+          "follow": {
+            "target": "target",
+            "offset": [0.0, 0.0, 0.0],
+            "dead_zone": [2.5, 1.5],
+            "smoothing": 5.0,
+            "max_speed": 8.0
+          },
+          "confine": { "min": [-8.0, -4.0], "max": [8.0, 4.0] },
+          "shake": { "trauma": 0.0, "strength": 0.3, "decay": 1.6, "frequency": 30.0, "phase": 0.0 }
+        }
+      }
+    },
+    {
+      "id": "target",
+      "name": "Moving Target",
+      "transform_3d": {
+        "position": [0.0, 0.0, 0.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [0.65, 0.65, 1.0]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "polygon",
+          "count": 4.0,
+          "fill": [0.18, 0.82, 1.0, 1.0],
+          "stroke": [0.8, 0.97, 1.0, 1.0],
+          "stroke_width": 0.08,
+          "layer": 4
+        }
+      }
+    },
+    {
+      "id": "world-grid",
+      "name": "World Grid",
+      "transform_3d": {
+        "position": [0.0, 0.0, -1.0],
+        "rotation": [0.0, 0.0, 0.0, 1.0],
+        "scale": [18.0, 10.0, 1.0]
+      },
+      "components": {
+        "sindri.shape": {
+          "kind": "grid",
+          "count": 18.0,
+          "fill": [0.0, 0.0, 0.0, 0.0],
+          "stroke": [0.18, 0.24, 0.32, 0.7],
+          "stroke_width": 0.012,
+          "layer": 0
+        }
+      }
+    }
+  ]
+}
