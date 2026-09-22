@@ -122,7 +122,8 @@ impl DesktopApp for CameraApp {
     }
 
     fn resize(&mut self, context: &AppContext<'_>) -> Result<(), Self::Error> {
-        self.depth.resize(context.device(), context.width(), context.height());
+        self.depth
+            .resize(context.device(), context.width(), context.height());
         Ok(())
     }
 
@@ -138,9 +139,12 @@ impl DesktopApp for CameraApp {
             sindri_scene::CameraView::default(),
             &TextureBindings::new(),
         )?;
-        let mut encoder = context.device().create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Sindri camera demo encoder"),
-        });
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Sindri camera demo encoder"),
+                });
         encode_prepared_frame(
             FrameRenderers {
                 cube: &mut self.cube,
@@ -153,7 +157,10 @@ impl DesktopApp for CameraApp {
             context.device(),
             context.queue(),
             &mut encoder,
-            FrameTarget { color: view, depth: &self.depth },
+            FrameTarget {
+                color: view,
+                depth: &self.depth,
+            },
             &prepared,
         )?;
         context.queue().submit([encoder.finish()]);
@@ -210,8 +217,17 @@ mod tests {
         for _ in 0..60 {
             engine.advance(Duration::from_secs_f32(1.0 / 60.0)).unwrap();
         }
-        let camera = engine.world().entity_for_source_id(&scene_id("camera")).unwrap();
-        let x = engine.world().get(camera).unwrap().transform_3d.unwrap().position[0];
+        let camera = engine
+            .world()
+            .entity_for_source_id(&scene_id("camera"))
+            .unwrap();
+        let x = engine
+            .world()
+            .get(camera)
+            .unwrap()
+            .transform_3d
+            .unwrap()
+            .position[0];
         assert!(x > 0.5, "camera should have followed right, got {x}");
     }
 
