@@ -18,6 +18,10 @@
             1
           ],
           "ambient_intensity": 0.34,
+          "ambient_occlusion": {
+            "enabled": true,
+            "strength": 0.72
+          },
           "bloom": {
             "enabled": true,
             "threshold": 0.58,

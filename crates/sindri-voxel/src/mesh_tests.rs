@@ -208,3 +208,39 @@ fn face_uvs_use_a_top_left_texture_origin() {
         );
     }
 }
+
+
+#[test]
+fn voxel_corner_ao_samples_neighbours_outside_the_exposed_face() {
+    struct Corner;
+
+    impl VoxelSource for Corner {
+        fn voxel(&self, coord: VoxelCoord) -> VoxelId {
+            if matches!(
+                (coord.x, coord.y, coord.z),
+                (0, 0, 0) | (-1, 1, 0) | (0, 1, -1)
+            ) {
+                VoxelId::new(1)
+            } else {
+                VoxelId::AIR
+            }
+        }
+    }
+
+    let mesh = mesh_block_section(&Corner, SectionCoord::new(0, 0, 0));
+    let top = mesh
+        .opaque
+        .vertices
+        .iter()
+        .find(|vertex| vertex.face == VoxelFace::Top && vertex.position == [0, 1, 0])
+        .expect("target top corner is emitted");
+    assert_eq!(top.ambient_occlusion, 0);
+
+    let open = mesh
+        .opaque
+        .vertices
+        .iter()
+        .find(|vertex| vertex.face == VoxelFace::Top && vertex.position == [1, 1, 1])
+        .expect("opposite top corner is emitted");
+    assert_eq!(open.ambient_occlusion, 3);
+}

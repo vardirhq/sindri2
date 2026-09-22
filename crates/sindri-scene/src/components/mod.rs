@@ -27,8 +27,8 @@ pub use camera::{
     add_camera_trauma, update_camera_behaviors,
 };
 pub use environment::{
-    EnvironmentBloom, EnvironmentComponent, EnvironmentDirectionalLight, EnvironmentError,
-    EnvironmentShadows, environment_of,
+    EnvironmentAmbientOcclusion, EnvironmentBloom, EnvironmentComponent,
+    EnvironmentDirectionalLight, EnvironmentError, EnvironmentShadows, environment_of,
 };
 pub use grid::{
     GridNavigationComponent, GridOccupantComponent, GridPlacementComponent, GridWallDocument,

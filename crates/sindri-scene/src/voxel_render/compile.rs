@@ -118,19 +118,22 @@ fn compile_part(
                 }
                 let index = u32::try_from(upload.vertices.len())
                     .expect("one section's renderer vertices fit in u32");
-                upload.vertices.push(TexturedVertex::new(
-                    source.position.map(f32::from),
-                    [
-                        mapping
-                            .uv
-                            .width()
-                            .mul_add(f32::from(source.uv[0]), mapping.uv.x()),
-                        mapping
-                            .uv
-                            .height()
-                            .mul_add(f32::from(source.uv[1]), mapping.uv.y()),
-                    ],
-                ));
+                upload.vertices.push(
+                    TexturedVertex::new(
+                        source.position.map(f32::from),
+                        [
+                            mapping
+                                .uv
+                                .width()
+                                .mul_add(f32::from(source.uv[0]), mapping.uv.x()),
+                            mapping
+                                .uv
+                                .height()
+                                .mul_add(f32::from(source.uv[1]), mapping.uv.y()),
+                        ],
+                    )
+                    .with_ambient_occlusion(f32::from(source.ambient_occlusion) / 3.0),
+                );
                 remapped.insert(*source_index, index);
                 index
             };

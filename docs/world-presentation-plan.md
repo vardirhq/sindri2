@@ -52,7 +52,9 @@ The first implementation deliberately uses one directional map rather than casca
 
 ### 4. Ambient occlusion and contact depth
 
-Start with the cheapest representation that gives voxel corners and contacts convincing depth. Compare mesh-time voxel AO with screen-space AO before choosing the permanent boundary; they solve overlapping but not identical problems.
+**Implemented.** Voxel block meshing samples the three neighbouring cells around each exposed face corner and carries a compact 0–3 visibility value into textured world vertices. The renderer interpolates that value across the face and applies authored contact-depth strength without another screen-space pass. Face diagonals flip when needed to keep the AO gradient from producing the familiar checkerboard seam.
+
+This intentionally chooses mesh-time voxel AO over SSAO for the first permanent boundary: it is deterministic, cheap, section-aware, works identically in native and WebGPU builds, and targets the block contacts that need the depth most. General screen-space AO remains a later extension if non-voxel scenes prove they need it.
 
 ### 5. Post-processing stack
 

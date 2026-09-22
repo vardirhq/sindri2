@@ -30,9 +30,10 @@ pub use audio::AudioSourceComponent;
 pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
     CameraBehaviorComponent, CameraBounds, CameraComponent, CameraFit, CameraFollow, CameraShake,
-    EnvironmentBloom, EnvironmentComponent, EnvironmentDirectionalLight, EnvironmentError,
-    EnvironmentShadows, GridNavigationComponent, GridOccupantComponent, GridPlacementComponent,
-    GridWallDocument, MeshComponent, MeshPrimitive, ShapeComponent, ShapeGeometry,
+    EnvironmentAmbientOcclusion, EnvironmentBloom, EnvironmentComponent,
+    EnvironmentDirectionalLight, EnvironmentError, EnvironmentShadows, GridNavigationComponent,
+    GridOccupantComponent, GridPlacementComponent, GridWallDocument, MeshComponent, MeshPrimitive,
+    ShapeComponent, ShapeGeometry,
     SpriteColorTransform, SpriteComponent, TileCellDocument, TileDraw, TileGridComponent,
     TileGridError, TileProjection, TileSpace, TileVolumeComponent, TileVolumeError,
     TileVolumeIndex, TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge,

@@ -25,14 +25,26 @@ impl ColoredVertex {
 pub struct TexturedVertex {
     pub position: [f32; 3],
     pub uv: [f32; 2],
+    /// Vertex ambient-occlusion visibility: 1.0 is open, 0.0 fully occluded.
+    pub ambient_occlusion: f32,
 }
 
 impl TexturedVertex {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 2] =
-        wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2];
+    const ATTRIBUTES: [wgpu::VertexAttribute; 3] =
+        wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2, 2 => Float32];
 
     pub const fn new(position: [f32; 3], uv: [f32; 2]) -> Self {
-        Self { position, uv }
+        Self {
+            position,
+            uv,
+            ambient_occlusion: 1.0,
+        }
+    }
+
+    #[must_use]
+    pub const fn with_ambient_occlusion(mut self, ambient_occlusion: f32) -> Self {
+        self.ambient_occlusion = ambient_occlusion;
+        self
     }
 
     pub const fn layout() -> wgpu::VertexBufferLayout<'static> {
