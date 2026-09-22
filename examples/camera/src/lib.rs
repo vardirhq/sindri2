@@ -7,7 +7,8 @@ use sindri_desktop::{AppContext, DesktopApp, Flow, WindowConfig};
 use sindri_platform::{EngineHost, FrameContext, Game, HostError, InputEvent, Key};
 use sindri_render::{
     DepthTarget, FrameEncodeError, FrameRenderers, FrameTarget, GlyphRenderer, ShapeRenderer,
-    SpriteBatchRenderer, TextRenderer, TextureRegistry, Viewport, encode_prepared_frame,
+    SpriteBatchRenderer, TextRenderer, TextureRegistry, TexturedCubeRenderer, Viewport,
+    encode_prepared_frame,
 };
 use sindri_scene::{
     CameraBehaviorComponent, SceneExtractError, SceneExtractor, TextureBindings,
@@ -77,6 +78,7 @@ struct CameraApp {
     engine: EngineHost<CameraGame>,
     extractor: SceneExtractor,
     depth: DepthTarget,
+    cube: TexturedCubeRenderer,
     sprites: SpriteBatchRenderer,
     text: TextRenderer,
     glyphs: GlyphRenderer,
@@ -98,6 +100,7 @@ impl DesktopApp for CameraApp {
             engine,
             extractor,
             depth: DepthTarget::new(context.device(), context.width(), context.height()),
+            cube: TexturedCubeRenderer::new(context.device(), context.format()),
             sprites: SpriteBatchRenderer::new(context.device(), context.format()),
             text: TextRenderer::new(),
             glyphs: GlyphRenderer::new(context.device(), context.format()),
@@ -140,7 +143,7 @@ impl DesktopApp for CameraApp {
         });
         encode_prepared_frame(
             FrameRenderers {
-                cube: &mut sindri_render::TexturedCubeRenderer::new(context.device(), context.format()),
+                cube: &mut self.cube,
                 sprites: &mut self.sprites,
                 text: &mut self.text,
                 glyphs: &mut self.glyphs,
