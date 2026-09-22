@@ -64,7 +64,12 @@ impl ShadowMap {
             compare: Some(wgpu::CompareFunction::LessEqual),
             ..Default::default()
         });
-        Self { _texture: texture, view, sampler, size }
+        Self {
+            _texture: texture,
+            view,
+            sampler,
+            size,
+        }
     }
 
     pub(crate) fn resize(&mut self, device: &wgpu::Device, size: u32) -> bool {
@@ -76,8 +81,12 @@ impl ShadowMap {
         true
     }
 
-    pub(crate) const fn view(&self) -> &wgpu::TextureView { &self.view }
-    pub(crate) const fn sampler(&self) -> &wgpu::Sampler { &self.sampler }
+    pub(crate) const fn view(&self) -> &wgpu::TextureView {
+        &self.view
+    }
+    pub(crate) const fn sampler(&self) -> &wgpu::Sampler {
+        &self.sampler
+    }
 }
 
 pub(crate) fn light_view_projection(
@@ -93,13 +102,26 @@ pub(crate) fn light_view_projection(
         Vec3::ZERO
     };
     let direction = Vec3::from_array(lighting.directional_direction).normalize_or_zero();
-    let direction = if direction.length_squared() > f32::EPSILON { direction } else { Vec3::NEG_Y };
+    let direction = if direction.length_squared() > f32::EPSILON {
+        direction
+    } else {
+        Vec3::NEG_Y
+    };
     let distance = settings.distance.max(1.0);
     let eye = center - direction * distance;
-    let up = if direction.dot(Vec3::Y).abs() > 0.98 { Vec3::Z } else { Vec3::Y };
+    let up = if direction.dot(Vec3::Y).abs() > 0.98 {
+        Vec3::Z
+    } else {
+        Vec3::Y
+    };
     let view = glam::camera::rh::view::look_at_mat4(eye, center, up);
     let projection = glam::camera::rh::proj::directx::orthographic(
-        -distance, distance, -distance, distance, 0.1, distance * 2.5,
+        -distance,
+        distance,
+        -distance,
+        distance,
+        0.1,
+        distance * 2.5,
     );
     projection * view
 }
@@ -157,7 +179,11 @@ pub(crate) fn create_shadow_pipeline(
             depth_write_enabled: Some(true),
             depth_compare: Some(wgpu::CompareFunction::Less),
             stencil: wgpu::StencilState::default(),
-            bias: wgpu::DepthBiasState { constant: 2, slope_scale: 2.0, clamp: 0.0 },
+            bias: wgpu::DepthBiasState {
+                constant: 2,
+                slope_scale: 2.0,
+                clamp: 0.0,
+            },
         }),
         multisample: wgpu::MultisampleState::default(),
         multiview_mask: None,

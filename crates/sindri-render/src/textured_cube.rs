@@ -6,7 +6,8 @@ use wgpu::util::DeviceExt;
 use crate::{
     CachedMeshId, DepthTarget, MeshBuffers, ShadowSettings, TextureId, TextureRegistry,
     TexturedMeshCacheStats, TexturedVertex, WorldLighting,
-    shadow::{ShadowMap, create_shadow_pipeline}, textured_mesh_cache::TexturedMeshCache,
+    shadow::{ShadowMap, create_shadow_pipeline},
+    textured_mesh_cache::TexturedMeshCache,
 };
 
 const SHADER: &str = include_str!("textured_cube.wgsl");
@@ -153,8 +154,8 @@ struct MeshBatch {
 }
 
 mod context;
-pub use context::DrawContext;
 pub(crate) use context::CachedMeshRequest;
+pub use context::DrawContext;
 
 impl TexturedCubeRenderer {
     /// Textures come from the frame's [`TextureRegistry`] rather than being

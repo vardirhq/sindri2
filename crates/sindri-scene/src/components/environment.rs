@@ -252,7 +252,10 @@ mod tests {
     fn invalid_shadow_map_size_is_rejected() {
         let mut environment = EnvironmentComponent::default();
         environment.shadows.map_size = 4096;
-        assert_eq!(environment.validate(), Err(EnvironmentError::InvalidShadows));
+        assert_eq!(
+            environment.validate(),
+            Err(EnvironmentError::InvalidShadows)
+        );
     }
 
     #[test]

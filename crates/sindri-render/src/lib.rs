@@ -9,9 +9,9 @@ mod encode;
 mod frame;
 mod glyph;
 mod lighting;
-mod shadow;
 mod mesh;
 mod offscreen;
+mod shadow;
 mod shape;
 mod sprite;
 mod sprite_batch;
@@ -44,9 +44,9 @@ pub use glyph::{
     GlyphSlot, RASTER_EM,
 };
 pub use lighting::WorldLighting;
-pub use shadow::ShadowSettings;
 pub use mesh::{ColoredVertex, MeshBuffers, TexturedVertex};
 pub use offscreen::{OffscreenError, OffscreenReadback, OffscreenTarget};
+pub use shadow::ShadowSettings;
 pub use shape::{
     MAX_POLYGON_POINTS, Shape, ShapeBlend, ShapeDrawError, ShapeInstance, ShapeRenderer,
 };

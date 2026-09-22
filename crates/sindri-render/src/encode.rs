@@ -69,7 +69,12 @@ pub fn encode_prepared_frame(
     // nothing had filled.
     encode_clear(encoder, target.color, target.depth, frame.clear());
     encode_directional_shadows(
-        cube_renderer, device, queue, encoder, textures, frame.passes(),
+        cube_renderer,
+        device,
+        queue,
+        encoder,
+        textures,
+        frame.passes(),
     );
     // Each batch draws from its own slot, and this is what hands the first one
     // back at the start of every submission. Without it a host would allocate a
@@ -155,7 +160,12 @@ pub fn encode_lit_frame(
     };
     encode_clear(encoder, &scene, target.depth, frame.clear());
     encode_directional_shadows(
-        cube_renderer, device, queue, encoder, textures, frame.passes(),
+        cube_renderer,
+        device,
+        queue,
+        encoder,
+        textures,
+        frame.passes(),
     );
     cube_renderer.begin_submission();
     sprite_renderer.begin_submission();
@@ -213,7 +223,10 @@ fn encode_directional_shadows(
     };
     cube.begin_submission();
     cube.begin_shadow_pass(encoder, camera);
-    for pass in passes.iter().filter(|pass| pass.stage == RenderStage::Opaque3d) {
+    for pass in passes
+        .iter()
+        .filter(|pass| pass.stage == RenderStage::Opaque3d)
+    {
         match &pass.command {
             FrameCommand::TexturedCube { model, .. } => {
                 cube.encode_shadow_cube(device, queue, encoder, *model);
