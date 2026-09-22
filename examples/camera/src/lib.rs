@@ -195,6 +195,8 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sindri_core::SceneComponent;
+    use sindri_scene::CameraBehaviorComponent;
 
     #[test]
     fn camera_follows_the_authored_target_on_the_fixed_step_path() {
