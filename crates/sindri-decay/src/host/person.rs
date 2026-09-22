@@ -78,16 +78,12 @@ impl WorldHost<'_> {
         }
         match call {
             CameraCall::AddTrauma => {
-                let camera = sindri_scene::authored_world_camera_entity(self.world)
-                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
-                let Some(camera) = camera else {
+                if !sindri_scene::add_camera_trauma(self.world, amount as f32) {
                     return Err(RuntimeError::Host(format!(
-                        "{} needs one authored world camera",
+                        "{} needs exactly one authored camera with sindri.camera.behavior",
                         path.dotted()
                     )));
-                };
-                sindri_scene::add_camera_trauma(self.world, camera, amount as f32)
-                    .map_err(|error| RuntimeError::Host(format!("{}: {error}", path.dotted())))?;
+                }
                 Ok(Value::Unit)
             }
         }
