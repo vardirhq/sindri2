@@ -129,7 +129,7 @@ pub struct CameraBounds {
     pub max: [f32; 2],
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub struct CameraShake {
     #[serde(default)]
     pub trauma: f32,
@@ -151,6 +151,18 @@ const fn default_shake_decay() -> f32 {
 }
 const fn default_shake_frequency() -> f32 {
     57.0
+}
+
+impl Default for CameraShake {
+    fn default() -> Self {
+        Self {
+            trauma: 0.0,
+            strength: default_shake_strength(),
+            decay: default_shake_decay(),
+            frequency: default_shake_frequency(),
+            phase: 0.0,
+        }
+    }
 }
 
 impl SceneComponent for CameraBehaviorComponent {
@@ -185,10 +197,16 @@ fn update_camera_behavior(
     let Some(current) = world.get(entity).and_then(|data| data.transform_3d) else {
         return;
     };
+    let previous_shake = shake_offset(&behavior.shake);
     let mut position = current.position;
+    position[0] -= previous_shake[0];
+    position[1] -= previous_shake[1];
     apply_follow(world, behavior.follow, &mut position, dt);
     apply_confine(behavior.confine, &mut position);
-    apply_shake(&mut behavior.shake, &mut position, dt);
+    advance_shake(&mut behavior.shake, dt);
+    let shake = shake_offset(&behavior.shake);
+    position[0] += shake[0];
+    position[1] += shake[1];
 
     if let Some(data) = world.get_mut(entity) {
         data.transform_3d = Some(Transform3D {
@@ -238,13 +256,19 @@ fn apply_confine(bounds: Option<CameraBounds>, position: &mut [f32; 3]) {
     position[1] = position[1].clamp(bounds.min[1], bounds.max[1]);
 }
 
-fn apply_shake(shake: &mut CameraShake, position: &mut [f32; 3], dt: f32) {
+fn advance_shake(shake: &mut CameraShake, dt: f32) {
     shake.phase += dt * shake.frequency.max(0.0);
     let trauma = shake.trauma.clamp(0.0, 1.0);
-    let amplitude = trauma * trauma * shake.strength.max(0.0);
-    position[0] += shake.phase.sin() * amplitude;
-    position[1] += (shake.phase * 1.37).cos() * amplitude;
     shake.trauma = (trauma - shake.decay.max(0.0) * dt).max(0.0);
+}
+
+fn shake_offset(shake: &CameraShake) -> [f32; 2] {
+    let trauma = shake.trauma.clamp(0.0, 1.0);
+    let amplitude = trauma * trauma * shake.strength.max(0.0);
+    [
+        shake.phase.sin() * amplitude,
+        (shake.phase * 1.37).sin() * amplitude,
+    ]
 }
 
 impl SceneComponent for CameraComponent {
@@ -281,6 +305,34 @@ mod behavior_tests {
         update_camera_behaviors(&mut world, 1.0);
         let x = world.get(camera).unwrap().transform_3d.unwrap().position[0];
         assert!((x - 4.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn default_shake_matches_an_empty_authored_shake() {
+        let authored: CameraShake = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(CameraShake::default(), authored);
+    }
+
+    #[test]
+    fn shake_does_not_accumulate_into_camera_position() {
+        const TOLERANCE: f32 = 1.0e-6;
+
+        let mut world = World::default();
+        let mut camera = entity([2.0, -1.0, 5.0]);
+        camera.components.insert(CameraBehaviorComponent::TYPE_NAME.into(), json!({
+            "shake": { "trauma": 1.0, "strength": 1.0, "decay": 0.0, "frequency": 1.0, "phase": 0.0 }
+        }));
+        let camera = world.spawn(camera);
+        update_camera_behaviors(&mut world, 0.25);
+        update_camera_behaviors(&mut world, 0.25);
+        let data = world.get(camera).unwrap();
+        let behavior: CameraBehaviorComponent =
+            serde_json::from_value(data.components[CameraBehaviorComponent::TYPE_NAME].clone())
+                .unwrap();
+        let expected = shake_offset(&behavior.shake);
+        let position = data.transform_3d.unwrap().position;
+        assert!((position[0] - (2.0 + expected[0])).abs() < TOLERANCE);
+        assert!((position[1] - (-1.0 + expected[1])).abs() < TOLERANCE);
     }
 
     #[test]
