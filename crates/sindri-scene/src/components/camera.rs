@@ -169,6 +169,42 @@ impl SceneComponent for CameraBehaviorComponent {
     const TYPE_NAME: &'static str = "sindri.camera.behavior";
 }
 
+/// Adds gameplay trauma to the one authored world camera carrying camera behavior.
+///
+/// Gameplay asks for an impact; the camera system remains responsible for the
+/// waveform, strength, decay, and transform it produces.
+pub fn add_camera_trauma(world: &mut World, amount: f32) -> bool {
+    if !amount.is_finite() || amount < 0.0 {
+        return false;
+    }
+    let cameras: Vec<_> = world
+        .entities()
+        .filter_map(|(entity, data)| {
+            (data.components.contains_key(CameraComponent::TYPE_NAME)
+                && data.components.contains_key(CameraBehaviorComponent::TYPE_NAME))
+            .then_some(entity)
+        })
+        .collect();
+    let [camera] = cameras.as_slice() else {
+        return false;
+    };
+    let Some(payload) = world
+        .get_mut(*camera)
+        .and_then(|data| data.components.get_mut(CameraBehaviorComponent::TYPE_NAME))
+    else {
+        return false;
+    };
+    let Ok(mut behavior) = serde_json::from_value::<CameraBehaviorComponent>(payload.clone()) else {
+        return false;
+    };
+    behavior.shake.trauma = (behavior.shake.trauma.max(0.0) + amount).min(1.0);
+    let Ok(value) = serde_json::to_value(behavior) else {
+        return false;
+    };
+    *payload = value;
+    true
+}
+
 pub fn update_camera_behaviors(world: &mut World, dt: f32) {
     if !dt.is_finite() || dt <= 0.0 {
         return;
