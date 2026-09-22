@@ -9,7 +9,7 @@ use decay_ir::Path;
 use decay_runtime::{RuntimeError, Value};
 
 use super::WorldHost;
-use super::convert::number;
+use super::convert::{as_f32, number};
 use crate::surface::{AimValue, CameraCall, CameraValue, GestureValue, PointerValue, StickValue, TouchCall};
 
 impl WorldHost<'_> {
@@ -78,7 +78,7 @@ impl WorldHost<'_> {
         }
         match call {
             CameraCall::AddTrauma => {
-                if !sindri_scene::add_camera_trauma(self.world, amount as f32) {
+                if !sindri_scene::add_camera_trauma(self.world, as_f32(amount)) {
                     return Err(RuntimeError::Host(format!(
                         "{} needs exactly one authored camera with sindri.camera.behavior",
                         path.dotted()
