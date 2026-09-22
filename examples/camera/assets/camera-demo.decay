@@ -1,0 +1,13 @@
+// Gameplay for the camera acceptance demo. Rust supplies engine capabilities;
+// Decay decides what the player does and when an impact shakes the camera.
+script CameraDemo {
+    @export let speed: f32 = 5.0;
+
+    fn update(dt: f32) {
+        this.transform.position.x += Input.axis("ArrowLeft", "ArrowRight") * speed * dt;
+        this.transform.position.y += Input.axis("ArrowDown", "ArrowUp") * speed * dt;
+        if Input.just_pressed("Space") {
+            Camera.add_trauma(1.0);
+        }
+    }
+}
