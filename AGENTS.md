@@ -160,6 +160,21 @@ check that can reasonably be reproduced locally. When a check fails, inspect the
 whole affected path rather than patching only the first diagnostic and pushing
 again.
 
+### Verify APIs before use
+
+Do not infer a Sindri or Decay API from conventions in another engine, language,
+or an earlier version of this repository. Before introducing an unfamiliar API
+name, type, method, field, event, or syntax form, locate its current definition
+or an existing valid use in this checkout and verify its ownership and signature.
+If neither exists, treat the capability as absent rather than inventing it.
+
+For Decay this rule is strict: use `decay/LANGUAGE.md`,
+`docs/decay-agent-guide.md`, the current host registrations, and existing checked
+scripts as the authority for syntax and callable host APIs. Search before writing
+an unfamiliar construct, then run the typed `decay-lsp --check` preflight on every
+changed script. Familiarity with Lua, JavaScript, Rust, or an older Decay script
+is not evidence that a construct exists in current Decay.
+
 ### Mandatory pre-push gate
 
 Do not push a code change merely because the edited code looks correct. Before
