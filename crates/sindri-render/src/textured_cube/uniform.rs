@@ -17,7 +17,7 @@ pub(super) struct CubeUniform {
     pub camera_position: [f32; 4],
 }
 
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 pub(super) fn cube_uniform(
     model: Mat4,
     model_view_projection: Mat4,
