@@ -23,8 +23,8 @@ use sindri_core::{ComponentSchemaRegistry, TagsComponent};
 use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
-    CameraBehaviorComponent, CameraComponent, EnvironmentComponent, GridNavigationComponent, GridOccupantComponent,
-    GridPlacementComponent, MeshComponent, ShapeComponent, SpriteComponent, TileGridComponent,
+    CameraBehaviorComponent, CameraComponent, EnvironmentComponent, GridNavigationComponent,
+    GridOccupantComponent, GridPlacementComponent, MeshComponent, ShapeComponent, SpriteComponent, TileGridComponent,
     TileVolumeComponent, TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent,
     UiShapeKind, UiTextComponent, VoxelWorldComponent,
 };
