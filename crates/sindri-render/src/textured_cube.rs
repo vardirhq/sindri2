@@ -16,7 +16,7 @@ mod geometry;
 mod shadow_pass;
 mod uniform;
 
-use uniform::{CubeUniform, cube_uniform};
+use uniform::cube_uniform;
 
 use geometry::{INDICES, VERTICES};
 
