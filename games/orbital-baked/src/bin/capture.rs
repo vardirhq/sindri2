@@ -18,7 +18,7 @@ use sindri_assets::{AssetBytes, AssetDecoder, FontAssetDecoder, TextureAssetDeco
 use sindri_core::{AssetId, SpriteSheetDocument, sheet_id_for};
 use sindri_gpu::{GpuContext, GpuRequestOptions};
 use sindri_render::{
-    Bloom, BloomSettings, DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, Lighting,
+    Bloom, BloomSettings, PostProcessSettings, DepthTarget, FrameRenderers, FrameTarget, GlyphRenderer, Lighting,
     OffscreenTarget, ShapeRenderer, SpriteBatchRenderer, TextRenderer, Texture2D, TextureRegistry,
     TexturedCubeRenderer, Viewport, encode_lit_frame,
 };

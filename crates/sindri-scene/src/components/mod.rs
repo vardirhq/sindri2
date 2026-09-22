@@ -28,7 +28,8 @@ pub use camera::{
 };
 pub use environment::{
     EnvironmentAmbientOcclusion, EnvironmentBloom, EnvironmentComponent,
-    EnvironmentDirectionalLight, EnvironmentError, EnvironmentShadows, environment_of,
+    EnvironmentDirectionalLight, EnvironmentError, EnvironmentPostProcess, EnvironmentShadows,
+    EnvironmentToneMapping, environment_of,
 };
 pub use grid::{
     GridNavigationComponent, GridOccupantComponent, GridPlacementComponent, GridWallDocument,

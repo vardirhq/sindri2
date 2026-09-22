@@ -142,6 +142,13 @@ fn register_environment(components: &mut ComponentSchemaRegistry) -> Result<(), 
                 "enabled": true,
                 "strength": 0.65
             },
+            "post_process": {
+                "exposure": 0.0,
+                "contrast": 1.0,
+                "saturation": 1.0,
+                "tone_mapping": "none",
+                "vignette": 0.0
+            },
             "bloom": {
                 "enabled": false,
                 "threshold": 0.65,

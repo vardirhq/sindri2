@@ -2,7 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 use sindri_core::{SceneComponent, World};
-use sindri_render::{ShadowSettings, WorldLighting};
+use sindri_render::{
+    BloomSettings, PostProcessSettings, ShadowSettings, ToneMapping, WorldLighting,
+};
 
 /// Scene-wide visual environment.
 ///
@@ -18,6 +20,7 @@ pub struct EnvironmentComponent {
     pub directional: EnvironmentDirectionalLight,
     pub shadows: EnvironmentShadows,
     pub ambient_occlusion: EnvironmentAmbientOcclusion,
+    pub post_process: EnvironmentPostProcess,
     pub bloom: EnvironmentBloom,
 }
 
@@ -34,6 +37,7 @@ impl Default for EnvironmentComponent {
             directional: EnvironmentDirectionalLight::default(),
             shadows: EnvironmentShadows::default(),
             ambient_occlusion: EnvironmentAmbientOcclusion::default(),
+            post_process: EnvironmentPostProcess::default(),
             bloom: EnvironmentBloom::default(),
         }
     }
@@ -96,6 +100,47 @@ impl Default for EnvironmentAmbientOcclusion {
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
+pub struct EnvironmentPostProcess {
+    pub exposure: f32,
+    pub contrast: f32,
+    pub saturation: f32,
+    pub tone_mapping: EnvironmentToneMapping,
+    pub vignette: f32,
+}
+
+impl Default for EnvironmentPostProcess {
+    fn default() -> Self {
+        Self {
+            exposure: 0.0,
+            contrast: 1.0,
+            saturation: 1.0,
+            tone_mapping: EnvironmentToneMapping::None,
+            vignette: 0.0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EnvironmentToneMapping {
+    #[default]
+    None,
+    Reinhard,
+    Aces,
+}
+
+impl EnvironmentToneMapping {
+    const fn renderer(self) -> ToneMapping {
+        match self {
+            Self::None => ToneMapping::None,
+            Self::Reinhard => ToneMapping::Reinhard,
+            Self::Aces => ToneMapping::Aces,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct EnvironmentBloom {
     pub enabled: bool,
     pub threshold: f32,
@@ -136,6 +181,24 @@ impl EnvironmentComponent {
             distance: self.shadows.distance,
             map_size: self.shadows.map_size,
             bias: self.shadows.bias,
+        }
+    }
+
+    #[must_use]
+    pub const fn post_process_settings(self) -> PostProcessSettings {
+        PostProcessSettings {
+            exposure: self.post_process.exposure,
+            contrast: self.post_process.contrast,
+            saturation: self.post_process.saturation,
+            tone_mapping: self.post_process.tone_mapping.renderer(),
+            vignette: self.post_process.vignette,
+            bloom: BloomSettings {
+                enabled: self.bloom.enabled,
+                threshold: self.bloom.threshold,
+                knee: self.bloom.knee,
+                intensity: self.bloom.intensity,
+                passes: self.bloom.passes,
+            },
         }
     }
 
@@ -180,9 +243,25 @@ impl EnvironmentComponent {
         {
             return Err(EnvironmentError::InvalidAmbientOcclusion);
         }
+        self.validate_post_process()?;
         self.validate_bloom()?;
         Ok(self)
     }
+    fn validate_post_process(self) -> Result<(), EnvironmentError> {
+        if !self.post_process.exposure.is_finite()
+            || !(-8.0..=8.0).contains(&self.post_process.exposure)
+            || !self.post_process.contrast.is_finite()
+            || !(0.0..=4.0).contains(&self.post_process.contrast)
+            || !self.post_process.saturation.is_finite()
+            || !(0.0..=4.0).contains(&self.post_process.saturation)
+            || !self.post_process.vignette.is_finite()
+            || !(0.0..=1.0).contains(&self.post_process.vignette)
+        {
+            return Err(EnvironmentError::InvalidPostProcess);
+        }
+        Ok(())
+    }
+
     fn validate_bloom(self) -> Result<(), EnvironmentError> {
         if !self.bloom.threshold.is_finite()
             || self.bloom.threshold < 0.0
@@ -231,6 +310,8 @@ pub enum EnvironmentError {
     InvalidShadows,
     #[error("environment ambient-occlusion settings are outside their supported ranges")]
     InvalidAmbientOcclusion,
+    #[error("environment post-process settings are outside their supported ranges")]
+    InvalidPostProcess,
     #[error("environment bloom settings are outside their supported ranges")]
     InvalidBloom,
 }
@@ -291,6 +372,16 @@ mod tests {
         assert_eq!(
             environment.validate(),
             Err(EnvironmentError::InvalidAmbientOcclusion)
+        );
+    }
+
+    #[test]
+    fn invalid_post_process_is_rejected() {
+        let mut environment = EnvironmentComponent::default();
+        environment.post_process.vignette = 2.0;
+        assert_eq!(
+            environment.validate(),
+            Err(EnvironmentError::InvalidPostProcess)
         );
     }
 

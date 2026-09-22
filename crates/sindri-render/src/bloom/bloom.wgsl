@@ -16,6 +16,10 @@ struct Params {
     source: vec4<f32>,
     // xy: blur direction, in texels. z: how much glow to add. w: unused.
     blur: vec4<f32>,
+    // x: exposure stops, y: contrast, z: saturation, w: vignette.
+    grade: vec4<f32>,
+    // x: tone-map mode, y: bloom enabled. zw reserved.
+    tone: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -57,9 +61,35 @@ fn above_threshold(color: vec3<f32>, threshold: f32, knee: f32) -> vec3<f32> {
     return color * kept;
 }
 
+fn tone_map(color: vec3<f32>) -> vec3<f32> {
+    if (params.tone.x < 0.5) {
+        return color;
+    }
+    if (params.tone.x < 1.5) {
+        return color / (vec3<f32>(1.0) + color);
+    }
+    // Narkowicz ACES approximation: compact, stable, and sufficient for a
+    // world presentation curve without pulling a colour-management system in.
+    let a = 2.51;
+    let b = 0.03;
+    let c = 2.43;
+    let d = 0.59;
+    let e = 0.14;
+    return clamp((color * (a * color + b)) / (color * (c * color + d) + e), vec3<f32>(0.0), vec3<f32>(1.0));
+}
+
+fn grade_world(color: vec3<f32>) -> vec3<f32> {
+    var graded = color * exp2(params.grade.x);
+    graded = tone_map(graded);
+    graded = (graded - vec3<f32>(0.5)) * params.grade.y + vec3<f32>(0.5);
+    let luma = dot(graded, vec3<f32>(0.2126, 0.7152, 0.0722));
+    graded = mix(vec3<f32>(luma), graded, params.grade.z);
+    return max(graded, vec3<f32>(0.0));
+}
+
 @fragment
 fn fs_bright(in: VertexOutput) -> @location(0) vec4<f32> {
-    let color = textureSample(source_texture, source_sampler, in.uv).rgb;
+    let color = grade_world(textureSample(source_texture, source_sampler, in.uv).rgb);
     return vec4<f32>(above_threshold(color, params.source.z, params.source.w), 1.0);
 }
 
@@ -93,6 +123,11 @@ fn fs_blur(in: VertexOutput) -> @location(0) vec4<f32> {
 @fragment
 fn fs_composite(in: VertexOutput) -> @location(0) vec4<f32> {
     let scene = textureSample(source_texture, source_sampler, in.uv);
-    let glow = textureSample(glow_texture, source_sampler, in.uv).rgb;
-    return vec4<f32>(scene.rgb + glow * params.blur.z, scene.a);
+    let glow = textureSample(glow_texture, source_sampler, in.uv).rgb * params.tone.y;
+    var color = grade_world(scene.rgb) + glow * params.blur.z;
+
+    let centered = in.uv * 2.0 - vec2<f32>(1.0);
+    let edge = smoothstep(0.25, 1.15, dot(centered, centered));
+    color = color * (1.0 - edge * params.grade.w);
+    return vec4<f32>(color, scene.a);
 }

@@ -11,10 +11,10 @@
 //! an example to draw anything at all.
 
 use crate::{
-    Bloom, BloomSettings, DepthTarget, DrawContext, FrameCommand, FramePass, GlyphDrawError,
+    Bloom, DepthTarget, DrawContext, FrameCommand, FramePass, GlyphDrawError,
     GlyphRenderer, PreparedFrame, RenderStage, ShapeDrawError, ShapeRenderer, SpriteBatchError,
     SpriteBatchRenderer, SpriteBatchStats, TextError, TextRenderer, TextureRegistry,
-    TexturedCubeRenderer, encode_clear, textured_cube::CachedMeshRequest,
+    TexturedCubeRenderer, encode_clear, textured_cube::CachedMeshRequest, PostProcessSettings,
 };
 use thiserror::Error;
 
@@ -272,7 +272,7 @@ fn encode_directional_shadows(
 /// swapped without the compiler minding.
 pub struct Lighting<'a> {
     pub bloom: &'a mut Bloom,
-    pub settings: BloomSettings,
+    pub settings: PostProcessSettings,
 }
 
 /// The renderers, borrowed for more than one target.

@@ -6,7 +6,7 @@ use eframe::{
 };
 use sindri_core::EngineState;
 use sindri_render::{
-    Bloom, BloomSettings, FrameRenderers, FrameTarget, GlyphRenderer, Lighting, ShapeRenderer,
+    Bloom, FrameRenderers, FrameTarget, GlyphRenderer, Lighting, ShapeRenderer,
     SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport, ViewportTarget,
     encode_lit_frame, encode_prepared_frame,
 };
@@ -163,8 +163,10 @@ impl RuntimeViewport {
             color: self.target.attachment(),
             depth: self.target.depth(),
         };
-        if let Some(environment) = environment.filter(|environment| environment.bloom.enabled) {
-            let authored = environment.bloom;
+        let post_process = environment
+            .map(EnvironmentComponent::post_process_settings)
+            .unwrap_or_default();
+        if !post_process.is_neutral() {
             encode_lit_frame(
                 frame_renderers,
                 &self.render_state.device,
@@ -174,12 +176,7 @@ impl RuntimeViewport {
                 &prepared,
                 Lighting {
                     bloom: &mut self.bloom,
-                    settings: BloomSettings {
-                        threshold: authored.threshold,
-                        knee: authored.knee,
-                        intensity: authored.intensity,
-                        passes: authored.passes,
-                    },
+                    settings: post_process,
                 },
             )
         } else {
