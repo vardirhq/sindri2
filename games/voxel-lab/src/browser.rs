@@ -295,11 +295,7 @@ fn atlas_rect(column: u32, width: u32) -> Result<UvRect, UvRectError> {
     )
 }
 
-fn browser_texture(
-    textures: BrowserMaterials,
-    voxel: VoxelId,
-    face: VoxelFace,
-) -> VoxelTexture {
+fn browser_texture(textures: BrowserMaterials, voxel: VoxelId, face: VoxelFace) -> VoxelTexture {
     match (voxel.value(), face) {
         (0, _) => unreachable!("air never produces block faces"),
         (1, VoxelFace::Top) => VoxelTexture::new(textures.grass_top, UvRect::FULL),
