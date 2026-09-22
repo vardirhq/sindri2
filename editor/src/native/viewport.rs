@@ -136,6 +136,12 @@ impl RuntimeViewport {
                 .map(EnvironmentComponent::world_lighting)
                 .unwrap_or_default(),
         );
+        renderers.cube.set_shadows(
+            &self.render_state.device,
+            environment
+                .map(EnvironmentComponent::shadow_settings)
+                .unwrap_or_default(),
+        );
         let frame_renderers = FrameRenderers {
             cube: &mut renderers.cube,
             sprites: &mut renderers.sprites,
