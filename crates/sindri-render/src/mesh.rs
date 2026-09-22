@@ -30,8 +30,10 @@ pub struct TexturedVertex {
 }
 
 impl TexturedVertex {
-    const ATTRIBUTES: [wgpu::VertexAttribute; 3] =
-        wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2, 2 => Float32];
+    const ATTRIBUTES: [wgpu::VertexAttribute; 2] =
+        wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2];
+    const AMBIENT_OCCLUSION_ATTRIBUTES: [wgpu::VertexAttribute; 3] =
+        wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x2, 14 => Float32];
 
     pub const fn new(position: [f32; 3], uv: [f32; 2]) -> Self {
         Self {
@@ -52,6 +54,14 @@ impl TexturedVertex {
             array_stride: std::mem::size_of::<Self>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &Self::ATTRIBUTES,
+        }
+    }
+
+    pub(crate) const fn ambient_occlusion_layout() -> wgpu::VertexBufferLayout<'static> {
+        wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<Self>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &Self::AMBIENT_OCCLUSION_ATTRIBUTES,
         }
     }
 }
