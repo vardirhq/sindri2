@@ -10,6 +10,7 @@
 //! entity is, because carrying one of these components already says it.
 
 mod camera;
+mod environment;
 mod grid;
 mod mesh;
 mod sprite;
@@ -25,6 +26,7 @@ pub use camera::{
     CameraBehaviorComponent, CameraBounds, CameraComponent, CameraFit, CameraFollow, CameraShake,
     add_camera_trauma, update_camera_behaviors,
 };
+pub use environment::{EnvironmentBloom, EnvironmentComponent, EnvironmentError, environment_of};
 pub use grid::{
     GridNavigationComponent, GridOccupantComponent, GridPlacementComponent, GridWallDocument,
 };

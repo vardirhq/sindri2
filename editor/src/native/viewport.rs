@@ -6,10 +6,11 @@ use eframe::{
 };
 use sindri_core::EngineState;
 use sindri_render::{
-    FrameRenderers, FrameTarget, GlyphRenderer, ShapeRenderer, SpriteBatchRenderer, TextRenderer,
-    TexturedCubeRenderer, Viewport, ViewportTarget, encode_prepared_frame,
+    Bloom, BloomSettings, FrameRenderers, FrameTarget, GlyphRenderer, Lighting, ShapeRenderer,
+    SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport, ViewportTarget,
+    encode_lit_frame, encode_prepared_frame,
 };
-use sindri_scene::{CameraView, SceneRuntime, UiCanvas};
+use sindri_scene::{CameraView, SceneRuntime, UiCanvas, environment_of};
 use weave::Viewport as WeaveViewport;
 
 use super::block_pointer::TileVolumeHover;
@@ -58,6 +59,7 @@ pub(super) struct RuntimeViewport {
     render_state: eframe::egui_wgpu::RenderState,
     target: ViewportTarget,
     texture_id: egui::TextureId,
+    bloom: Bloom,
 }
 
 impl RuntimeViewport {
@@ -73,10 +75,17 @@ impl RuntimeViewport {
             target.sampled(),
             wgpu::FilterMode::Linear,
         );
+        let mut bloom = Bloom::new(&render_state.device, ViewportTarget::FORMAT);
+        bloom.resize(
+            &render_state.device,
+            INITIAL_VIEWPORT_WIDTH,
+            INITIAL_VIEWPORT_HEIGHT,
+        );
         Self {
             render_state,
             target,
             texture_id,
+            bloom,
         }
     }
 
@@ -121,24 +130,48 @@ impl RuntimeViewport {
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Sindri editor runtime viewport encoder"),
                 });
-        encode_prepared_frame(
-            FrameRenderers {
-                cube: &mut renderers.cube,
-                sprites: &mut renderers.sprites,
-                text: &mut renderers.text,
-                glyphs: &mut renderers.glyphs,
-                shapes: &mut renderers.shapes,
-                textures: source.textures.registry(),
-            },
-            &self.render_state.device,
-            &self.render_state.queue,
-            &mut encoder,
-            FrameTarget {
-                color: self.target.attachment(),
-                depth: self.target.depth(),
-            },
-            &prepared,
-        )
+        let frame_renderers = FrameRenderers {
+            cube: &mut renderers.cube,
+            sprites: &mut renderers.sprites,
+            text: &mut renderers.text,
+            glyphs: &mut renderers.glyphs,
+            shapes: &mut renderers.shapes,
+            textures: source.textures.registry(),
+        };
+        let target = FrameTarget {
+            color: self.target.attachment(),
+            depth: self.target.depth(),
+        };
+        let environment = environment_of(source.world).map_err(|error| error.to_string())?;
+        if let Some(environment) = environment.filter(|environment| environment.bloom.enabled) {
+            let authored = environment.bloom;
+            encode_lit_frame(
+                frame_renderers,
+                &self.render_state.device,
+                &self.render_state.queue,
+                &mut encoder,
+                target,
+                &prepared,
+                Lighting {
+                    bloom: &mut self.bloom,
+                    settings: BloomSettings {
+                        threshold: authored.threshold,
+                        knee: authored.knee,
+                        intensity: authored.intensity,
+                        passes: authored.passes,
+                    },
+                },
+            )
+        } else {
+            encode_prepared_frame(
+                frame_renderers,
+                &self.render_state.device,
+                &self.render_state.queue,
+                &mut encoder,
+                target,
+                &prepared,
+            )
+        }
         .map_err(|error| error.to_string())?;
         self.render_state.queue.submit([encoder.finish()]);
         Ok(())
@@ -150,6 +183,7 @@ impl RuntimeViewport {
         if !self.target.resize(&self.render_state.device, width, height) {
             return;
         }
+        self.bloom.resize(&self.render_state.device, width, height);
         self.render_state
             .renderer
             .write()
@@ -514,74 +548,5 @@ impl EditorApp {
             self.problem(),
             axes,
         );
-    }
-}
-
-impl EditorApp {
-    /// Where this view puts the UI.
-    ///
-    /// The Scene view puts it in the world, where panning and zooming reach it.
-    /// The Game view *is* the screen, so there the overlay is the viewport and
-    /// no camera can move it — which is what makes a HUD a HUD.
-    fn canvas_for(&self, editing: bool) -> UiCanvas {
-        if editing {
-            UiCanvas::InScene {
-                aspect: self.canvas_aspect(),
-            }
-        } else {
-            UiCanvas::OnViewport
-        }
-    }
-
-    /// Draws the box the selected text element is laid out in.
-    ///
-    /// The rect the words actually occupy, which is the authored bounds where
-    /// there are any and what the string came out as where there are not. It is
-    /// the one way to see what a wrap width does without retyping it and
-    /// looking.
-    fn paint_text_rect(
-        &self,
-        ui: &egui::Ui,
-        rect: Rect,
-        camera: CameraView,
-        centre: [f32; 2],
-        size: [f32; 2],
-    ) {
-        let aspect = rect.width() / rect.height().max(1.0);
-        let Ok(Some(world)) = self
-            .scene
-            .world_camera_for_viewport(&self.world, aspect, camera)
-        else {
-            return;
-        };
-        let painter = ui.painter();
-        let stroke = egui::Stroke::new(1.0, crate::ui::theme::color::FORGE_DIM);
-        for [start, end] in
-            super::camera::canvas_rect_outline(rect, world.view_projection, centre, size)
-        {
-            painter.line_segment([start, end], stroke);
-        }
-    }
-
-    /// Draws the edge of the screen the UI is laid out on.
-    ///
-    /// Only in the Scene view, and only because the canvas is in the scene
-    /// there: in the Game view the canvas *is* the viewport and its edge is the
-    /// viewport's border, which is already drawn.
-    fn paint_canvas_outline(&self, ui: &egui::Ui, rect: Rect, camera: CameraView) {
-        let aspect = rect.width() / rect.height().max(1.0);
-        let Ok(Some(world)) = self
-            .scene
-            .world_camera_for_viewport(&self.world, aspect, camera)
-        else {
-            return;
-        };
-        let painter = ui.painter();
-        let stroke = egui::Stroke::new(1.0, crate::ui::theme::color::LINE);
-        for [start, end] in
-            super::camera::canvas_outline(rect, world.view_projection, self.canvas_aspect())
-        {
-            painter.line_segment([start, end], stroke);
-        }
     }
 }

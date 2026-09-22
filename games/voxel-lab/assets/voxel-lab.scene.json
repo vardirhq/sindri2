@@ -2,19 +2,59 @@
   "format_version": 9,
   "entities": [
     {
+      "id": "environment",
+      "name": "Environment",
+      "components": {
+        "sindri.environment": {
+          "background": [
+            0.035,
+            0.045,
+            0.065,
+            1
+          ],
+          "ambient_color": [
+            1,
+            0.96,
+            0.9
+          ],
+          "ambient_intensity": 0.8,
+          "bloom": {
+            "enabled": true,
+            "threshold": 0.58,
+            "knee": 0.22,
+            "intensity": 0.38,
+            "passes": 3
+          }
+        }
+      }
+    },
+    {
       "id": "camera",
       "name": "Camera",
       "transform_3d": {
-        "position": [42.0, 34.0, 42.0],
-        "rotation": [-0.239118, 0.369644, 0.099046, 0.892399],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          42,
+          34,
+          42
+        ],
+        "rotation": [
+          -0.239118,
+          0.369644,
+          0.099046,
+          0.892399
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
       },
       "components": {
         "sindri.camera": {
           "projection": "orthographic",
-          "vertical_size": 38.0,
+          "vertical_size": 38,
           "near": 0.1,
-          "far": 300.0
+          "far": 300
         }
       }
     },
@@ -22,9 +62,22 @@
       "id": "voxel-world",
       "name": "Engine Voxel World",
       "transform_3d": {
-        "position": [0.0, 0.0, 0.0],
-        "rotation": [0.0, 0.0, 0.0, 1.0],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
       },
       "components": {
         "sindri.voxel_world": {
@@ -58,7 +111,11 @@
               "bottom": "textures/block-tops.png#stone"
             }
           ],
-          "focus": [0, 0, 0],
+          "focus": [
+            0,
+            0,
+            0
+          ],
           "render_radius": 2,
           "vertical_radius": 1,
           "layer": 0

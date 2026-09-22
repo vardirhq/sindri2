@@ -1668,3 +1668,7 @@ already reads, and carries a `solid` tag the player script tests with
 differently: the Wisp steps cell to cell and asks the engine to route it, while
 the player walks in continuous coordinates and has to test the cell it is about
 to enter. Nothing new was added to the engine for either.
+## World presentation
+
+Scenes can author `sindri.environment` as the scene-wide presentation contract. The first slice owns background colour, forward-compatible ambient colour/intensity, and bloom controls. The editor Scene/Game viewports and the browser Voxel Lab resolve bloom from that authored component; Voxel Lab is the acceptance lab for the wider presentation track in `docs/world-presentation-plan.md`. Directional lighting, shadows, ambient occlusion, fog, sky, environment profiles/volumes, local lights, weather, water, and advanced post effects remain future slices.
+

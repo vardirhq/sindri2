@@ -60,7 +60,8 @@ fn every_component_that_names_a_font_is_one_hosts_load_from() {
                 .err()
                 .and_then(|error| error.source().map(ToString::to_string))
         };
-        complaint(&serde_json::json!({})) != complaint(&serde_json::json!({ "font": 0 }))
+        complaint(&serde_json::json!({ "font": "" }))
+            != complaint(&serde_json::json!({ "font": 0 }))
     };
 
     for metadata in extractor.components().registered_components() {

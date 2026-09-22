@@ -282,3 +282,5 @@ Keep entries release-oriented and readable:
   documentation, or architecture decision record.
 - When the first release is cut, rename `Unreleased` to that version and date,
   then add a fresh empty `Unreleased` section above it.
+- Added the authored `sindri.environment` presentation component and connected the existing bloom renderer to editor viewports and Voxel Lab, making bloom scene-controlled instead of a stranded renderer-only capability. Voxel Lab now serves as the acceptance lab for the world-presentation roadmap.
+

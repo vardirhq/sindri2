@@ -23,10 +23,10 @@ use sindri_core::{ComponentSchemaRegistry, TagsComponent};
 use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
-    CameraBehaviorComponent, CameraComponent, GridNavigationComponent, GridOccupantComponent,
-    GridPlacementComponent, MeshComponent, ShapeComponent, SpriteComponent, TileGridComponent,
-    TileVolumeComponent, TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent,
-    UiShapeKind, UiTextComponent, VoxelWorldComponent,
+    CameraBehaviorComponent, CameraComponent, EnvironmentComponent, GridNavigationComponent,
+    GridOccupantComponent, GridPlacementComponent, MeshComponent, ShapeComponent, SpriteComponent,
+    TileGridComponent, TileVolumeComponent, TilemapComponent, UiImageComponent, UiShapeBlend,
+    UiShapeComponent, UiShapeKind, UiTextComponent, VoxelWorldComponent,
 };
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
@@ -126,6 +126,21 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
     // be visible rather than neutral: a sprite added to an entity should
     // appear, or the author is left wondering whether the click worked.
     register_cameras(components)?;
+    components.register_with_default::<EnvironmentComponent>(
+        "Environment",
+        serde_json::json!({
+            "background": [0.035, 0.045, 0.065, 1.0],
+            "ambient_color": [1.0, 1.0, 1.0],
+            "ambient_intensity": 1.0,
+            "bloom": {
+                "enabled": false,
+                "threshold": 0.65,
+                "knee": 0.20,
+                "intensity": 0.45,
+                "passes": 3
+            }
+        }),
+    )?;
     components.register_with_default::<MeshComponent>(
         "Mesh",
         serde_json::json!({

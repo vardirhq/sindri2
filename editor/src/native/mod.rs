@@ -70,6 +70,7 @@ mod tools;
 mod unsaved;
 mod view_interaction;
 mod viewport;
+mod viewport_chrome;
 mod welcome;
 mod workspace;
 

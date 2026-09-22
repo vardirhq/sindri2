@@ -105,7 +105,6 @@ written the row.
 
 | Capability | State | Why it is stranded |
 | --- | --- | --- |
-| **Bloom / post-processing** | `crates/sindri-render/src/bloom/` has `BloomSettings`, a chain, and a WGSL shader | Nothing in `sindri-scene`, the editor, or Decay references it. A game cannot turn it on. |
 | **Input actions** | `crates/sindri-platform/src/input/action/` parses an action document, binds named actions to keys, pointer axes and scroll | No scene component, no editor surface, no Decay binding. Games poll raw keys instead. |
 | **Scroll input** | `Source::ScrollX/ScrollY` are bound and parsed | Never surfaced to Decay, so no game can use a wheel. |
 | **Gamepad bindings** | `"gamepad.South"` parses as a binding *name* | `Source::from_name` returns `None` for it — an explicit, tested hole. A gamepad is unimplemented, not merely unbound. |
@@ -176,8 +175,8 @@ The ordered work required to close these gaps is tracked in
 | **Tilemap collision** | ❌ | ❌ | ❌ | ❌ | **Absent** | Grid walls serve pathfinding, not physics. A tilemap generates no colliders |
 | **2D lights and shadows** | ❌ | ❌ | ❌ | ❌ | **Absent** | URP 2D lights, Godot's CanvasModulate + Light2D. Nothing here |
 | **Custom shaders / materials** | ❌ | ❌ | ❌ | ❌ | **Absent** | No material asset, no shader authoring. The single biggest ceiling on visual identity |
-| Bloom | 🟡 | ❌ | ❌ | ❌ | **Behind** | Built and stranded — see above |
-| **Post-processing stack** | 🟡 | ❌ | ❌ | ❌ | **Behind** | Bloom only, and unreachable |
+| Bloom | ✅ | ✅ | ❌ | 🟡 | **Behind** | `sindri.environment` authors bloom and the shared renderer applies it in editor viewports and browser Voxel Lab. Voxel Lab is acceptance proof, not yet a shipped-game proof; Decay control is intentionally absent until gameplay needs it. |
+| **Post-processing stack** | 🟡 | 🟡 | ❌ | 🟡 | **Behind** | The authored environment reaches bloom end to end, but exposure, tone mapping, colour grading, vignette, and the general ordered stack remain. |
 | **Nine-slice sprites** | ❌ | ❌ | — | — | **Absent** | Every UI panel that resizes needs it |
 | **Sprite masking / stencil** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | Sorting and draw order | ✅ | ✅ | 🟡 | ✅ | **Par** | Layers plus the ground anchor |
