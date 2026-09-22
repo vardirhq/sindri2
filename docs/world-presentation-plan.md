@@ -46,7 +46,9 @@ The next slice adds shadows from this same directional light rather than inventi
 
 ### 3. Shadows
 
-Directional-light shadow casting and receiving for voxel terrain and general world geometry, with authored distance and quality controls and explicit WebGPU limits.
+**Implemented.** The authored directional light now owns one WebGPU-friendly shadow map shared by textured world geometry and cached voxel meshes. `sindri.environment.shadows` controls whether shadows are enabled, the world-space coverage distance, map resolution (256–2048), and depth bias. Editor viewports and browser Voxel Lab use the same path, and older environments default to shadows off.
+
+The first implementation deliberately uses one directional map rather than cascades: predictable cost and WebGPU portability matter more than hiding every long-distance alias. Cascaded shadows remain a later quality extension if a real game proves the need.
 
 ### 4. Ambient occlusion and contact depth
 

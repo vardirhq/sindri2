@@ -68,6 +68,14 @@ pub fn encode_prepared_frame(
     // a scene with none would leave its sprites drawing against a depth buffer
     // nothing had filled.
     encode_clear(encoder, target.color, target.depth, frame.clear());
+    encode_directional_shadows(
+        cube_renderer,
+        device,
+        queue,
+        encoder,
+        textures,
+        frame.passes(),
+    );
     // Each batch draws from its own slot, and this is what hands the first one
     // back at the start of every submission. Without it a host would allocate a
     // slot per batch per frame for as long as it ran.
@@ -151,6 +159,15 @@ pub fn encode_lit_frame(
         depth: target.depth,
     };
     encode_clear(encoder, &scene, target.depth, frame.clear());
+    encode_directional_shadows(
+        cube_renderer,
+        device,
+        queue,
+        encoder,
+        textures,
+        frame.passes(),
+    );
+    cube_renderer.begin_submission();
     sprite_renderer.begin_submission();
     glyph_renderer.begin_submission();
     shape_renderer.begin_submission();
@@ -184,6 +201,68 @@ pub fn encode_lit_frame(
         frame.passes().iter().filter(is_overlay),
     )?;
     Ok(borrowed.sprites.stats())
+}
+
+fn encode_directional_shadows(
+    cube: &mut TexturedCubeRenderer,
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    encoder: &mut wgpu::CommandEncoder,
+    textures: &TextureRegistry,
+    passes: &[FramePass],
+) {
+    if !cube.shadows_enabled() {
+        return;
+    }
+    let Some(camera) = passes
+        .iter()
+        .find(|pass| pass.stage == RenderStage::Opaque3d)
+        .map(|pass| pass.camera.view_projection)
+    else {
+        return;
+    };
+    cube.begin_submission();
+    cube.begin_shadow_pass(encoder, camera);
+    for pass in passes
+        .iter()
+        .filter(|pass| pass.stage == RenderStage::Opaque3d)
+    {
+        match &pass.command {
+            FrameCommand::TexturedCube { model, .. } => {
+                cube.encode_shadow_cube(device, queue, encoder, *model);
+            }
+            FrameCommand::TexturedMesh {
+                model,
+                vertices,
+                indices,
+                ..
+            } => {
+                cube.encode_shadow_mesh(device, queue, encoder, *model, vertices, indices);
+            }
+            FrameCommand::CachedTexturedMesh {
+                model,
+                texture,
+                cache,
+                revision,
+                replacement,
+            } => cube.encode_shadow_cached_mesh(
+                DrawContext {
+                    device,
+                    queue,
+                    textures,
+                    texture: *texture,
+                },
+                encoder,
+                *model,
+                CachedMeshRequest {
+                    id: *cache,
+                    revision: *revision,
+                    replacement: replacement.as_ref(),
+                },
+            ),
+            _ => {}
+        }
+    }
 }
 
 /// What lights a frame.

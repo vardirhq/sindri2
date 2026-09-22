@@ -195,6 +195,12 @@
             -0.35
           ],
           "intensity": 0.85
+        },
+        "shadows": {
+          "bias": 0.002,
+          "distance": 48.0,
+          "enabled": true,
+          "map_size": 1024
         }
       },
       "display_name": "Environment",
@@ -230,6 +236,12 @@
             -0.35
           ],
           "intensity": 0.85
+        },
+        "shadows": {
+          "bias": 0.002,
+          "distance": 48.0,
+          "enabled": true,
+          "map_size": 1024
         }
       },
       "meanings": {},

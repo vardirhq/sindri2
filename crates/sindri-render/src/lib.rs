@@ -11,6 +11,7 @@ mod glyph;
 mod lighting;
 mod mesh;
 mod offscreen;
+mod shadow;
 mod shape;
 mod sprite;
 mod sprite_batch;
@@ -45,6 +46,7 @@ pub use glyph::{
 pub use lighting::WorldLighting;
 pub use mesh::{ColoredVertex, MeshBuffers, TexturedVertex};
 pub use offscreen::{OffscreenError, OffscreenReadback, OffscreenTarget};
+pub use shadow::ShadowSettings;
 pub use shape::{
     MAX_POLYGON_POINTS, Shape, ShapeBlend, ShapeDrawError, ShapeInstance, ShapeRenderer,
 };

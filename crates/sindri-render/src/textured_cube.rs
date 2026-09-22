@@ -4,45 +4,18 @@ use glam::Mat4;
 use wgpu::util::DeviceExt;
 
 use crate::{
-    CachedMeshId, CachedTexturedMeshUpload, DepthTarget, MeshBuffers, TextureId, TextureRegistry,
-    TexturedMeshCacheStats, TexturedVertex, WorldLighting, textured_mesh_cache::TexturedMeshCache,
+    CachedMeshId, DepthTarget, MeshBuffers, ShadowSettings, TextureId, TextureRegistry,
+    TexturedMeshCacheStats, TexturedVertex, WorldLighting,
+    shadow::{ShadowMap, create_shadow_pipeline},
+    textured_mesh_cache::TexturedMeshCache,
 };
 
 const SHADER: &str = include_str!("textured_cube.wgsl");
 
-const FACE_UVS: [[f32; 2]; 4] = [[0.0, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]];
+mod geometry;
+mod shadow_pass;
 
-const VERTICES: [TexturedVertex; 24] = [
-    TexturedVertex::new([-1.0, -1.0, 1.0], FACE_UVS[0]),
-    TexturedVertex::new([1.0, -1.0, 1.0], FACE_UVS[1]),
-    TexturedVertex::new([1.0, 1.0, 1.0], FACE_UVS[2]),
-    TexturedVertex::new([-1.0, 1.0, 1.0], FACE_UVS[3]),
-    TexturedVertex::new([1.0, -1.0, -1.0], FACE_UVS[0]),
-    TexturedVertex::new([-1.0, -1.0, -1.0], FACE_UVS[1]),
-    TexturedVertex::new([-1.0, 1.0, -1.0], FACE_UVS[2]),
-    TexturedVertex::new([1.0, 1.0, -1.0], FACE_UVS[3]),
-    TexturedVertex::new([1.0, -1.0, 1.0], FACE_UVS[0]),
-    TexturedVertex::new([1.0, -1.0, -1.0], FACE_UVS[1]),
-    TexturedVertex::new([1.0, 1.0, -1.0], FACE_UVS[2]),
-    TexturedVertex::new([1.0, 1.0, 1.0], FACE_UVS[3]),
-    TexturedVertex::new([-1.0, -1.0, -1.0], FACE_UVS[0]),
-    TexturedVertex::new([-1.0, -1.0, 1.0], FACE_UVS[1]),
-    TexturedVertex::new([-1.0, 1.0, 1.0], FACE_UVS[2]),
-    TexturedVertex::new([-1.0, 1.0, -1.0], FACE_UVS[3]),
-    TexturedVertex::new([-1.0, 1.0, 1.0], FACE_UVS[0]),
-    TexturedVertex::new([1.0, 1.0, 1.0], FACE_UVS[1]),
-    TexturedVertex::new([1.0, 1.0, -1.0], FACE_UVS[2]),
-    TexturedVertex::new([-1.0, 1.0, -1.0], FACE_UVS[3]),
-    TexturedVertex::new([-1.0, -1.0, -1.0], FACE_UVS[0]),
-    TexturedVertex::new([1.0, -1.0, -1.0], FACE_UVS[1]),
-    TexturedVertex::new([1.0, -1.0, 1.0], FACE_UVS[2]),
-    TexturedVertex::new([-1.0, -1.0, 1.0], FACE_UVS[3]),
-];
-
-const INDICES: [u16; 36] = [
-    0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4, 8, 9, 10, 10, 11, 8, 12, 13, 14, 14, 15, 12, 16, 17, 18,
-    18, 19, 16, 20, 21, 22, 22, 23, 20,
-];
+use geometry::{INDICES, VERTICES};
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -52,6 +25,8 @@ struct CubeUniform {
     ambient: [f32; 4],
     directional_direction: [f32; 4],
     directional_color: [f32; 4],
+    light_view_projection: [[f32; 4]; 4],
+    shadow: [f32; 4],
 }
 
 fn create_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
@@ -82,6 +57,22 @@ fn create_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
                 binding: 2,
                 visibility: wgpu::ShaderStages::FRAGMENT,
                 ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 3,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    sample_type: wgpu::TextureSampleType::Depth,
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                    multisampled: false,
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 4,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison),
                 count: None,
             },
         ],
@@ -143,6 +134,11 @@ pub struct TexturedCubeRenderer {
     mesh: MeshBuffers,
     cached_meshes: TexturedMeshCache,
     lighting: WorldLighting,
+    shadow_settings: ShadowSettings,
+    shadow_map: ShadowMap,
+    shadow_bind_group_layout: wgpu::BindGroupLayout,
+    shadow_pipeline: wgpu::RenderPipeline,
+    shadow_view_projection: Mat4,
 }
 
 /// GPU state owned by one textured-mesh draw in a submission.
@@ -152,27 +148,14 @@ pub struct TexturedCubeRenderer {
 #[derive(Debug)]
 struct MeshBatch {
     uniform: wgpu::Buffer,
+    shadow_uniform: wgpu::Buffer,
+    shadow_bind_group: wgpu::BindGroup,
     bind_groups: std::collections::HashMap<TextureId, wgpu::BindGroup>,
 }
 
-/// The GPU handles and texture a draw resolves against.
-///
-/// Bundled because a draw needs all of them together, and threading four more
-/// parameters through every encode call obscures what is actually being drawn.
-#[derive(Clone, Copy)]
-pub struct DrawContext<'a> {
-    pub device: &'a wgpu::Device,
-    pub queue: &'a wgpu::Queue,
-    pub textures: &'a TextureRegistry,
-    pub texture: TextureId,
-}
-
-#[derive(Clone, Copy)]
-pub(crate) struct CachedMeshRequest<'a> {
-    pub id: CachedMeshId,
-    pub revision: u64,
-    pub replacement: Option<&'a CachedTexturedMeshUpload>,
-}
+mod context;
+pub(crate) use context::CachedMeshRequest;
+pub use context::DrawContext;
 
 impl TexturedCubeRenderer {
     /// Textures come from the frame's [`TextureRegistry`] rather than being
@@ -180,6 +163,8 @@ impl TexturedCubeRenderer {
     pub fn new(device: &wgpu::Device, target_format: wgpu::TextureFormat) -> Self {
         let bind_group_layout = create_bind_group_layout(device);
         let pipeline = create_pipeline(device, target_format, &bind_group_layout);
+        let shadow_map = ShadowMap::new(device, ShadowSettings::default().map_size);
+        let (shadow_bind_group_layout, shadow_pipeline) = create_shadow_pipeline(device);
         Self {
             pipeline,
             bind_group_layout,
@@ -188,12 +173,30 @@ impl TexturedCubeRenderer {
             mesh: MeshBuffers::new(device, "Sindri textured cube", &VERTICES, &INDICES),
             cached_meshes: TexturedMeshCache::default(),
             lighting: WorldLighting::default(),
+            shadow_settings: ShadowSettings::default(),
+            shadow_map,
+            shadow_bind_group_layout,
+            shadow_pipeline,
+            shadow_view_projection: Mat4::IDENTITY,
         }
     }
 
     /// Sets the world lighting used by subsequent textured 3D draws.
     pub fn set_lighting(&mut self, lighting: WorldLighting) {
         self.lighting = lighting;
+    }
+
+    pub fn set_shadows(&mut self, device: &wgpu::Device, settings: ShadowSettings) {
+        self.shadow_settings = settings;
+        if self.shadow_map.resize(device, settings.map_size) {
+            for batch in &mut self.batches {
+                batch.bind_groups.clear();
+            }
+        }
+    }
+
+    pub(crate) const fn shadows_enabled(&self) -> bool {
+        self.shadow_settings.enabled && self.lighting.directional_intensity > 0.0
     }
 
     /// Makes the reusable draw slots available for a new GPU submission.
@@ -211,11 +214,28 @@ impl TexturedCubeRenderer {
                     Mat4::IDENTITY,
                     Mat4::IDENTITY,
                     WorldLighting::default(),
+                    Mat4::IDENTITY,
+                    ShadowSettings::default(),
                 )),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
+            let shadow_uniform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Sindri shadow mesh uniform"),
+                contents: bytemuck::cast_slice(&Mat4::IDENTITY.to_cols_array()),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
+            let shadow_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Sindri shadow mesh bind group"),
+                layout: &self.shadow_bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: shadow_uniform.as_entire_binding(),
+                }],
+            });
             self.batches.push(MeshBatch {
                 uniform,
+                shadow_uniform,
+                shadow_bind_group,
                 bind_groups: std::collections::HashMap::new(),
             });
         }
@@ -251,6 +271,14 @@ impl TexturedCubeRenderer {
                     binding: 2,
                     resource: wgpu::BindingResource::Sampler(resolved.sampler()),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: wgpu::BindingResource::TextureView(self.shadow_map.view()),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: wgpu::BindingResource::Sampler(self.shadow_map.sampler()),
+                },
             ],
         });
         batch.bind_groups.insert(texture, bind_group);
@@ -283,6 +311,8 @@ impl TexturedCubeRenderer {
             Mat4::IDENTITY,
             model_view_projection,
             self.lighting,
+            self.shadow_view_projection,
+            self.shadow_settings,
             (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
@@ -313,6 +343,8 @@ impl TexturedCubeRenderer {
             model,
             view_projection * model,
             self.lighting,
+            self.shadow_view_projection,
+            self.shadow_settings,
             (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
@@ -351,6 +383,8 @@ impl TexturedCubeRenderer {
             Mat4::IDENTITY,
             model_view_projection,
             self.lighting,
+            self.shadow_view_projection,
+            self.shadow_settings,
             (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
@@ -387,6 +421,8 @@ impl TexturedCubeRenderer {
             model,
             view_projection * model,
             self.lighting,
+            self.shadow_view_projection,
+            self.shadow_settings,
             (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
@@ -426,6 +462,8 @@ impl TexturedCubeRenderer {
             model,
             view_projection * model,
             self.lighting,
+            self.shadow_view_projection,
+            self.shadow_settings,
             (&batch.uniform, &self.pipeline, bind_group),
             mesh,
             "Sindri cached textured mesh pass",
@@ -449,7 +487,13 @@ impl TexturedCubeRenderer {
     }
 }
 
-fn cube_uniform(model: Mat4, model_view_projection: Mat4, lighting: WorldLighting) -> CubeUniform {
+fn cube_uniform(
+    model: Mat4,
+    model_view_projection: Mat4,
+    lighting: WorldLighting,
+    light_view_projection: Mat4,
+    shadows: ShadowSettings,
+) -> CubeUniform {
     CubeUniform {
         model_view_projection: model_view_projection.to_cols_array_2d(),
         model: model.to_cols_array_2d(),
@@ -471,6 +515,17 @@ fn cube_uniform(model: Mat4, model_view_projection: Mat4, lighting: WorldLightin
             lighting.directional_color[2],
             0.0,
         ],
+        light_view_projection: light_view_projection.to_cols_array_2d(),
+        shadow: [
+            shadows.bias,
+            if shadows.enabled && lighting.directional_intensity > 0.0 {
+                1.0
+            } else {
+                0.0
+            },
+            0.0,
+            0.0,
+        ],
     }
 }
 
@@ -482,6 +537,8 @@ fn encode_mesh_buffers(
     model: Mat4,
     model_view_projection: Mat4,
     lighting: WorldLighting,
+    light_view_projection: Mat4,
+    shadows: ShadowSettings,
     state: (&wgpu::Buffer, &wgpu::RenderPipeline, &wgpu::BindGroup),
     mesh: &MeshBuffers,
     label: &str,
@@ -490,7 +547,13 @@ fn encode_mesh_buffers(
     queue.write_buffer(
         uniform,
         0,
-        bytemuck::bytes_of(&cube_uniform(model, model_view_projection, lighting)),
+        bytemuck::bytes_of(&cube_uniform(
+            model,
+            model_view_projection,
+            lighting,
+            light_view_projection,
+            shadows,
+        )),
     );
     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some(label),
