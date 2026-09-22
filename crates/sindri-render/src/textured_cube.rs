@@ -99,7 +99,7 @@ fn create_pipeline(
         vertex: wgpu::VertexState {
             module: &shader,
             entry_point: Some("vs_main"),
-            buffers: &[Some(TexturedVertex::layout())],
+            buffers: &[Some(TexturedVertex::ambient_occlusion_layout())],
             compilation_options: wgpu::PipelineCompilationOptions::default(),
         },
         fragment: Some(wgpu::FragmentState {
