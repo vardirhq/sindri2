@@ -166,6 +166,8 @@ impl DesktopApp for VoxelLabApp {
                     label: Some("Voxel Lab browser encoder"),
                 });
         self.cubes.set_lighting(self.environment.world_lighting());
+        self.cubes
+            .set_shadows(context.device(), self.environment.shadow_settings());
         let renderers = FrameRenderers {
             cube: &mut self.cubes,
             sprites: &mut self.sprites,
