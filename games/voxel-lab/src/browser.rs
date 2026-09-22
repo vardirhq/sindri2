@@ -187,7 +187,7 @@ impl DesktopApp for VoxelLabApp {
             depth: &self.depth,
         };
         let post_process = self.environment.post_process_settings();
-        if !post_process.is_neutral() {
+        if post_process.is_active() {
             encode_lit_frame(
                 renderers,
                 context.device(),
