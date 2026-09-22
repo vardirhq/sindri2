@@ -375,7 +375,10 @@ impl TexturedCubeRenderer {
         let slot = self.reserve(context.device);
         self.bind_texture(context.device, context.textures, slot, context.texture);
         let batch = &self.batches[slot];
-        let bind_group = batch\n            .bind_groups\n            .get(&context.texture)\n            .expect("the texture is bound before encoding");
+        let bind_group = batch
+            .bind_groups
+            .get(&context.texture)
+            .expect("the texture is bound before encoding");
         encode_mesh_buffers(
             context.queue,
             encoder,
