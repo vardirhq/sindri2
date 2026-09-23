@@ -1,4 +1,5 @@
 use std::{
+    collections::BTreeMap,
     env,
     fmt::Write,
     fs,
@@ -7,7 +8,7 @@ use std::{
 };
 
 use sindri_diagnostics::{
-    CheckOutcome, CheckResult, DiagnosticReport, GithubAnnotation, fingerprint_failure,
+    CheckOutcome, CheckResult, Diagnostic, DiagnosticReport, GithubAnnotation, fingerprint_failure,
     fingerprint_report, parse_cargo_messages, parse_decay_report, parse_file_size_violations,
     parse_rustfmt_diff, render_ci_summary, render_terminal_report,
 };
@@ -156,28 +157,99 @@ fn report_check_result(
 fn github_summary(report: &DiagnosticReport, command: &str) -> String {
     let errors = report.error_count();
     let warnings = report.warning_count();
+    let actionable = report
+        .diagnostics
+        .iter()
+        .filter(|diagnostic| matches!(diagnostic.severity, sindri_diagnostics::Severity::Error))
+        .collect::<Vec<_>>();
+    let groups = group_diagnostics(&actionable);
+    let locations = actionable
+        .iter()
+        .filter(|diagnostic| diagnostic.location.is_some())
+        .count();
+    let start = actionable
+        .iter()
+        .find_map(|diagnostic| diagnostic.location.as_ref())
+        .map(|location| format!("`{}:{}:{}`", location.path.display(), location.line, location.column))
+        .unwrap_or_else(|| "the first diagnostic below".into());
+
     let mut output = format!(
         "## Sindri diagnostics\n\n**{errors} {command} error(s), {warnings} warning(s)**\n\n"
     );
-    for diagnostic in &report.diagnostics {
-        let location = diagnostic.location.as_ref().map_or_else(
-            || "unknown file".into(),
-            |location| location.path.display().to_string(),
+    if errors > 0 {
+        let _ = writeln!(
+            output,
+            "**Repair scope:** {} diagnostic(s) in {} failure class(es); {locations} exact source location(s).",
+            actionable.len(),
+            groups.len()
         );
-        let _ = writeln!(output, "- `{location}`: {}", diagnostic.message);
+        let _ = writeln!(output, "**Start here:** {start}\n");
     }
+
+    for (key, diagnostics) in groups {
+        let _ = writeln!(output, "### {} ({})", key, diagnostics.len());
+        for diagnostic in diagnostics {
+            render_summary_diagnostic(&mut output, diagnostic);
+        }
+        output.push('\n');
+    }
+
     if command == "rustfmt" && errors > 0 {
-        output.push_str("\nRun `cargo fmt --all` locally before pushing.\n");
+        output.push_str("**Why:** committed Rust does not match the repository formatter.\n\n");
+        output.push_str("**How:** run `cargo fmt --all`, review the diff, and commit every affected file.\n\n");
+        output.push_str("**Verify:** `cargo fmt --all --check`\n");
     }
     if command == "cargo" && errors > 0 {
-        output.push_str("\nFix the annotated Rust diagnostics before pushing.\n");
+        output.push_str("**Why:** Cargo/Clippy rejected the code shown above. The stable code and source location come directly from Cargo's structured diagnostic stream.\n\n");
+        output.push_str("**How:** fix every occurrence listed above in one pass. Prefer the compiler/Clippy help and repository policy over suppressing the diagnostic.\n\n");
+        output.push_str("**Verify:** rerun the same Cargo/Clippy command used by this CI step.\n");
+    }
+    if command == "file-size" && errors > 0 {
+        output.push_str("**Why:** a Rust source file exceeds Sindri's repository size policy.\n\n");
+        output.push_str("**How:** split by responsibility; do not compress or reformat code merely to get below the cap. See `docs/module-layout.md`.\n\n");
+        output.push_str("**Verify:** `python3 scripts/check-file-size.py`\n");
     }
     output
+}
+
+fn group_diagnostics<'a>(diagnostics: &[&'a Diagnostic]) -> BTreeMap<String, Vec<&'a Diagnostic>> {
+    let mut groups = BTreeMap::<String, Vec<&Diagnostic>>::new();
+    for diagnostic in diagnostics {
+        let key = diagnostic.code.as_ref().map_or_else(
+            || "uncoded diagnostic".into(),
+            |code| code.0.clone(),
+        );
+        groups.entry(key).or_default().push(*diagnostic);
+    }
+    groups
+}
+
+fn render_summary_diagnostic(output: &mut String, diagnostic: &Diagnostic) {
+    let location = diagnostic.location.as_ref().map_or_else(
+        || "unknown location".into(),
+        |location| {
+            format!(
+                "{}:{}:{}",
+                location.path.display(),
+                location.line,
+                location.column
+            )
+        },
+    );
+    let _ = writeln!(output, "- **Where:** `{location}`");
+    let _ = writeln!(output, "  **What:** {}", diagnostic.message);
+    if let Some(suggestion) = &diagnostic.suggestion {
+        let _ = writeln!(output, "  **Suggested repair:** `{suggestion}`");
+    }
+    for note in &diagnostic.notes {
+        let _ = writeln!(output, "  **Context:** {note}");
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sindri_diagnostics::{DiagnosticCode, DiagnosticSource, Severity, SourceLocation};
 
     #[test]
     fn summary_names_every_unformatted_file() {
@@ -188,5 +260,41 @@ mod tests {
         assert!(summary.contains("crates/a/src/lib.rs"));
         assert!(summary.contains("crates/b/src/lib.rs"));
         assert!(summary.contains("2 rustfmt error(s)"));
+        assert!(summary.contains("fix every occurrence" ) == false);
+    }
+
+    #[test]
+    fn cargo_summary_groups_all_occurrences_and_keeps_locations() {
+        let report = DiagnosticReport::new(vec![
+            rust_error("clippy::too_many_lines", "first is too long", "src/a.rs", 10),
+            rust_error("clippy::too_many_lines", "second is too long", "src/b.rs", 20),
+            rust_error("unused_imports", "unused import", "src/c.rs", 30),
+        ]);
+        let summary = github_summary(&report, "cargo");
+        assert!(summary.contains("3 diagnostic(s) in 2 failure class(es)"));
+        assert!(summary.contains("### clippy::too_many_lines (2)"));
+        assert!(summary.contains("`src/a.rs:10:1`"));
+        assert!(summary.contains("`src/b.rs:20:1`"));
+        assert!(summary.contains("fix every occurrence listed above in one pass"));
+    }
+
+    fn rust_error(code: &str, message: &str, path: &str, line: u32) -> Diagnostic {
+        Diagnostic {
+            severity: Severity::Error,
+            source: DiagnosticSource::Rust,
+            code: Some(DiagnosticCode(code.into())),
+            message: message.into(),
+            location: Some(SourceLocation {
+                path: path.into(),
+                line,
+                column: 1,
+                end_line: None,
+                end_column: None,
+            }),
+            notes: Vec::new(),
+            suggestion: None,
+            rendered: None,
+            relation: None,
+        }
     }
 }
