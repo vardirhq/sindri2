@@ -4,7 +4,7 @@ use std::cell::{RefCell, RefMut};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
-use sindri_core::{EntityId, SpriteRef, World};
+use sindri_core::{EntityId, SceneComponent, SpriteRef, World};
 use sindri_render::{
     ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage,
 };
@@ -18,7 +18,7 @@ use crate::{
     VoxelTexture, VoxelWorldComponent, compile_block_mesh,
 };
 
-use super::camera::ResolvedCameras;
+use super::camera::{ResolvedCamera, ResolvedCameras};
 use super::frustum::aabb_in_view;
 use super::{SceneExtractError, SceneExtractor, transform_matrix};
 
@@ -230,6 +230,13 @@ impl ResidentVoxelWorld {
     }
 }
 
+/// Where one voxel world's commands go, and what they are drawn against.
+struct VoxelTarget<'a> {
+    camera: ResolvedCamera,
+    textures: &'a TextureBindings,
+    frame: &'a mut ExtractedFrame,
+}
+
 impl SceneExtractor {
     pub(super) fn push_voxel_worlds(
         &self,
@@ -257,39 +264,84 @@ impl SceneExtractor {
         }
 
         for (entity, component) in components {
-            let definition = definition(&component)?;
-            let fresh = runtimes.get(&entity).is_some_and(|runtime| {
-                runtime.definition == definition
-                    && runtime.texture_generation == textures.generation()
-            });
-            if !fresh {
-                if let Some(mut previous) = runtimes.remove(&entity) {
-                    push_commands(previous.release_all(), component.layer, camera, frame);
+            let target = VoxelTarget {
+                camera,
+                textures,
+                frame: &mut *frame,
+            };
+            let pushed = self.push_voxel_world(&mut runtimes, entity, &component, world, target);
+            match pushed {
+                Ok(()) => {}
+                Err(error) if self.tolerant() => {
+                    self.record(entity, VoxelWorldComponent::TYPE_NAME, &error);
                 }
-                runtimes.insert(
-                    entity,
-                    ResidentVoxelWorld::new(definition, textures.generation()),
-                );
+                Err(error) => return Err(error),
             }
-            let focus =
-                SectionCoord::new(component.focus[0], component.focus[1], component.focus[2]);
-            let transform = world
-                .get(entity)
-                .and_then(|data| data.transform_3d)
-                .unwrap_or_default();
-            let root = transform_matrix(transform);
-            let mut commands = runtimes
-                .get_mut(&entity)
-                .expect("the voxel runtime was inserted above")
-                .commands(focus, textures, camera.view_projection * root)?;
-            for command in &mut commands {
-                if let FrameCommand::CachedTexturedMesh { model, .. } = command {
-                    *model = root * *model;
-                }
-            }
-            push_commands(commands, component.layer, camera, frame);
         }
         Ok(())
+    }
+
+    /// One voxel world's commands for this frame.
+    ///
+    /// A definition that cannot be used -- an ID no material defines, two
+    /// materials with one ID, a face texture that does not parse -- is checked
+    /// before the resident world is replaced. Tolerantly, the world it would
+    /// have replaced keeps drawing, and the error is still returned for the
+    /// caller to record: the terrain stays on screen and responsive to the
+    /// camera while the edit that broke it is finished or undone.
+    fn push_voxel_world(
+        &self,
+        runtimes: &mut BTreeMap<EntityId, ResidentVoxelWorld>,
+        entity: EntityId,
+        component: &VoxelWorldComponent,
+        world: &World,
+        target: VoxelTarget<'_>,
+    ) -> Result<(), SceneExtractError> {
+        let VoxelTarget {
+            camera,
+            textures,
+            frame,
+        } = target;
+        let refused = match definition(component).and_then(|definition| {
+            resolve_materials(&definition.materials, textures)?;
+            Ok(definition)
+        }) {
+            Ok(definition) => {
+                let fresh = runtimes.get(&entity).is_some_and(|runtime| {
+                    runtime.definition == definition
+                        && runtime.texture_generation == textures.generation()
+                });
+                if !fresh {
+                    if let Some(mut previous) = runtimes.remove(&entity) {
+                        push_commands(previous.release_all(), component.layer, camera, frame);
+                    }
+                    runtimes.insert(
+                        entity,
+                        ResidentVoxelWorld::new(definition, textures.generation()),
+                    );
+                }
+                None
+            }
+            Err(error) if self.tolerant() && runtimes.contains_key(&entity) => Some(error),
+            Err(error) => return Err(error),
+        };
+        let focus = SectionCoord::new(component.focus[0], component.focus[1], component.focus[2]);
+        let transform = world
+            .get(entity)
+            .and_then(|data| data.transform_3d)
+            .unwrap_or_default();
+        let root = transform_matrix(transform);
+        let mut commands = runtimes
+            .get_mut(&entity)
+            .expect("the voxel runtime was inserted or kept above")
+            .commands(focus, textures, camera.view_projection * root)?;
+        for command in &mut commands {
+            if let FrameCommand::CachedTexturedMesh { model, .. } = command {
+                *model = root * *model;
+            }
+        }
+        push_commands(commands, component.layer, camera, frame);
+        refused.map_or(Ok(()), Err)
     }
 }
 

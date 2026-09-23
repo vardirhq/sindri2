@@ -101,10 +101,14 @@ fn meanings(registry: &ComponentSchemaRegistry, type_name: &str) -> Value {
                         Value::Null
                     };
                 }
+                FieldMeaning::KeyOf(target) => {
+                    described["key_of"] = json!(target);
+                }
                 FieldMeaning::Colour
                 | FieldMeaning::Angle
                 | FieldMeaning::Mask
-                | FieldMeaning::Entity => {}
+                | FieldMeaning::Entity
+                | FieldMeaning::Key => {}
             }
             (path.to_owned(), described)
         })

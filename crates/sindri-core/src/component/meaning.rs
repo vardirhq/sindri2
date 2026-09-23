@@ -81,6 +81,19 @@ pub enum FieldMeaning {
     Mask,
     /// Names another entity in the same scene.
     Entity,
+    /// The identity of an item within its list: a whole number from one,
+    /// held by no other item of the same list.
+    ///
+    /// Declared on a field inside a list, such as `materials[].voxel`. A tool
+    /// adding an item gives it the next key nobody holds, rather than copying
+    /// the exemplar's, which every existing list already uses.
+    Key,
+    /// Names an item of a list in the same component by its key.
+    ///
+    /// The path is the key field of that list, such as `materials[].voxel`.
+    /// A tool offers the keys the list holds rather than any number, and
+    /// refuses to remove an item while something here still names it.
+    KeyOf(&'static str),
 }
 
 impl FieldMeaning {
@@ -103,7 +116,30 @@ impl FieldMeaning {
             Self::Range { .. } => "range",
             Self::Mask => "mask",
             Self::Entity => "entity",
+            Self::Key => "key",
+            Self::KeyOf(_) => "key_of",
         }
+    }
+}
+
+impl super::ComponentSchemaRegistry {
+    /// The fields of this component that name items of a list by key, when
+    /// `key_path` is that list's key field.
+    ///
+    /// `key_path` may name one item, `materials.2.voxel`, or all of them,
+    /// `materials[].voxel`; both answer with the `KeyOf` fields pointing at the
+    /// list. A tool asks this before removing an item: an item something still
+    /// names cannot go without leaving that name pointing at nothing.
+    pub fn references_to<'a>(
+        &'a self,
+        type_name: &'a str,
+        key_path: &'a str,
+    ) -> impl Iterator<Item = &'a str> + 'a {
+        self.meanings(type_name)
+            .filter_map(move |(path, meaning)| match meaning {
+                FieldMeaning::KeyOf(target) if matches(target, key_path) => Some(path),
+                _ => None,
+            })
     }
 }
 

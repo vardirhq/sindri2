@@ -136,6 +136,7 @@ pub(super) struct ViewportStatus<'a> {
 pub(super) fn paint_runtime_overlay(
     painter: &egui::Painter,
     rect: Rect,
+    visible: Rect,
     status: &ViewportStatus<'_>,
     error: Option<&str>,
     axes: Option<Mat4>,
@@ -145,7 +146,7 @@ pub(super) fn paint_runtime_overlay(
     if status.playing {
         paint_play_border(painter, rect);
     }
-    paint_error_banner(painter, rect, error);
+    paint_error_banner(painter, visible, error);
     if let Some(view) = axes {
         paint_axis_gizmo(
             painter,
@@ -219,19 +220,50 @@ fn paint_play_border(painter: &egui::Painter, rect: Rect) {
 ///
 /// A render failure is still reported here, because a blank view with no
 /// explanation is worse than a view with a message across it.
-pub(super) fn paint_viewport_border(painter: &egui::Painter, rect: Rect, error: Option<&str>) {
+pub(super) fn paint_viewport_border(
+    painter: &egui::Painter,
+    rect: Rect,
+    visible: Rect,
+    error: Option<&str>,
+) {
     painter.rect_stroke(rect, 0.0, hairline(), StrokeKind::Inside);
-    paint_error_banner(painter, rect, error);
+    paint_error_banner(painter, visible, error);
 }
 
-fn paint_error_banner(painter: &egui::Painter, rect: Rect, error: Option<&str>) {
+/// The widest the banner grows, so it stays clear of the panels anchored in
+/// the view's bottom corners.
+const BANNER_MAX_WIDTH: f32 = 720.0;
+
+/// What went wrong, across the bottom of the part of the view nothing covers.
+///
+/// `visible` rather than the view: with the furniture floating, the view is the
+/// whole window and the status bar sits over its bottom edge, which is where a
+/// banner placed against the view's own edge was drawn -- half under the bar.
+/// Centred with a capped width, so the panels anchored in the bottom corners do
+/// not cover its ends, and wrapped, because the message that matters most names
+/// a field and what it accepts and does not fit on one line of a narrow view.
+fn paint_error_banner(painter: &egui::Painter, visible: Rect, error: Option<&str>) {
     let Some(error) = error else {
         return;
     };
-    let banner = Rect::from_min_size(
-        Pos2::new(rect.left() + 10.0, rect.bottom() - 40.0),
-        Vec2::new((rect.width() - 20.0).max(1.0), 28.0),
+    let width = (visible.width() - 20.0).clamp(1.0, BANNER_MAX_WIDTH);
+    let galley = painter.layout(
+        error.to_owned(),
+        FontId::proportional(text::NOTE),
+        color::DANGER_TEXT,
+        (width - 18.0).max(1.0),
     );
+    let height = galley.size().y + 12.0;
+    let banner = Rect::from_min_size(
+        Pos2::new(
+            visible.center().x - width / 2.0,
+            visible.bottom() - 12.0 - height,
+        ),
+        Vec2::new(width, height),
+    );
+    // Backed like the status plate: a translucent red alone was unreadable
+    // over bright terrain.
+    painter.rect_filled(banner, radius(), Color32::from_black_alpha(200));
     painter.rect_filled(banner, radius(), color::DANGER.gamma_multiply(0.22));
     painter.rect_stroke(
         banner,
@@ -239,13 +271,7 @@ fn paint_error_banner(painter: &egui::Painter, rect: Rect, error: Option<&str>) 
         Stroke::new(1.0, color::DANGER),
         StrokeKind::Inside,
     );
-    painter.text(
-        banner.left_center() + Vec2::new(9.0, 0.0),
-        Align2::LEFT_CENTER,
-        error,
-        FontId::proportional(text::NOTE),
-        color::DANGER_TEXT,
-    );
+    painter.galley(banner.min + Vec2::new(9.0, 6.0), galley, color::DANGER_TEXT);
 }
 
 /// How long an axis arm is when it points straight across the screen.

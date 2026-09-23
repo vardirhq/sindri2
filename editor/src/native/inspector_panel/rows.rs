@@ -30,6 +30,11 @@ pub(crate) struct Described<'a> {
     pub(crate) registry: &'a ComponentSchemaRegistry,
     pub(crate) type_name: &'a str,
     pub(crate) assets: FieldAssets<'a>,
+    /// The whole component as it stood when drawing began, for a field whose
+    /// meaning depends on another part of it: a key reference reads the list
+    /// it names. Only taken for components that declare keys, because it is a
+    /// copy of the payload every frame.
+    pub(crate) whole: Option<&'a Value>,
 }
 
 /// Where in a component a value sits, and what the component says about it.
@@ -178,7 +183,7 @@ pub(crate) fn value_row(
         // but a row with no control and no explanation is the complaint this
         // panel keeps earning, so it says on hover why it is a readout.
         inspector::ValueKind::Opaque => {
-            property::readout(
+            property::readout_indented(
                 ui,
                 &label,
                 &opaque_summary(value),
@@ -189,6 +194,7 @@ pub(crate) fn value_row(
                     }
                     _ => "Shown as it is stored: editing it as text could break the scene",
                 }),
+                indent,
             );
         }
     }
@@ -313,6 +319,13 @@ fn described_row(
         {
             colour_row(ui, key, value);
             true
+        }
+        FieldMeaning::Key => {
+            super::keys::key_row(ui, label, value, indent);
+            true
+        }
+        FieldMeaning::KeyOf(target) => {
+            super::keys::key_of_row(ui, at, label, target, value, indent)
         }
         FieldMeaning::Choice(options) => {
             if described

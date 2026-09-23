@@ -1274,7 +1274,23 @@
         "render_radius": 2,
         "vertical_radius": 1
       },
-      "meanings": {},
+      "meanings": {
+        "generator.deep_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
+        "generator.subsurface_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
+        "generator.surface_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
+        "materials[].voxel": {
+          "kind": "key"
+        }
+      },
       "schema_version": 1,
       "type_name": "sindri.voxel_world"
     }

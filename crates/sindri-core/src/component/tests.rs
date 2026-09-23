@@ -259,3 +259,61 @@ fn a_component_without_a_template_cannot_be_described() {
         Err(ComponentRegistryError::DescribedWithoutFields(_))
     ));
 }
+
+/// A reference is checked at both ends.
+///
+/// `KeyOf` names a second path, and a renamed list field would leave it naming
+/// nothing, so the path it refers to is held to the same check as the field it
+/// is declared on.
+#[test]
+fn a_key_reference_to_a_missing_list_is_refused() {
+    #[allow(dead_code)]
+    #[derive(Debug, serde::Deserialize)]
+    struct Palette {
+        swatches: Vec<Swatch>,
+        chosen: u16,
+    }
+    #[allow(dead_code)]
+    #[derive(Debug, serde::Deserialize)]
+    struct Swatch {
+        id: u16,
+    }
+    impl SceneComponent for Palette {
+        const TYPE_NAME: &'static str = "game.palette";
+    }
+
+    let mut registry = ComponentSchemaRegistry::default();
+    registry
+        .register_with_fields::<Palette>(
+            "Palette",
+            json!({ "swatches": [{ "id": 1 }], "chosen": 1 }),
+        )
+        .unwrap();
+
+    assert!(matches!(
+        registry.describe::<Palette>([("chosen", FieldMeaning::KeyOf("colours[].id"))]),
+        Err(ComponentRegistryError::UnknownFieldPath { path, .. }) if path == "colours[].id"
+    ));
+    registry
+        .describe::<Palette>([
+            ("swatches[].id", FieldMeaning::Key),
+            ("chosen", FieldMeaning::KeyOf("swatches[].id")),
+        ])
+        .expect("both ends of the reference exist");
+    assert_eq!(
+        registry.meaning("game.palette", "swatches.0.id"),
+        Some(&FieldMeaning::Key)
+    );
+    assert_eq!(
+        registry
+            .references_to("game.palette", "swatches.3.id")
+            .collect::<Vec<_>>(),
+        ["chosen"],
+        "any item's key is named by the field that refers to the list"
+    );
+    assert_eq!(
+        registry.references_to("game.palette", "chosen").count(),
+        0,
+        "a field that is not a key has nothing referring to it"
+    );
+}

@@ -17,8 +17,11 @@
 use eframe::egui::{self, RichText};
 use serde_json::Value;
 
+use crate::ui::icons;
 use crate::ui::theme::{color, metric, text};
+use crate::ui::widgets::{button, button::Intent};
 
+use super::keys;
 use super::rows::{At, Authored, join, value_row};
 
 /// Whether the component says this field holds a list of objects.
@@ -75,7 +78,9 @@ pub(crate) fn list_rows(
                 .size(text::NOTE)
                 .color(color::TEXT_FAINT),
         );
-        if blank_item(at).is_some() && ui.small_button("+").on_hover_text("Add one").clicked() {
+        if blank_item(at).is_some()
+            && button::row_icon(ui, icons::ADD, Intent::Quiet, "Add one").clicked()
+        {
             change = Some(Change::Add);
         }
     });
@@ -84,6 +89,7 @@ pub(crate) fn list_rows(
         return;
     };
     for (index, item) in items.iter_mut().enumerate() {
+        let named_by = keys::named_by(at, item, index);
         ui.horizontal(|ui| {
             ui.add_space(metric::GUTTER + indent + 10.0);
             ui.label(
@@ -95,10 +101,24 @@ pub(crate) fn list_rows(
             // at all, and for a compound collider order decides nothing but
             // reads as structure, so one button that moves an item up is
             // enough to arrange it.
-            if index > 0 && ui.small_button("↑").on_hover_text("Move up").clicked() {
+            if index > 0 && button::row_icon(ui, icons::MOVE_UP, Intent::Quiet, "Move up").clicked()
+            {
                 change = Some(Change::MoveUp(index));
             }
-            if ui.small_button("−").on_hover_text("Remove").clicked() {
+            // An item something still names cannot go: the name would be left
+            // pointing at nothing, and the component would stop drawing. The
+            // button says what names it rather than doing nothing.
+            let removable = named_by.is_empty();
+            let removed = ui
+                .add_enabled_ui(removable, |ui| {
+                    button::row_icon(ui, icons::REMOVE, Intent::Quiet, "Remove")
+                })
+                .inner
+                .on_disabled_hover_text(format!(
+                    "Still used by {}. Point those somewhere else first.",
+                    named_by.join(", ")
+                ));
+            if removed.clicked() {
                 change = Some(Change::Remove(index));
             }
         });
@@ -124,7 +144,12 @@ pub(crate) fn list_rows(
 
 /// Applies what the author asked for, once the list is no longer being walked.
 fn apply(at: At<'_>, value: &mut Value, change: Option<Change>) {
+    let added = matches!(change, Some(Change::Add));
     apply_change(blank_item(at), value, change);
+    if added && let Some(items) = value.as_array_mut() {
+        let last = items.len().saturating_sub(1);
+        keys::number_new_item(at, items, last);
+    }
 }
 
 /// The same, with the blank already resolved, so what a list *does* can be
@@ -206,6 +231,84 @@ mod tests {
         let mut list = json!([piece(0.1), piece(0.2)]);
         apply_change(None, &mut list, Some(Change::MoveUp(1)));
         assert_eq!(list, json!([piece(0.2), piece(0.1)]));
+    }
+
+    /// The voxel world the inspector adds materials to, with the schema that
+    /// says which field is a material's key and which fields name one.
+    mod voxel_materials {
+        use serde_json::{Value, json};
+        use sindri_scene::SceneExtractor;
+
+        use super::super::{Change, apply};
+        use crate::native::inspector_panel::field::FieldAssets;
+        use crate::native::inspector_panel::keys;
+        use crate::native::inspector_panel::rows::{At, Described};
+
+        fn world() -> Value {
+            json!({
+                "generator": { "kind": "layered_terrain", "surface_voxel": 1,
+                               "subsurface_voxel": 2, "deep_voxel": 3 },
+                "materials": [
+                    { "voxel": 1, "top": "a.png", "side": "a.png", "bottom": "a.png" },
+                    { "voxel": 2, "top": "a.png", "side": "a.png", "bottom": "a.png" },
+                    { "voxel": 3, "top": "a.png", "side": "a.png", "bottom": "a.png" }
+                ]
+            })
+        }
+
+        fn at<'a>(extractor: &'a SceneExtractor, whole: &'a Value) -> At<'a> {
+            At {
+                described: Some(Described {
+                    registry: extractor.components(),
+                    type_name: "sindri.voxel_world",
+                    assets: FieldAssets {
+                        textures: &[],
+                        fonts: &[],
+                        scripts: &[],
+                        audio: &[],
+                        profiles: &[],
+                        tile_sets: &[],
+                    },
+                    whole: Some(whole),
+                }),
+                path: "materials",
+            }
+        }
+
+        /// The schema's blank material is ID 1, which every world has; adding
+        /// it unnumbered made a world the engine refused and froze the view.
+        #[test]
+        fn an_added_material_gets_an_id_no_other_material_has() {
+            let extractor = SceneExtractor::new().unwrap();
+            let whole = world();
+            let mut materials = whole["materials"].clone();
+            apply(at(&extractor, &whole), &mut materials, Some(Change::Add));
+            let ids: Vec<_> = materials
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|material| material["voxel"].clone())
+                .collect();
+            assert_eq!(ids, [json!(1), json!(2), json!(3), json!(4)]);
+        }
+
+        #[test]
+        fn a_material_the_generator_uses_cannot_be_removed() {
+            let extractor = SceneExtractor::new().unwrap();
+            let mut whole = world();
+            whole["materials"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({ "voxel": 7, "top": "a.png", "side": "a.png", "bottom": "a.png" }));
+            let at = at(&extractor, &whole);
+            let materials = whole["materials"].as_array().unwrap();
+            assert_eq!(keys::named_by(at, &materials[0], 0), ["Surface voxel"]);
+            assert_eq!(keys::named_by(at, &materials[2], 2), ["Deep voxel"]);
+            assert!(
+                keys::named_by(at, &materials[3], 3).is_empty(),
+                "a material nothing uses can go"
+            );
+        }
     }
 
     /// An index that is not there leaves the list alone.

@@ -68,6 +68,7 @@ pub const CONSOLE: MaterialIcon = icons::ICON_TERMINAL;
 // What a control does.
 pub const ADD: MaterialIcon = icons::ICON_ADD;
 pub const REMOVE: MaterialIcon = icons::ICON_DELETE;
+pub const MOVE_UP: MaterialIcon = icons::ICON_ARROW_UPWARD;
 pub const SEARCH: MaterialIcon = icons::ICON_SEARCH;
 pub const REFRESH: MaterialIcon = icons::ICON_REFRESH;
 pub const MORE: MaterialIcon = icons::ICON_MORE_HORIZ;

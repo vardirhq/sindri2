@@ -25,7 +25,7 @@ use crate::audio::AudioSourceComponent;
 use crate::components::{
     CameraComponent, GridOccupantComponent, MeshComponent, ShapeComponent, SpriteComponent,
     TileGridComponent, TileProjection, TileVolumeComponent, TilemapComponent, UiImageComponent,
-    UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextComponent,
+    UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextComponent, VoxelWorldComponent,
 };
 use crate::components::{UiAnchor, UiTextCase, UiTextLineAlign, UiTextWrap};
 use crate::effects::EffectBurstComponent;
@@ -52,6 +52,21 @@ fn shape_kinds() -> FieldMeaning {
 
 fn shape_blends() -> FieldMeaning {
     FieldMeaning::choice(UiShapeBlend::ALL.into_iter().map(UiShapeBlend::as_str))
+}
+
+/// A voxel world's generator names its materials by ID, and an ID nothing
+/// defines is a world the engine refuses. Declaring the IDs as keys is what
+/// lets a tool offer only the materials that exist, number a new one so it
+/// does not collide, and refuse to remove one the terrain is made of.
+fn describe_voxel_world(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    const MATERIAL: &str = "materials[].voxel";
+    components.describe::<VoxelWorldComponent>([
+        (MATERIAL, FieldMeaning::Key),
+        ("generator.surface_voxel", FieldMeaning::KeyOf(MATERIAL)),
+        ("generator.subsurface_voxel", FieldMeaning::KeyOf(MATERIAL)),
+        ("generator.deep_voxel", FieldMeaning::KeyOf(MATERIAL)),
+    ])?;
+    Ok(())
 }
 
 pub(super) fn describe_builtins(
@@ -90,6 +105,7 @@ fn describe_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
     )])?;
     components
         .describe::<TileVolumeComponent>([("tileset", FieldMeaning::Asset(AssetKind::TileSet))])?;
+    describe_voxel_world(components)?;
     components.describe::<ShapeComponent>([
         ("kind", shape_kinds()),
         ("blend", shape_blends()),
@@ -293,6 +309,22 @@ mod tests {
             panic!("a collider piece's shape should be a choice");
         };
         assert_eq!(shapes.as_slice(), &["box", "circle", "capsule"]);
+    }
+
+    #[test]
+    fn a_voxel_generator_names_its_materials_by_key() {
+        let components = builtin_components().expect("the built-ins register");
+        assert_eq!(
+            components.meaning("sindri.voxel_world", "materials.2.voxel"),
+            Some(&FieldMeaning::Key)
+        );
+        for layer in ["surface_voxel", "subsurface_voxel", "deep_voxel"] {
+            assert_eq!(
+                components.meaning("sindri.voxel_world", &format!("generator.{layer}")),
+                Some(&FieldMeaning::KeyOf("materials[].voxel")),
+                "{layer} should name a material rather than any number"
+            );
+        }
     }
 
     #[test]

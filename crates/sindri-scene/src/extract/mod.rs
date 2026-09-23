@@ -17,8 +17,11 @@ mod text;
 mod tile_volume;
 pub(crate) use tile_volume::face_is_occluded;
 mod tilemap;
+mod tolerance;
 mod ui;
 mod voxel_world;
+
+pub use tolerance::ExtractProblem;
 
 pub use camera::view::UiCanvas;
 
@@ -54,11 +57,8 @@ pub use camera::{
     pan_for_drag, world_camera_of,
 };
 
-fn environment_clear(world: &World) -> Result<ClearOperations, SceneExtractError> {
-    let Some(environment) = crate::environment_of(world)? else {
-        return Ok(ClearOperations::default());
-    };
-    Ok(ClearOperations {
+fn environment_clear(environment: Option<crate::EnvironmentComponent>) -> ClearOperations {
+    environment.map_or_else(ClearOperations::default, |environment| ClearOperations {
         color: environment.background.map(f64::from),
         depth: 1.0,
     })
@@ -86,6 +86,14 @@ pub struct SceneExtractor {
     baked_volumes: RefCell<BTreeMap<EntityId, BakedVolume>>,
     /// Persistent section worlds and their compiled renderer bridges.
     voxel_worlds: voxel_world::VoxelWorldCache,
+    /// Whether an invalid environment or voxel world is drawn around rather
+    /// than failing the frame. See `tolerance.rs`.
+    tolerant: bool,
+    /// What the most recent frame drew around.
+    problems: RefCell<Vec<ExtractProblem>>,
+    /// The last valid environment, and the entity that held it, for a
+    /// tolerant frame to fall back on.
+    last_environment: RefCell<Option<(EntityId, crate::EnvironmentComponent)>>,
 }
 
 fn transform_matrix(transform: Transform3D) -> Mat4 {
@@ -167,6 +175,9 @@ impl SceneExtractor {
             components: builtin_components()?,
             baked_volumes: RefCell::default(),
             voxel_worlds: voxel_world::VoxelWorldCache::default(),
+            tolerant: false,
+            problems: RefCell::default(),
+            last_environment: RefCell::default(),
         })
     }
 
@@ -259,7 +270,8 @@ impl SceneExtractor {
         if let UiCanvas::InScene { aspect } = canvas {
             place_overlay_in_scene(&mut cameras, aspect);
         }
-        let mut frame = ExtractedFrame::new(viewport, environment_clear(world)?);
+        self.begin_frame();
+        let mut frame = ExtractedFrame::new(viewport, environment_clear(self.environment(world)?));
         self.push_meshes(world, &cameras, textures, &mut frame)?;
         self.push_voxel_worlds(world, &cameras, textures, &mut frame)?;
         let resting = SpriteAnimations::new();
@@ -316,7 +328,8 @@ impl SceneExtractor {
             place_overlay_in_scene(&mut cameras, aspect);
         }
 
-        let mut frame = ExtractedFrame::new(viewport, environment_clear(world)?);
+        self.begin_frame();
+        let mut frame = ExtractedFrame::new(viewport, environment_clear(self.environment(world)?));
         self.push_meshes(world, &cameras, textures, &mut frame)?;
         self.push_voxel_worlds(world, &cameras, textures, &mut frame)?;
         let resting = SpriteAnimations::new();

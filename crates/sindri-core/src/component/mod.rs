@@ -248,11 +248,19 @@ impl ComponentSchemaRegistry {
             return Err(ComponentRegistryError::DescribedWithoutFields(T::TYPE_NAME));
         };
         for (path, meaning) in meanings {
-            if !meaning::resolves(template, path) {
-                return Err(ComponentRegistryError::UnknownFieldPath {
-                    type_name: T::TYPE_NAME,
-                    path: path.to_owned(),
-                });
+            // A reference names a second path, and that one drifts exactly as
+            // the first does, so it is held to the same check.
+            let referenced = match &meaning {
+                FieldMeaning::KeyOf(target) => Some(*target),
+                _ => None,
+            };
+            for checked in std::iter::once(path).chain(referenced) {
+                if !meaning::resolves(template, checked) {
+                    return Err(ComponentRegistryError::UnknownFieldPath {
+                        type_name: T::TYPE_NAME,
+                        path: checked.to_owned(),
+                    });
+                }
             }
             registration.meanings.push((path.to_owned(), meaning));
         }

@@ -70,6 +70,7 @@ pub(crate) fn object_rows(
     // variant the registry's fresh component happens to be.
     let blank = fields.map(|fields| choices::blank_for(registry, type_name, fields, payload));
     let mut drawn = fields::drawn_payload(blank.as_ref(), payload);
+    let whole = super::keys::has_keys(registry, type_name).then(|| drawn.clone());
     for key in fields::ordered_keys(&drawn) {
         if (skip_properties && key == "properties") || !inspector::applies(type_name, &key) {
             continue;
@@ -111,6 +112,7 @@ pub(crate) fn object_rows(
                 registry,
                 type_name,
                 assets,
+                whole: whole.as_ref(),
             }),
             path: &key,
         };

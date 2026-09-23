@@ -59,6 +59,11 @@ pub(super) fn open_named_scene(path: &str) -> (SceneFile, Option<String>) {
 /// construction instead of by both remembering the same list.
 pub fn scene_extractor() -> SceneExtractor {
     let mut scene = SceneExtractor::new().expect("the built-in component schemas register");
+    // An editor's scene is invalid for as long as it takes to finish typing a
+    // value, and a frame failed for that froze the viewport on its last good
+    // image. Invalid environments and voxel worlds are drawn around instead,
+    // and reported against their entity.
+    scene.tolerate_invalid_components();
     // Fields but no default: a script names a source and a container, and
     // neither is something the engine can invent. The editor completes both
     // from the project and from what the source declares, which is why Script
