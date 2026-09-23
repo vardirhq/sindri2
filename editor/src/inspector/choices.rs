@@ -30,7 +30,8 @@ use sindri_core::ComponentSchemaRegistry;
 /// choice goes through, and comes out describing the same variant they are
 /// looking at.
 ///
-/// Only a tag the component itself carries. A tag inside a list is one tag per
+/// Only a tag the component itself carries, directly or in an object it holds
+/// — a voxel world's `generator.kind`. A tag inside a list is one tag per
 /// item — each piece of a collider has its own shape — and a blank holds one
 /// exemplar rather than one per item, so there is nothing there to rewrite. The
 /// items are drawn from what they store.
@@ -43,15 +44,25 @@ pub fn blank_for(
 ) -> Value {
     let mut blank = defaults.clone();
     for tag in registry.variant_tags(type_name) {
-        let Some(chosen) = tag
-            .find(['.', '['])
-            .is_none()
-            .then(|| payload.get(tag).and_then(Value::as_str))
-            .flatten()
+        if tag.contains('[') {
+            continue;
+        }
+        let (parent, leaf) = tag.rsplit_once('.').unwrap_or(("", tag));
+        let pointer = if parent.is_empty() {
+            String::new()
+        } else {
+            format!("/{}", parent.replace('.', "/"))
+        };
+        let Some(chosen) = payload
+            .pointer(&pointer)
+            .and_then(|holder| holder.get(leaf))
+            .and_then(Value::as_str)
         else {
             continue;
         };
-        registry.switch_variant(type_name, tag, chosen, &mut blank);
+        if let Some(holder) = blank.pointer_mut(&pointer) {
+            registry.switch_variant(type_name, tag, chosen, holder);
+        }
     }
     blank
 }
@@ -122,6 +133,24 @@ mod tests {
             &mut piece,
         );
         assert_eq!(piece["shape"], json!("circle"));
+    }
+
+    /// A tag inside an object is rewritten as well: a natural terrain is
+    /// drawn from the natural terrain's blank, not from the layered one a
+    /// fresh voxel world would otherwise start from.
+    #[test]
+    fn a_blank_follows_a_tag_inside_an_object() {
+        let extractor = sindri_scene::SceneExtractor::new().unwrap();
+        let registry = extractor.components();
+        let layered = json!({ "generator": { "kind": "layered_terrain", "seed": 4,
+            "base_height": 3, "height_variation": 6, "surface_voxel": 1,
+            "subsurface_voxel": 2, "deep_voxel": 3, "subsurface_depth": 3 } });
+        let natural = json!({ "generator": { "kind": "natural_terrain" } });
+        let blank = blank_for(registry, "sindri.voxel_world", &layered, &natural);
+        assert_eq!(blank["generator"]["kind"], json!("natural_terrain"));
+        assert!(blank["generator"].get("biomes").is_some(), "{blank}");
+        assert!(blank["generator"].get("base_height").is_none(), "{blank}");
+        assert_eq!(blank["generator"]["seed"], json!(4), "a shared field stays");
     }
 
     /// A component with no variants keeps its blank: there is nothing to

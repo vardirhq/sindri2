@@ -10,8 +10,15 @@
 use sindri_core::{AssetKind, ComponentSchemaRegistry, FieldMeaning};
 
 use super::SceneExtractError;
-use super::voxel_world::{MAX_HEIGHT_VARIATION, MAX_RESIDENCY_RADIUS};
-use crate::components::{EnvironmentComponent, EnvironmentToneMapping, VoxelWorldComponent};
+use super::voxel_source::{
+    FEATURE_SIZES, MAX_BIOME_RELIEF, MAX_HEIGHT_VARIATION, MAX_RELIEF, MAX_SUBSURFACE_DEPTH,
+    MAX_TERRACE,
+};
+use super::voxel_world::MAX_RESIDENCY_RADIUS;
+use crate::components::{
+    EnvironmentComponent, EnvironmentToneMapping, NaturalTerrainDocument, VoxelGeneratorDocument,
+    VoxelWorldComponent,
+};
 
 const COLOUR: FieldMeaning = FieldMeaning::Colour;
 
@@ -82,27 +89,101 @@ fn describe_environment(components: &mut ComponentSchemaRegistry) -> Result<(), 
 /// A material's faces name a texture or a sprite cut from one, which is what
 /// the texture picker offers.
 fn describe_voxel_world(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
-    const MATERIAL: &str = "materials[].voxel";
     let texture = || FieldMeaning::Asset(AssetKind::Texture);
     components.describe::<VoxelWorldComponent>([
         (MATERIAL, FieldMeaning::Key),
         ("materials[].top", texture()),
         ("materials[].side", texture()),
         ("materials[].bottom", texture()),
-        ("generator.kind", FieldMeaning::choice(["layered_terrain"])),
+        (
+            "generator.kind",
+            FieldMeaning::choice(VoxelGeneratorDocument::KINDS),
+        ),
+        ("generator.seed", at_least(0.0)),
+        ("render_radius", range(0.0, f64::from(MAX_RESIDENCY_RADIUS))),
+        (
+            "vertical_radius",
+            range(0.0, f64::from(MAX_RESIDENCY_RADIUS)),
+        ),
+    ])?;
+    describe_generators(components)?;
+    components.describe::<VoxelWorldComponent>([
         ("generator.surface_voxel", FieldMeaning::KeyOf(MATERIAL)),
         ("generator.subsurface_voxel", FieldMeaning::KeyOf(MATERIAL)),
         ("generator.deep_voxel", FieldMeaning::KeyOf(MATERIAL)),
-        ("generator.seed", at_least(0.0)),
         (
             "generator.height_variation",
             range(0.0, f64::from(MAX_HEIGHT_VARIATION)),
         ),
         ("generator.subsurface_depth", at_least(0.0)),
-        ("render_radius", range(0.0, f64::from(MAX_RESIDENCY_RADIUS))),
+    ])?;
+    describe_natural_terrain(components)
+}
+
+const MATERIAL: &str = "materials[].voxel";
+
+/// What each generator holds, so switching one to the other writes the
+/// fields the arriving one needs and drops the ones it does not.
+fn describe_generators(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    let [layered, natural] = VoxelGeneratorDocument::KINDS;
+    let fields = |generator: VoxelGeneratorDocument| {
+        let mut value = serde_json::to_value(generator).expect("a generator serializes");
+        if let Some(object) = value.as_object_mut() {
+            object.remove("kind");
+        }
+        value
+    };
+    components.describe_variants::<VoxelWorldComponent>(
+        "generator.kind",
+        [
+            (layered, fields(VoxelGeneratorDocument::default())),
+            (
+                natural,
+                fields(VoxelGeneratorDocument::NaturalTerrain(
+                    NaturalTerrainDocument::default(),
+                )),
+            ),
+        ],
+    )?;
+    Ok(())
+}
+
+/// Ranges mirror the checks in `voxel_source`; the test below holds the two
+/// together. Every voxel a natural terrain names is a key of the material
+/// list, the optional ones included: a tool offers the materials there are,
+/// and none.
+fn describe_natural_terrain(
+    components: &mut ComponentSchemaRegistry,
+) -> Result<(), SceneExtractError> {
+    let material = || FieldMeaning::KeyOf(MATERIAL);
+    components.describe::<VoxelWorldComponent>([
+        ("generator.relief", range(1.0, f64::from(MAX_RELIEF))),
         (
-            "vertical_radius",
-            range(0.0, f64::from(MAX_RESIDENCY_RADIUS)),
+            "generator.feature_size",
+            range(f64::from(FEATURE_SIZES.0), f64::from(FEATURE_SIZES.1)),
+        ),
+        ("generator.stone_voxel", material()),
+        ("generator.water_voxel", material()),
+        ("generator.beach_voxel", material()),
+        ("generator.sea_bed_voxel", material()),
+        ("generator.cliff_voxel", material()),
+        ("generator.snow_voxel", material()),
+        ("generator.ice_voxel", material()),
+        ("generator.trunk_voxel", material()),
+        ("generator.leaves_voxel", material()),
+        ("generator.biomes[].temperature", UNIT),
+        ("generator.biomes[].moisture", UNIT),
+        ("generator.biomes[].trees", UNIT),
+        ("generator.biomes[].surface_voxel", material()),
+        ("generator.biomes[].subsurface_voxel", material()),
+        (
+            "generator.biomes[].subsurface_depth",
+            range(0.0, f64::from(MAX_SUBSURFACE_DEPTH)),
+        ),
+        ("generator.biomes[].relief", range(0.0, MAX_BIOME_RELIEF)),
+        (
+            "generator.biomes[].terraces",
+            range(0.0, f64::from(MAX_TERRACE)),
         ),
     ])?;
     Ok(())
@@ -114,7 +195,9 @@ mod tests {
     use sindri_core::FieldMeaning;
 
     use super::super::registry::builtin_components;
-    use crate::components::EnvironmentComponent;
+    use crate::components::{
+        EnvironmentComponent, NaturalTerrainDocument, VoxelGeneratorDocument, VoxelWorldComponent,
+    };
 
     /// Writes `number` at a dotted path, as an integer where the field holds
     /// one, because serde refuses `8.0` for a `u32`.
@@ -172,6 +255,47 @@ mod tests {
         assert!(
             checked >= 18,
             "only {checked} environment bounds were declared"
+        );
+    }
+
+    /// The same promise for a natural terrain: every end of every range the
+    /// inspector offers is a world the engine builds.
+    #[test]
+    fn every_natural_terrain_range_is_one_validation_accepts() {
+        let components = builtin_components().expect("the built-ins register");
+        let natural = serde_json::to_value(VoxelWorldComponent {
+            generator: VoxelGeneratorDocument::NaturalTerrain(NaturalTerrainDocument::default()),
+            ..serde_json::from_str("{}").expect("a bare voxel world decodes")
+        })
+        .expect("it serializes");
+        let builds = |path: &str, number: f64| {
+            let mut payload = natural.clone();
+            set(&mut payload, &path.replace("[]", ".0"), number);
+            let component: VoxelWorldComponent =
+                serde_json::from_value(payload).expect("the edited world decodes");
+            super::super::voxel_source::terrain_source(
+                &component.generator,
+                &[1, 2, 3].into_iter().collect(),
+            )
+            .is_ok()
+        };
+        let mut checked = 0;
+        for (path, meaning) in components.meanings("sindri.voxel_world") {
+            let pointer = format!("/{}", path.replace("[]", ".0").replace('.', "/"));
+            if !path.starts_with("generator.") || natural.pointer(&pointer).is_none() {
+                continue;
+            }
+            if let FieldMeaning::Range { min, max } = meaning {
+                assert!(builds(path, *min), "{path} refuses its own minimum {min}");
+                if max.is_finite() {
+                    assert!(builds(path, *max), "{path} refuses its own maximum {max}");
+                }
+                checked += 1;
+            }
+        }
+        assert!(
+            checked >= 9,
+            "only {checked} natural terrain bounds were declared"
         );
     }
 

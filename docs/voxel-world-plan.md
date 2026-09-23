@@ -169,6 +169,7 @@ Exit: Causeway uses `sindri-voxel` for generation/residency and has no holes cau
 - Store edits as sparse overrides/deltas from deterministic generation.
 - Generate a real vertical volume rather than a surface skirt.
 - Support caves, tunnels, overhangs, ores, and multiple surfaces at one X/Z.
+  (`natural_terrain` has all but ores; see [`voxel-terrain.md`](voxel-terrain.md).)
 - Save/load edited chunks without serializing untouched procedural terrain.
 
 Exit: dig through a mountain, unload it, reload it, and the tunnel remains.

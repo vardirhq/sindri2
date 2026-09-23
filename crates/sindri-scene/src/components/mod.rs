@@ -21,6 +21,7 @@ mod ui;
 mod ui_shape;
 mod ui_text_options;
 pub mod ui_text_template;
+mod voxel_terrain;
 mod voxel_world;
 
 pub use camera::{
@@ -48,6 +49,7 @@ pub use ui_shape::{ShapeComponent, ShapeGeometry, UiShapeBlend, UiShapeComponent
 pub use ui_text_options::{
     UiTextAutoSize, UiTextCase, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,
 };
+pub use voxel_terrain::{BiomeDocument, NaturalTerrainDocument};
 pub use voxel_world::{VoxelGeneratorDocument, VoxelMaterialDocument, VoxelWorldComponent};
 
 /// The tint a component that does not name one draws with.

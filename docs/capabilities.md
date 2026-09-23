@@ -446,11 +446,15 @@ two: it maps semantic voxel/face identities to atlas regions, groups one section
 into deterministic texture batches, keeps stable GPU identities across newer
 section revisions, ignores superseded results, and releases every batch when a
 section leaves residency. Scenes can author this as `sindri.voxel_world`, with
-a deterministic layered generator, per-face voxel material textures, bounded
+either a deterministic layered generator or a natural terrain generator
+(continents, ranges, rivers, biomes, caves, overhangs, water, snow and trees
+from one seed; see [`voxel-terrain.md`](voxel-terrain.md)), per-face voxel
+material textures, bounded
 horizontal/vertical residency, and a section focus. The same scene path renders
 in games and in the editor Scene view. Material IDs are declared keys
 (`FieldMeaning::Key`) and the generator's surface, subsurface, and deep layers
-reference them (`FieldMeaning::KeyOf`), so the editor numbers an added material
+reference them (`FieldMeaning::KeyOf`, including the natural terrain's biome
+and optional palette voxels, which also offer *None*), so the editor numbers an added material
 past every ID in use, refuses to remove one a layer still names, and offers the
 layers only the IDs that exist. The editor's extractor tolerates an invalid
 voxel world or environment (`SceneExtractor::tolerate_invalid_components`):

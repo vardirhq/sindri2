@@ -24,9 +24,10 @@ use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
     CameraBehaviorComponent, CameraComponent, EnvironmentComponent, GridNavigationComponent,
-    GridOccupantComponent, GridPlacementComponent, MeshComponent, ShapeComponent, SpriteComponent,
-    TileGridComponent, TileVolumeComponent, TilemapComponent, UiImageComponent, UiShapeBlend,
-    UiShapeComponent, UiShapeKind, UiTextComponent, VoxelWorldComponent,
+    GridOccupantComponent, GridPlacementComponent, MeshComponent, NaturalTerrainDocument,
+    ShapeComponent, SpriteComponent, TileGridComponent, TileVolumeComponent, TilemapComponent,
+    UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextComponent,
+    VoxelGeneratorDocument, VoxelWorldComponent,
 };
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
@@ -335,16 +336,13 @@ fn register_tiles(components: &mut ComponentSchemaRegistry) -> Result<(), SceneE
     components.register_with_default::<VoxelWorldComponent>(
         "Voxel World",
         serde_json::json!({
-            "generator": {
-                "kind": "layered_terrain",
-                "seed": 0,
-                "base_height": 3,
-                "height_variation": 6,
-                "surface_voxel": 1,
-                "subsurface_voxel": 2,
-                "deep_voxel": 3,
-                "subsurface_depth": 3
-            },
+            // A new world is a natural one: continents, ranges and biomes
+            // from the three starting materials, rather than the rolling
+            // field of the simpler generator.
+            "generator": serde_json::to_value(VoxelGeneratorDocument::NaturalTerrain(
+                NaturalTerrainDocument::default(),
+            ))
+            .expect("a generator serializes"),
             "materials": [
                 {
                     "voxel": 1,

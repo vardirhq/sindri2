@@ -100,7 +100,7 @@ pub(crate) fn named_by(at: At<'_>, item: &Value, index: usize) -> Vec<String> {
             .registry
             .references_to(described.type_name, &key_path)
         {
-            if value_at(whole, referring) == Some(key) {
+            if values_at(whole, referring).contains(&key) {
                 names.push(inspector::humanize(
                     referring.rsplit('.').next().unwrap_or(referring),
                 ));
@@ -110,12 +110,39 @@ pub(crate) fn named_by(at: At<'_>, item: &Value, index: usize) -> Vec<String> {
     names
 }
 
+/// Every value at a dotted path. A numeric step indexes a list, and a step
+/// ending in `[]` walks every item of one: a material a biome names is still
+/// named, whichever biome names it.
+fn values_at<'v>(root: &'v Value, path: &str) -> Vec<&'v Value> {
+    let mut here = vec![root];
+    for step in path.split('.') {
+        here = here
+            .into_iter()
+            .flat_map(|value| -> Vec<&Value> {
+                if let Some(list) = step.strip_suffix("[]") {
+                    value
+                        .get(list)
+                        .and_then(Value::as_array)
+                        .map(|items| items.iter().collect())
+                        .unwrap_or_default()
+                } else if let Value::Array(items) = value {
+                    step.parse::<usize>()
+                        .ok()
+                        .and_then(|index| items.get(index))
+                        .into_iter()
+                        .collect()
+                } else {
+                    value.get(step).into_iter().collect()
+                }
+            })
+            .collect();
+    }
+    here
+}
+
 /// The value at a dotted path, where a numeric step indexes a list.
 fn value_at<'v>(root: &'v Value, path: &str) -> Option<&'v Value> {
-    path.split('.').try_fold(root, |here, step| match here {
-        Value::Array(items) => items.get(step.parse::<usize>().ok()?),
-        _ => here.get(step),
-    })
+    values_at(root, path).into_iter().next()
 }
 
 /// The keys a `KeyOf(target)` field may choose from, in list order.
@@ -162,13 +189,25 @@ pub(crate) fn key_of_row(
         inspector::humanize(list),
         field.replace('_', " ")
     );
-    let missing = !options.contains(value);
+    // A reference the component may leave unset holds null, and its exemplar
+    // does too: a world with no water names no water material. Such a field
+    // offers "None" beside the keys, and holding it is not a problem.
+    let optional = value.is_null()
+        || at.described.is_some_and(|described| {
+            described
+                .registry
+                .exemplar(described.type_name, &exemplar_path(at.path))
+                .is_some_and(Value::is_null)
+        });
+    let missing = !value.is_null() && !options.contains(value);
     let mut chosen = value.clone();
     property::Property::new(label)
         .indent(indent)
         .show(ui, |ui| {
             let shown = RichText::new(if missing {
                 format!("{value} (not defined)")
+            } else if value.is_null() {
+                NONE.to_owned()
             } else {
                 value.to_string()
             })
@@ -182,6 +221,9 @@ pub(crate) fn key_of_row(
                 .selected_text(shown)
                 .width(property::picker_width(ui))
                 .show_ui(ui, |ui| {
+                    if optional {
+                        ui.selectable_value(&mut chosen, Value::Null, NONE);
+                    }
                     for option in &options {
                         ui.selectable_value(&mut chosen, option.clone(), option.to_string());
                     }
@@ -197,6 +239,22 @@ pub(crate) fn key_of_row(
         *value = chosen;
     }
     true
+}
+
+/// What an unset optional reference is called in its picker.
+const NONE: &str = "None";
+
+/// The template path for a field path: `biomes.2.surface_voxel` is
+/// `biomes[].surface_voxel`, which is what an exemplar is looked up by.
+fn exemplar_path(path: &str) -> String {
+    let mut steps: Vec<String> = Vec::new();
+    for step in path.split('.') {
+        match steps.last_mut() {
+            Some(previous) if step.parse::<usize>().is_ok() => previous.push_str("[]"),
+            _ => steps.push(step.to_owned()),
+        }
+    }
+    steps.join(".")
 }
 
 /// A key, shown rather than edited.
@@ -231,6 +289,31 @@ mod tests {
         let mut items = vec![material(1), material(2), material(5), material(1)];
         assign_next_keys(&mut items, 3, &["voxel".to_owned()]);
         assert_eq!(items[3]["voxel"], json!(6));
+    }
+
+    #[test]
+    fn an_item_index_becomes_the_list_step_of_its_template_path() {
+        assert_eq!(
+            exemplar_path("generator.biomes.2.surface_voxel"),
+            "generator.biomes[].surface_voxel"
+        );
+        assert_eq!(
+            exemplar_path("generator.water_voxel"),
+            "generator.water_voxel"
+        );
+    }
+
+    #[test]
+    fn a_key_named_inside_any_list_item_is_found() {
+        let whole = json!({ "generator": { "biomes": [
+            { "surface_voxel": 1 }, { "surface_voxel": 7 }
+        ] } });
+        let named = values_at(&whole, "generator.biomes[].surface_voxel");
+        assert!(named.contains(&&json!(7)), "{named:?}");
+        assert_eq!(
+            value_at(&whole, "generator.biomes.1.surface_voxel"),
+            Some(&json!(7))
+        );
     }
 
     #[test]

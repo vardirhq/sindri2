@@ -41,6 +41,25 @@ pub(super) struct TaggedField {
     tag: String,
     /// What each spelling makes the object hold.
     variants: Vec<(&'static str, Value)>,
+    /// The whole field template as each variant makes it.
+    ///
+    /// The template itself is only one variant — whichever a fresh component
+    /// starts as — so a field only another variant has would otherwise be a
+    /// field nothing could describe or find an exemplar for.
+    forms: Vec<Value>,
+}
+
+impl super::ComponentRegistration {
+    /// What the field template holds at `path`, as any variant makes it.
+    pub(super) fn exemplar(&self, path: &str) -> Option<&Value> {
+        let template = self.fields.as_ref()?;
+        meaning::exemplar(template, path).or_else(|| {
+            self.variants
+                .iter()
+                .flat_map(|tagged| &tagged.forms)
+                .find_map(|form| meaning::exemplar(form, path))
+        })
+    }
 }
 
 use super::{
@@ -128,6 +147,7 @@ impl ComponentSchemaRegistry {
                 });
             }
         }
+        let mut forms = Vec::with_capacity(variants.len());
         for (name, _) in &variants {
             let mut candidate = template.clone();
             let Some(holder) = meaning::at_mut(&mut candidate, parent) else {
@@ -144,11 +164,13 @@ impl ComponentSchemaRegistry {
                     source,
                 }
             })?;
+            forms.push(candidate);
         }
         registration.variants.push(TaggedField {
             path: tag_path.to_owned(),
             tag: tag.to_owned(),
             variants,
+            forms,
         });
         Ok(())
     }
@@ -324,6 +346,37 @@ mod tests {
         assert!(eye.get("spread").is_none(), "the wide lens took its field");
         assert_eq!(eye["reach"], json!(12.0));
         registry.validate_payload("game.eye", &eye).unwrap();
+    }
+
+    /// A field only the other variant has can be described once that variant
+    /// is, and not before: a tool drawing a long lens needs to know what its
+    /// reach means, though a fresh eye is wide.
+    #[test]
+    fn a_field_only_another_variant_has_can_be_described() {
+        let mut registry = registry();
+        let reach = || {
+            [(
+                "reach",
+                FieldMeaning::Range {
+                    min: 0.0,
+                    max: 50.0,
+                },
+            )]
+        };
+        assert!(matches!(
+            registry.describe::<Eye>(reach()),
+            Err(ComponentRegistryError::UnknownFieldPath { .. })
+        ));
+        described(&mut registry).unwrap();
+        registry.describe::<Eye>(reach()).unwrap();
+        assert_eq!(registry.exemplar("game.eye", "reach"), Some(&json!(12.0)));
+        assert_eq!(
+            registry.meaning("game.eye", "reach"),
+            Some(&FieldMeaning::Range {
+                min: 0.0,
+                max: 50.0
+            })
+        );
     }
 
     /// A field both variants have is a field the author set, not part of the

@@ -9,124 +9,25 @@ use sindri_render::{
     ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage,
 };
 use sindri_voxel::{
-    MeshingProfile, ResidencyConfig, SectionCoord, SectionMeshKey, VoxelCoord, VoxelFace, VoxelId,
-    VoxelSource, VoxelWorld, mesh_block_section,
+    MeshingProfile, ResidencyConfig, SectionCoord, SectionMeshKey, VoxelFace, VoxelId, VoxelWorld,
+    mesh_block_section,
 };
 
 use crate::{
-    TextureBindings, VoxelGeneratorDocument, VoxelMaterialDocument, VoxelRenderBridge,
-    VoxelTexture, VoxelWorldComponent, compile_block_mesh,
+    TextureBindings, VoxelMaterialDocument, VoxelRenderBridge, VoxelTexture, VoxelWorldComponent,
+    compile_block_mesh,
 };
 
 use super::camera::{ResolvedCamera, ResolvedCameras};
 use super::frustum::aabb_in_view;
+use super::voxel_source::{SceneTerrain, terrain_source};
 use super::{SceneExtractError, SceneExtractor, transform_matrix};
 
 pub(super) const MAX_RESIDENCY_RADIUS: u32 = 8;
-pub(super) const MAX_HEIGHT_VARIATION: u32 = 4_096;
-const TERRAIN_SAMPLE_SCALE: i32 = 8;
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct LayeredTerrain {
-    seed: u64,
-    base_height: i32,
-    height_variation: u32,
-    surface_voxel: VoxelId,
-    subsurface_voxel: VoxelId,
-    deep_voxel: VoxelId,
-    subsurface_depth: u32,
-}
-
-impl LayeredTerrain {
-    fn from_document(generator: &VoxelGeneratorDocument) -> Self {
-        let VoxelGeneratorDocument::LayeredTerrain {
-            seed,
-            base_height,
-            height_variation,
-            surface_voxel,
-            subsurface_voxel,
-            deep_voxel,
-            subsurface_depth,
-        } = generator;
-        Self {
-            seed: *seed,
-            base_height: *base_height,
-            height_variation: *height_variation,
-            surface_voxel: VoxelId::new(*surface_voxel),
-            subsurface_voxel: VoxelId::new(*subsurface_voxel),
-            deep_voxel: VoxelId::new(*deep_voxel),
-            subsurface_depth: *subsurface_depth,
-        }
-    }
-
-    fn height(&self, x: i32, z: i32) -> i32 {
-        if self.height_variation == 0 {
-            return self.base_height;
-        }
-        let grid_x = x.div_euclid(TERRAIN_SAMPLE_SCALE);
-        let grid_z = z.div_euclid(TERRAIN_SAMPLE_SCALE);
-        let offset_x = i64::from(x.rem_euclid(TERRAIN_SAMPLE_SCALE));
-        let offset_z = i64::from(z.rem_euclid(TERRAIN_SAMPLE_SCALE));
-        let sample = |sample_x, sample_z| {
-            i64::from(
-                u32::try_from(
-                    terrain_hash(self.seed, sample_x, sample_z)
-                        % u64::from(self.height_variation.saturating_add(1)),
-                )
-                .expect("terrain variation fits in u32"),
-            )
-        };
-        let lerp = |from: i64, to: i64, offset: i64| {
-            (from * (i64::from(TERRAIN_SAMPLE_SCALE) - offset) + to * offset)
-                / i64::from(TERRAIN_SAMPLE_SCALE)
-        };
-        let near = lerp(
-            sample(grid_x, grid_z),
-            sample(grid_x.saturating_add(1), grid_z),
-            offset_x,
-        );
-        let far = lerp(
-            sample(grid_x, grid_z.saturating_add(1)),
-            sample(grid_x.saturating_add(1), grid_z.saturating_add(1)),
-            offset_x,
-        );
-        self.base_height.saturating_add(
-            i32::try_from(lerp(near, far, offset_z)).expect("terrain variation fits in i32"),
-        )
-    }
-}
-
-fn terrain_hash(seed: u64, x: i32, z: i32) -> u64 {
-    let x = u64::from(u32::from_ne_bytes(x.to_ne_bytes()));
-    let z = u64::from(u32::from_ne_bytes(z.to_ne_bytes()));
-    let mut value = seed ^ x.wrapping_mul(0x9e37_79b1) ^ z.wrapping_mul(0x85eb_ca77);
-    value ^= value >> 30;
-    value = value.wrapping_mul(0xbf58_476d_1ce4_e5b9);
-    value ^= value >> 27;
-    value = value.wrapping_mul(0x94d0_49bb_1331_11eb);
-    value ^ (value >> 31)
-}
-
-impl VoxelSource for LayeredTerrain {
-    fn voxel(&self, coord: VoxelCoord) -> VoxelId {
-        let height = self.height(coord.x, coord.z);
-        if coord.y > height {
-            VoxelId::AIR
-        } else if coord.y == height {
-            self.surface_voxel
-        } else if u32::try_from(height.saturating_sub(coord.y))
-            .is_ok_and(|depth| depth <= self.subsurface_depth)
-        {
-            self.subsurface_voxel
-        } else {
-            self.deep_voxel
-        }
-    }
-}
 
 #[derive(Clone, Debug, PartialEq)]
 struct VoxelWorldDefinition {
-    source: LayeredTerrain,
+    source: SceneTerrain,
     materials: Vec<VoxelMaterialDocument>,
     render_radius: u32,
     vertical_radius: u32,
@@ -144,7 +45,7 @@ struct ResidentVoxelWorld {
     /// hot-reloading elsewhere rebuilt the whole voxel world. Only a change to
     /// what these faces actually draw with needs their meshes compiled again.
     resolved: ResolvedMaterials,
-    world: VoxelWorld<LayeredTerrain>,
+    world: VoxelWorld<SceneTerrain>,
     render: VoxelRenderBridge,
     resident: BTreeSet<SectionCoord>,
 }
@@ -389,16 +290,6 @@ fn definition(component: &VoxelWorldComponent) -> Result<VoxelWorldDefinition, S
             maximum: MAX_RESIDENCY_RADIUS,
         });
     }
-    let VoxelGeneratorDocument::LayeredTerrain {
-        height_variation, ..
-    } = &component.generator;
-    if *height_variation > MAX_HEIGHT_VARIATION {
-        return Err(SceneExtractError::VoxelHeightVariationTooLarge {
-            variation: *height_variation,
-            maximum: MAX_HEIGHT_VARIATION,
-        });
-    }
-    let source = LayeredTerrain::from_document(&component.generator);
     let ids: BTreeSet<_> = component
         .materials
         .iter()
@@ -407,15 +298,7 @@ fn definition(component: &VoxelWorldComponent) -> Result<VoxelWorldDefinition, S
     if ids.len() != component.materials.len() || ids.contains(&VoxelId::AIR.value()) {
         return Err(SceneExtractError::InvalidVoxelMaterials);
     }
-    for voxel in [
-        source.surface_voxel,
-        source.subsurface_voxel,
-        source.deep_voxel,
-    ] {
-        if voxel.is_air() || !ids.contains(&voxel.value()) {
-            return Err(SceneExtractError::MissingVoxelMaterial(voxel.value()));
-        }
-    }
+    let source = terrain_source(&component.generator, &ids)?;
     Ok(VoxelWorldDefinition {
         source,
         materials: component.materials.clone(),
@@ -451,27 +334,4 @@ fn resolve_materials(
         }
     }
     Ok(resolved)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn layered_terrain_is_solid_below_its_surface() {
-        let source = LayeredTerrain::from_document(&VoxelGeneratorDocument::default());
-        let height = source.height(12, -7);
-        assert_eq!(
-            source.voxel(VoxelCoord::new(12, height + 1, -7)),
-            VoxelId::AIR
-        );
-        assert_eq!(
-            source.voxel(VoxelCoord::new(12, height, -7)),
-            VoxelId::new(1)
-        );
-        assert_eq!(
-            source.voxel(VoxelCoord::new(12, height - 20, -7)),
-            VoxelId::new(3)
-        );
-    }
 }

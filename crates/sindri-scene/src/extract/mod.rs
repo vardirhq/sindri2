@@ -19,6 +19,7 @@ pub(crate) use tile_volume::face_is_occluded;
 mod tilemap;
 mod tolerance;
 mod ui;
+mod voxel_source;
 mod voxel_world;
 mod world_meanings;
 
@@ -159,6 +160,11 @@ pub enum SceneExtractError {
     },
     #[error("voxel height variation {variation} exceeds the supported maximum {maximum}")]
     VoxelHeightVariationTooLarge { variation: u32, maximum: u32 },
+    #[error("voxel generator `{field}` must be {requirement}")]
+    VoxelGeneratorField {
+        field: String,
+        requirement: &'static str,
+    },
     #[error("voxel materials must use unique non-air IDs")]
     InvalidVoxelMaterials,
     #[error("voxel generator references material ID {0}, but the component does not define it")]

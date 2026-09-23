@@ -3,11 +3,15 @@
 use serde::{Deserialize, Serialize};
 use sindri_core::SceneComponent;
 
+use super::voxel_terrain::NaturalTerrainDocument;
+
 /// How a scene deterministically supplies untouched voxel data.
 ///
-/// The first built-in source is deliberately modest. Games may still own
-/// richer `VoxelSource` implementations; this document gives the editor a
-/// portable source it can construct without loading game-specific Rust code.
+/// Both built-in sources are portable: the editor constructs them without
+/// loading game-specific Rust code. `layered_terrain` is a modest rolling
+/// field of three layers; `natural_terrain` is a whole world of continents,
+/// ranges, rivers, biomes, caves and trees. Games may still own richer
+/// `VoxelSource` implementations.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum VoxelGeneratorDocument {
@@ -27,6 +31,12 @@ pub enum VoxelGeneratorDocument {
         #[serde(default = "default_subsurface_depth")]
         subsurface_depth: u32,
     },
+    NaturalTerrain(NaturalTerrainDocument),
+}
+
+impl VoxelGeneratorDocument {
+    /// Every spelling of `kind`, in the order a picker offers them.
+    pub const KINDS: [&'static str; 2] = ["layered_terrain", "natural_terrain"];
 }
 
 impl Default for VoxelGeneratorDocument {

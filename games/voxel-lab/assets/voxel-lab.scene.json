@@ -51,9 +51,9 @@
           },
           "shadows": {
             "enabled": true,
-            "distance": 56,
+            "distance": 110,
             "map_size": 1024,
-            "bias": 0.0025
+            "bias": 0.02
           },
           "fog": {
             "enabled": true,
@@ -62,8 +62,8 @@
               0.24,
               0.32
             ],
-            "start": 34,
-            "distance": 62,
+            "start": 70,
+            "distance": 110,
             "density": 0.012,
             "height": 5,
             "height_falloff": 0.035
@@ -77,8 +77,8 @@
       "transform_3d": {
         "position": [
           42,
-          34,
-          42
+          60,
+          50
         ],
         "rotation": [
           -0.239118,
@@ -95,9 +95,9 @@
       "components": {
         "sindri.camera": {
           "projection": "orthographic",
-          "vertical_size": 38,
+          "vertical_size": 64,
           "near": 0.1,
-          "far": 300
+          "far": 400
         }
       }
     },
@@ -106,7 +106,7 @@
       "name": "Engine Voxel World",
       "transform_3d": {
         "position": [
-          0,
+          -80,
           0,
           0
         ],
@@ -125,14 +125,103 @@
       "components": {
         "sindri.voxel_world": {
           "generator": {
-            "kind": "layered_terrain",
+            "kind": "natural_terrain",
             "seed": 12648430,
-            "base_height": 3,
-            "height_variation": 7,
-            "surface_voxel": 1,
-            "subsurface_voxel": 2,
-            "deep_voxel": 3,
-            "subsurface_depth": 3
+            "sea_level": 0,
+            "relief": 40,
+            "feature_size": 64,
+            "tree_line": 22,
+            "snow_line": 30,
+            "caves": true,
+            "rivers": true,
+            "stone_voxel": 3,
+            "water_voxel": 12,
+            "beach_voxel": 4,
+            "sea_bed_voxel": 10,
+            "cliff_voxel": 5,
+            "snow_voxel": 6,
+            "ice_voxel": 7,
+            "trunk_voxel": 13,
+            "leaves_voxel": 14,
+            "biomes": [
+              {
+                "name": "Grassland",
+                "temperature": 0.55,
+                "moisture": 0.4,
+                "surface_voxel": 1,
+                "subsurface_voxel": 2,
+                "subsurface_depth": 3,
+                "trees": 0.06,
+                "relief": 0.8,
+                "terraces": 0
+              },
+              {
+                "name": "Forest",
+                "temperature": 0.55,
+                "moisture": 0.72,
+                "surface_voxel": 1,
+                "subsurface_voxel": 2,
+                "subsurface_depth": 3,
+                "trees": 0.55,
+                "relief": 1.0,
+                "terraces": 0
+              },
+              {
+                "name": "Swamp",
+                "temperature": 0.75,
+                "moisture": 0.92,
+                "surface_voxel": 8,
+                "subsurface_voxel": 8,
+                "subsurface_depth": 3,
+                "trees": 0.2,
+                "relief": 0.3,
+                "terraces": 0
+              },
+              {
+                "name": "Desert",
+                "temperature": 0.92,
+                "moisture": 0.12,
+                "surface_voxel": 4,
+                "subsurface_voxel": 4,
+                "subsurface_depth": 5,
+                "trees": 0.0,
+                "relief": 0.6,
+                "terraces": 0
+              },
+              {
+                "name": "Badlands",
+                "temperature": 0.85,
+                "moisture": 0.35,
+                "surface_voxel": 11,
+                "subsurface_voxel": 11,
+                "subsurface_depth": 6,
+                "trees": 0.0,
+                "relief": 1.4,
+                "terraces": 3
+              },
+              {
+                "name": "Taiga",
+                "temperature": 0.28,
+                "moisture": 0.65,
+                "surface_voxel": 9,
+                "subsurface_voxel": 2,
+                "subsurface_depth": 3,
+                "trees": 0.45,
+                "relief": 1.1,
+                "terraces": 0
+              },
+              {
+                "name": "Tundra",
+                "temperature": 0.1,
+                "moisture": 0.3,
+                "surface_voxel": 6,
+                "subsurface_voxel": 2,
+                "subsurface_depth": 2,
+                "trees": 0.03,
+                "relief": 0.7,
+                "terraces": 0
+              }
+            ]
           },
           "materials": [
             {
@@ -150,17 +239,83 @@
             {
               "voxel": 3,
               "top": "textures/world-blocks-top.png#stone-0",
-              "side": "textures/world-blocks-side.png#stone-0",
+              "side": "textures/world-blocks-top.png#stone-0",
               "bottom": "textures/world-blocks-top.png#stone-0"
+            },
+            {
+              "voxel": 4,
+              "top": "textures/world-blocks-top.png#sand-0",
+              "side": "textures/world-blocks-side.png#sand-0",
+              "bottom": "textures/world-blocks-top.png#sand-0"
+            },
+            {
+              "voxel": 5,
+              "top": "textures/world-blocks-top.png#stone-1",
+              "side": "textures/world-blocks-top.png#stone-1",
+              "bottom": "textures/world-blocks-top.png#stone-1"
+            },
+            {
+              "voxel": 6,
+              "top": "textures/world-blocks-top.png#snow-0",
+              "side": "textures/world-blocks-side.png#snow-0",
+              "bottom": "textures/world-blocks-top.png#snow-0"
+            },
+            {
+              "voxel": 7,
+              "top": "textures/world-blocks-top.png#ice-0",
+              "side": "textures/world-blocks-side.png#ice-0",
+              "bottom": "textures/world-blocks-top.png#ice-0"
+            },
+            {
+              "voxel": 8,
+              "top": "textures/world-blocks-top.png#mud-0",
+              "side": "textures/world-blocks-side.png#mud-0",
+              "bottom": "textures/world-blocks-top.png#mud-0"
+            },
+            {
+              "voxel": 9,
+              "top": "textures/world-blocks-top.png#moss-0",
+              "side": "textures/world-blocks-side.png#moss-0",
+              "bottom": "textures/world-blocks-top.png#moss-0"
+            },
+            {
+              "voxel": 10,
+              "top": "textures/world-blocks-top.png#gravel-0",
+              "side": "textures/world-blocks-side.png#gravel-0",
+              "bottom": "textures/world-blocks-top.png#gravel-0"
+            },
+            {
+              "voxel": 11,
+              "top": "textures/world-blocks-top.png#clay-0",
+              "side": "textures/world-blocks-side.png#clay-0",
+              "bottom": "textures/world-blocks-top.png#clay-0"
+            },
+            {
+              "voxel": 12,
+              "top": "textures/world-blocks-top.png#water",
+              "side": "textures/world-blocks-side.png#water",
+              "bottom": "textures/world-blocks-top.png#water"
+            },
+            {
+              "voxel": 13,
+              "top": "textures/log-end.png",
+              "side": "textures/log-bark.png",
+              "bottom": "textures/log-end.png"
+            },
+            {
+              "voxel": 14,
+              "top": "textures/leaves.png",
+              "side": "textures/leaves.png",
+              "bottom": "textures/leaves.png"
             }
           ],
           "focus": [
-            0,
-            0,
+            4,
+            1,
             0
           ],
-          "render_radius": 2,
-          "vertical_radius": 1,
+          "render_radius": 4,
+          "vertical_radius": 2,
           "layer": 0
         }
       }

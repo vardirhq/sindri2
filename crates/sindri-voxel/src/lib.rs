@@ -1,7 +1,9 @@
 //! Engine-owned sparse voxel world foundations.
 //!
 //! Games decide what a coordinate contains. This crate owns how that answer is
-//! addressed, stored in sections, revised, and eventually handed to meshers.
+//! addressed, stored in sections, revised, and eventually handed to meshers,
+//! and offers one portable answer of its own, [`NaturalTerrain`], for scenes
+//! that want a world without game code behind it.
 
 mod cache;
 mod coord;
@@ -12,6 +14,7 @@ mod mesh_tests;
 mod queue;
 mod section;
 mod source;
+mod terrain;
 mod world;
 
 pub use cache::{
@@ -28,4 +31,5 @@ pub use mesh::{
 pub use queue::VoxelWorkQueue;
 pub use section::{VoxelId, VoxelSection};
 pub use source::VoxelSource;
+pub use terrain::{NaturalTerrain, NaturalTerrainSettings, TerrainBiome, TerrainPalette};
 pub use world::{ResidencyConfig, ResidencyDelta, VoxelWorld};

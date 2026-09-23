@@ -235,7 +235,9 @@ impl ComponentSchemaRegistry {
     ///
     /// A path is dotted, and `[]` descends into an array: `pieces[].friction`
     /// means the `friction` of every piece. The template carries one exemplar
-    /// item, which is what the path resolves against.
+    /// item, which is what the path resolves against. A field only one variant
+    /// of a tag has resolves once [`Self::describe_variants`] has said what
+    /// that variant holds.
     pub fn describe<T: SceneComponent>(
         &mut self,
         meanings: impl IntoIterator<Item = (&'static str, FieldMeaning)>,
@@ -244,9 +246,9 @@ impl ComponentSchemaRegistry {
             .registrations
             .get_mut(T::TYPE_NAME)
             .ok_or(ComponentRegistryError::NotRegistered(T::TYPE_NAME))?;
-        let Some(template) = registration.fields.as_ref() else {
+        if registration.fields.is_none() {
             return Err(ComponentRegistryError::DescribedWithoutFields(T::TYPE_NAME));
-        };
+        }
         for (path, meaning) in meanings {
             // A reference names a second path, and that one drifts exactly as
             // the first does, so it is held to the same check.
@@ -255,7 +257,7 @@ impl ComponentSchemaRegistry {
                 _ => None,
             };
             for checked in std::iter::once(path).chain(referenced) {
-                if !meaning::resolves(template, checked) {
+                if registration.exemplar(checked).is_none() {
                     return Err(ComponentRegistryError::UnknownFieldPath {
                         type_name: T::TYPE_NAME,
                         path: checked.to_owned(),
@@ -276,7 +278,7 @@ impl ComponentSchemaRegistry {
     /// already describes rather than one the editor invents.
     #[must_use]
     pub fn exemplar(&self, type_name: &str, path: &str) -> Option<&Value> {
-        meaning::exemplar(self.registrations.get(type_name)?.fields.as_ref()?, path)
+        self.registrations.get(type_name)?.exemplar(path)
     }
 
     /// What this component's field at `path` means, if anything has said.
