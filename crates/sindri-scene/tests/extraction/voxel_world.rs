@@ -111,3 +111,66 @@ fn settled_voxel_world_reuses_its_compiled_section() {
         "an unchanged resident section must not upload replacement geometry"
     );
 }
+
+fn uploads(frame: &sindri_render::PreparedFrame) -> usize {
+    frame
+        .passes()
+        .iter()
+        .filter(|pass| {
+            matches!(
+                &pass.command,
+                FrameCommand::CachedTexturedMesh {
+                    replacement: Some(_),
+                    ..
+                }
+            )
+        })
+        .count()
+}
+
+/// Binding a texture the world does not use leaves its meshes alone. The
+/// bindings' generation moves on any bind in the project, and comparing it
+/// rebuilt the whole voxel world whenever a sprite elsewhere loaded.
+#[test]
+fn an_unrelated_texture_does_not_rebuild_the_world() {
+    let extractor = SceneExtractor::new().unwrap();
+    let world = voxel_world();
+    let mut textures = textures();
+    extractor
+        .extract(&world, VIEWPORT, CameraView::default(), &textures)
+        .expect("the voxel world extracts");
+
+    textures.bind("somebody-elses-sprite.png", TextureId::new(9));
+    let after = extractor
+        .extract(&world, VIEWPORT, CameraView::default(), &textures)
+        .expect("the voxel world extracts");
+    assert_eq!(uploads(&after), 0, "no section was compiled again");
+    assert!(
+        !after
+            .passes()
+            .iter()
+            .any(|pass| matches!(pass.command, FrameCommand::ReleaseCachedTexturedMesh { .. })),
+        "no section was released"
+    );
+}
+
+/// A texture a face draws with, bound to something else, is a change to what
+/// the world looks like, so its sections are compiled again.
+#[test]
+fn a_texture_the_world_draws_with_rebuilds_it() {
+    let extractor = SceneExtractor::new().unwrap();
+    let world = voxel_world();
+    let mut textures = textures();
+    extractor
+        .extract(&world, VIEWPORT, CameraView::default(), &textures)
+        .expect("the voxel world extracts");
+
+    textures.bind("surface.png", TextureId::new(7));
+    let after = extractor
+        .extract(&world, VIEWPORT, CameraView::default(), &textures)
+        .expect("the voxel world extracts");
+    assert!(
+        uploads(&after) > 0,
+        "the surface is drawn with the new texture"
+    );
+}

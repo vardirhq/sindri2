@@ -456,7 +456,9 @@ layers only the IDs that exist. The editor's extractor tolerates an invalid
 voxel world or environment (`SceneExtractor::tolerate_invalid_components`):
 the last valid terrain and lighting keep drawing, and the failure is reported
 against its entity, naming the environment field and the values it accepts.
-Games and capture tools stay strict and fail the frame. Voxel Lab now uses that component rather
+Games and capture tools stay strict and fail the frame. A resident voxel
+world keeps its compiled sections until its definition or the textures its own
+faces resolve to change; binding an unrelated texture no longer rebuilds it. Voxel Lab now uses that component rather
 than a tile volume, while its browser route exposes the persistent-cache and
 settled-remesh counters. Cached section bounds are tested conservatively against
 the current camera after the voxel world's entity transform, so offscreen

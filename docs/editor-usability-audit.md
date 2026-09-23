@@ -212,7 +212,11 @@ longer run off the panel. Grouping by cause remains. Item 5 is done: the title b
 collision, shared dock budget, squeezed sizes no longer persisted, Wide's
 assistant column, the bottom-dock project listing, status plate and axes
 placement, the Canvas inspector's height, and readout truncation. The viewport
-toolbar still scrolls rather than wraps when a view is very narrow. Other components still
+toolbar still scrolls rather than wraps when a view is very narrow. Item 6 is done for the
+case that cost the most: a voxel world is rebuilt only when what its faces
+draw with changes, not whenever any texture in the project is bound. A change
+to a material or the generator still recompiles every section, because every
+face may use it. Other components still
 fail the frame when invalid; they adopt the same tolerance as they are reached.
 
 1. **Stop the freeze.** Per-component extraction diagnostics and fallback
