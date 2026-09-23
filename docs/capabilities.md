@@ -455,7 +455,10 @@ in games and in the editor Scene view. A world may instead name a block set in
 `blocks` (the engine ships `builtin:blocks`, and new worlds use it), and then
 its generator names blocks by name, drawn with each block's per-face art; the
 generator's fields are `FieldMeaning::Block`, which the editor offers as a
-menu of the set's blocks drawn as cubes. Without a block set, material IDs are
+menu of the set's blocks drawn as cubes. A block's faces may animate through
+frames and a block may glow (drawn per batch through a `MeshSurface` UV offset
+and glow, with no remeshing); blocks that do not hide their neighbours are cut
+out, and `liquid` ones hide only their own inner faces. Without a block set, material IDs are
 declared keys
 (`FieldMeaning::Key`) and the generator's surface, subsurface, and deep layers
 reference them (`FieldMeaning::Block` falling back to `KeyOf`, including the natural terrain's biome

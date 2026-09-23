@@ -84,15 +84,29 @@ it hides its neighbours, supports, is walkable, its height and its tags.
 Tags are words a game gives a block (`hot`, `liquid`) that the engine never
 reads and scripts ask about with `Grid.tagged`.
 
+A face can move and a block can glow. A face's `animation` lists further frames
+(sprites the same size on the same texture as its first) and a speed; the
+faces are meshed once, with the first frame, and the renderer shows the others
+by shifting where they read, so a lake ripples without being rebuilt. A
+block's `glow` lights it itself: shadow takes none of it away, and the bloom
+pass picks up what exceeds full brightness. The built-in water and lava are
+8-frame loops, and lava glows. Hosts pass the scene's time as
+`SceneRuntime::with_seconds`; at zero every animation shows its first frame.
+The editor runs its own clock and redraws while a scene has animated blocks.
+
+Whether a block hides its neighbours decides how it is meshed. One that does
+(most blocks) is opaque. One that does not is cut out, holes and all, like
+leaves; one that does not and is tagged `liquid` hides only the faces between
+its own blocks, so a lake has no walls inside it.
+
 An invalid value is reported against the field, for example
 ``voxel generator `biomes.2.trees` must be from 0 to 1``, and the editor keeps
 drawing the last valid world meanwhile.
 
 ## Not yet
 
-Everything is drawn as opaque cubes, so water and leaves are solid until cutout
-and transparent rendering lands; Voxel Lab uses a leaves texture flattened
-onto green for that reason. A block's variants and its `occludes` flag are not
-yet read by the voxel mesher, block faces do not animate, and lava does not
-glow. There are no strata, ores or structures, and water does not flow.
-Causeway still uses its own generator.
+Water is drawn opaque: a liquid hides only its own inner faces, but light does
+not pass through it, because blended rendering needs a sorted pass the voxel
+renderer does not have yet. A block's variants are not yet read by the voxel
+mesher, and tile volumes do not yet animate or glow. There are no strata, ores
+or structures, and water does not flow. Causeway still uses its own generator.

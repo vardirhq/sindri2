@@ -85,6 +85,8 @@ Project asset describing semantic terrain:
 - face visuals for top, bottom, and four horizontal neighbours
 - `tags`: words a game gives a tile (`hot`, `slippery`) that the engine never
   reads and scripts ask about with `Grid.tagged`
+- a face's `animation` (further frames on the same texture, and a speed) and a
+  tile's `glow`; voxel worlds draw both, tile volumes do not yet
 - adjacency groups and allowed transitions
 - deterministic weighted variants: one tile ID with several looks, chosen from
   a hash of the cell, the tile's name and the volume's seed. The scene stores
