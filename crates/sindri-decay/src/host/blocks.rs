@@ -61,7 +61,7 @@ impl WorldHost<'_> {
                 if tile.is_empty() {
                     return Ok(Value::Bool(false));
                 }
-                let tile_set = self.tile_set_of(path, map, &tile)?;
+                let (_, tile_set) = self.tile_set_of(path, map, &tile)?;
                 Ok(Value::Bool(tile_set.tile(&tile).is_some_and(|block| {
                     block.tags.iter().any(|carried| carried == tag)
                 })))
@@ -175,23 +175,24 @@ impl WorldHost<'_> {
         map: EntityId,
         tile: &str,
     ) -> Result<(), RuntimeError> {
-        let tile_set = self.tile_set_of(path, map, tile)?;
+        let (name, tile_set) = self.tile_set_of(path, map, tile)?;
         if tile_set.tile(tile).is_none() {
             return Err(RuntimeError::Host(format!(
-                "{} was given tile `{tile}`, which the volume's tile set does not define",
+                "{} was given tile `{tile}`, which tile set `{name}` does not define",
                 path.dotted()
             )));
         }
         Ok(())
     }
 
-    /// The tile set a volume names, from the ones this host has bound.
+    /// The tile set a volume names, and its name, from the ones this host has
+    /// bound.
     fn tile_set_of(
         &self,
         path: &Path,
         map: EntityId,
         tile: &str,
-    ) -> Result<&sindri_core::TileSetDocument, RuntimeError> {
+    ) -> Result<(String, &sindri_core::TileSetDocument), RuntimeError> {
         let name = self
             .world
             .get(map)
@@ -206,12 +207,13 @@ impl WorldHost<'_> {
                 path.dotted()
             )));
         };
-        tile_sets.get(&name).ok_or_else(|| {
+        let tile_set = tile_sets.get(&name).ok_or_else(|| {
             RuntimeError::Host(format!(
                 "{} cannot check tile `{tile}`: tile set `{name}` is not bound",
                 path.dotted()
             ))
-        })
+        })?;
+        Ok((name, tile_set))
     }
 
     fn volume_cells(&self, path: &Path, map: EntityId) -> Result<&Vec<Json>, RuntimeError> {

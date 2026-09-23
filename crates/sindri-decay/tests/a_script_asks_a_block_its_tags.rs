@@ -107,5 +107,7 @@ fn lava_is_hot_and_grass_and_air_are_not() {
         .and_then(|data| data.transform_3d)
         .expect("the actor kept its transform")
         .scale;
-    assert_eq!(scale, [2.0, 3.0, 4.0]);
+    for (axis, (got, want)) in scale.iter().zip([2.0, 3.0, 4.0]).enumerate() {
+        assert!((got - want).abs() < 1.0e-5, "axis {axis}: {got} != {want}");
+    }
 }
