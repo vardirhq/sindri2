@@ -26,8 +26,9 @@ use sindri_core::{AssetKind, ComponentSchemaRegistry, FieldMeaning};
 
 use crate::inspector::{self, choices, fields};
 use crate::ui::theme::{color, metric, text};
-use crate::ui::widgets::property;
+use crate::ui::widgets::{cube, property};
 
+use super::super::thumbnails::Pictures;
 use super::rows::{At, Authored, Described, value_row};
 
 /// What the panel knows about the project while drawing a field.
@@ -44,7 +45,7 @@ pub(crate) struct FieldAssets<'a> {
     pub(crate) tile_sets: &'a [String],
     /// What each loaded texture reference looks like, for a field that can
     /// show one: a voxel material as a cube.
-    pub(crate) pictures: &'a super::super::thumbnails::Pictures,
+    pub(crate) pictures: &'a Pictures,
 }
 
 /// The rows of one payload, indented under its heading.
@@ -103,7 +104,15 @@ pub(crate) fn object_rows(
         };
         let meaning = registry.meaning(type_name, &key);
         if let Some(list) = asset_list(meaning, assets) {
-            asset_row(ui, &key, &key, value, list, 0.0);
+            asset_row(
+                ui,
+                &key,
+                &key,
+                value,
+                list,
+                pictures_for(meaning, assets),
+                0.0,
+            );
             continue;
         }
         if is_colour(meaning, value) {
@@ -147,6 +156,15 @@ pub(crate) fn asset_list<'a>(
         // chosen by its own picker, and a stylesheet is not a component field.
         AssetKind::Prefab | AssetKind::Weave => return None,
     })
+}
+
+/// The pictures a field can show beside its reference: a texture field's, and
+/// no other kind's.
+pub(crate) fn pictures_for<'a>(
+    meaning: Option<&FieldMeaning>,
+    assets: FieldAssets<'a>,
+) -> Option<&'a Pictures> {
+    matches!(meaning, Some(FieldMeaning::Asset(AssetKind::Texture))).then_some(assets.pictures)
 }
 
 /// Whether to draw a swatch.
@@ -225,8 +243,14 @@ pub(crate) fn asset_row(
     key: &str,
     value: &mut Value,
     available: &[String],
+    pictures: Option<&Pictures>,
     indent: f32,
 ) {
+    let picture = |reference: &str| {
+        pictures
+            .and_then(|pictures| pictures.get(reference))
+            .copied()
+    };
     let mut typed = value.as_str().unwrap_or_default().to_owned();
     let known = typed.is_empty() || available.contains(&typed);
     let mut changed = false;
@@ -240,8 +264,15 @@ pub(crate) fn asset_row(
         // the field beside it, and a combo repeating it would take half the row
         // to say the same thing twice.
         let picker = 12.0;
-        let field_width =
+        let mut field_width =
             (property::value_width(ui) - picker - property::PICKER_FURNITURE - 4.0).max(56.0);
+        // A texture field shows the picture it names. A long reference is cut
+        // off before its sprite name, so two fields naming different parts of
+        // one sheet read the same until you look at the picture.
+        if pictures.is_some() {
+            cube::swatch(ui, cube::ROW, picture(&typed)).on_hover_text(typed.as_str());
+            field_width = (field_width - cube::row_width()).max(56.0);
+        }
         if !known {
             ui.visuals_mut().extreme_bg_color = color::DANGER.gamma_multiply(0.12);
             ui.visuals_mut().widgets.inactive.bg_stroke =
@@ -266,7 +297,15 @@ pub(crate) fn asset_row(
                     );
                 }
                 for option in available {
-                    if ui.selectable_label(*option == typed, option).clicked() {
+                    let clicked = ui
+                        .horizontal(|ui| {
+                            if pictures.is_some() {
+                                cube::swatch(ui, cube::ROW, picture(option));
+                            }
+                            ui.selectable_label(*option == typed, option).clicked()
+                        })
+                        .inner;
+                    if clicked {
                         typed.clone_from(option);
                         changed = true;
                         ui.close();

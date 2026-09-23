@@ -117,6 +117,7 @@ pub(super) fn script_exports_section(
                 &export.name,
                 &mut value,
                 profiles,
+                None,
                 0.0,
             );
         } else {
