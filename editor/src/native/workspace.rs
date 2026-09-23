@@ -242,6 +242,12 @@ impl EditorApp {
     /// the canvas runs edge to edge under the bars — that is the point of it —
     /// so the corners overlays anchor to have to be inset past them by hand, or
     /// the hierarchy sits under the menus.
+    /// The part of `rect` no floating bar covers, for anything drawn in a view
+    /// that has to be read.
+    pub(super) fn unobscured(&self, rect: Rect) -> Rect {
+        rect.intersect(self.overlay_field())
+    }
+
     fn overlay_field(&self) -> Rect {
         let canvas = self.dock.canvas;
         if self.preferences.workspace.chrome().floats() {

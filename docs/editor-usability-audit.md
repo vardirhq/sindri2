@@ -200,6 +200,10 @@ section in `editor-architecture.md` changes in the same commit.
 
 Dependency order, cheapest unlock first.
 
+**Status:** items 1 and 2 are done for Environment and Voxel World, with the
+error banner moved clear of the status bar and wrapped. Other components still
+fail the frame when invalid; they adopt the same tolerance as they are reached.
+
 1. **Stop the freeze.** Per-component extraction diagnostics and fallback
    (section 1, layers 2–3). This removes the worst symptom for every
    component, including ones not audited here.

@@ -40,13 +40,13 @@ pub use components::{
     UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase,
     UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,
     VoxelGeneratorDocument, VoxelMaterialDocument, VoxelWorldComponent, add_camera_trauma,
-    cell_to_local_in, environment_of, ui_text_template, update_camera_behaviors,
+    cell_to_local_in, environment_of, environments_in, ui_text_template, update_camera_behaviors,
 };
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{
-    CameraView, OverlayPlacement, OverlayView, SceneExtractError, SceneExtractor, SceneRuntime,
-    UiCanvas, ViewCamera, WorldProjection, overlay_for_viewport, overlay_in_scene, pan_for_drag,
-    world_camera_of,
+    CameraView, ExtractProblem, OverlayPlacement, OverlayView, SceneExtractError, SceneExtractor,
+    SceneRuntime, UiCanvas, ViewCamera, WorldProjection, overlay_for_viewport, overlay_in_scene,
+    pan_for_drag, world_camera_of,
 };
 pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
 pub use occlusion::{

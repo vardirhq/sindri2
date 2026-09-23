@@ -448,7 +448,15 @@ section revisions, ignores superseded results, and releases every batch when a
 section leaves residency. Scenes can author this as `sindri.voxel_world`, with
 a deterministic layered generator, per-face voxel material textures, bounded
 horizontal/vertical residency, and a section focus. The same scene path renders
-in games and in the editor Scene view. Voxel Lab now uses that component rather
+in games and in the editor Scene view. Material IDs are declared keys
+(`FieldMeaning::Key`) and the generator's surface, subsurface, and deep layers
+reference them (`FieldMeaning::KeyOf`), so the editor numbers an added material
+past every ID in use, refuses to remove one a layer still names, and offers the
+layers only the IDs that exist. The editor's extractor tolerates an invalid
+voxel world or environment (`SceneExtractor::tolerate_invalid_components`):
+the last valid terrain and lighting keep drawing, and the failure is reported
+against its entity, naming the environment field and the values it accepts.
+Games and capture tools stay strict and fail the frame. Voxel Lab now uses that component rather
 than a tile volume, while its browser route exposes the persistent-cache and
 settled-remesh counters. Cached section bounds are tested conservatively against
 the current camera after the voxel world's entity transform, so offscreen

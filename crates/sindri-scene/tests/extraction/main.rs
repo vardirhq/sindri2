@@ -17,6 +17,7 @@ mod text;
 mod textures;
 mod tile_volume;
 mod tilemap;
+mod tolerance;
 mod ui;
 mod variants;
 mod view;

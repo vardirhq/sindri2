@@ -1,5 +1,8 @@
 # Changelog
 
+- The editor no longer freezes the Scene view when a Voxel World or Environment value is invalid: the last valid terrain and lighting keep drawing, and the problem is reported against its entity, naming the exact field and the values it accepts.
+- Adding a voxel material in the inspector now gives it an unused ID, a material the generator still uses cannot be removed, and the generator's surface, subsurface, and deep layers are chosen from the defined materials.
+- The viewport's error banner no longer sits under the status bar or the bottom-left panel, and wraps long messages.
 - Added authored world fog/atmosphere with distance, exponential-density, and height contributions, plus Voxel Lab horizon integration and consistent browser materials.
 - Camera gameplay can now trigger engine-owned shake through Decay with `Camera.add_trauma`, and the camera acceptance demo moves its target and triggers impacts from Decay instead of bespoke Rust gameplay.
 

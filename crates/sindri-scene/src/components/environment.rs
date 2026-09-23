@@ -1,7 +1,9 @@
 //! Authored world presentation shared by games, the editor, and browser builds.
 
 use serde::{Deserialize, Serialize};
-use sindri_core::{SceneComponent, World};
+use sindri_core::{EntityId, SceneComponent, World};
+
+use super::EnvironmentError;
 use sindri_render::{
     BloomSettings, FogSettings, PostProcessSettings, ShadowSettings, ToneMapping, WorldLighting,
 };
@@ -242,159 +244,42 @@ impl EnvironmentComponent {
             },
         }
     }
-
-    /// Refuses authored values that would make the renderer's behaviour
-    /// surprising or non-finite.
-    pub fn validate(self) -> Result<Self, EnvironmentError> {
-        if !self.background.iter().all(|value| value.is_finite())
-            || !self.ambient_color.iter().all(|value| value.is_finite())
-            || !self.ambient_intensity.is_finite()
-            || self.ambient_intensity < 0.0
-            || !self.directional.color.iter().all(|value| value.is_finite())
-            || !self.directional.intensity.is_finite()
-            || self.directional.intensity < 0.0
-        {
-            return Err(EnvironmentError::InvalidColourOrIntensity);
-        }
-        let direction_length_squared = self
-            .directional
-            .direction
-            .iter()
-            .map(|value| value * value)
-            .sum::<f32>();
-        if !self
-            .directional
-            .direction
-            .iter()
-            .all(|value| value.is_finite())
-            || direction_length_squared <= f32::EPSILON
-        {
-            return Err(EnvironmentError::InvalidDirectionalLight);
-        }
-        if !self.shadows.distance.is_finite()
-            || self.shadows.distance < 1.0
-            || !matches!(self.shadows.map_size, 256 | 512 | 1024 | 2048)
-            || !self.shadows.bias.is_finite()
-            || !(0.0..=0.05).contains(&self.shadows.bias)
-        {
-            return Err(EnvironmentError::InvalidShadows);
-        }
-        if !self.ambient_occlusion.strength.is_finite()
-            || !(0.0..=1.0).contains(&self.ambient_occlusion.strength)
-        {
-            return Err(EnvironmentError::InvalidAmbientOcclusion);
-        }
-        self.validate_fog()?;
-        self.validate_post_process()?;
-        self.validate_bloom()?;
-        Ok(self)
-    }
-    fn validate_fog(self) -> Result<(), EnvironmentError> {
-        if !self.fog.color.iter().all(|value| value.is_finite())
-            || !self.fog.start.is_finite()
-            || self.fog.start < 0.0
-            || !self.fog.distance.is_finite()
-            || self.fog.distance <= 0.0
-            || !self.fog.density.is_finite()
-            || !(0.0..=1.0).contains(&self.fog.density)
-            || !self.fog.height.is_finite()
-            || !self.fog.height_falloff.is_finite()
-            || !(0.0..=1.0).contains(&self.fog.height_falloff)
-        {
-            return Err(EnvironmentError::InvalidFog);
-        }
-        Ok(())
-    }
-
-    fn validate_post_process(self) -> Result<(), EnvironmentError> {
-        if !self.post_process.exposure.is_finite()
-            || !(-8.0..=8.0).contains(&self.post_process.exposure)
-            || !self.post_process.contrast.is_finite()
-            || !(0.0..=4.0).contains(&self.post_process.contrast)
-            || !self.post_process.saturation.is_finite()
-            || !(0.0..=4.0).contains(&self.post_process.saturation)
-            || !self.post_process.vignette.is_finite()
-            || !(0.0..=1.0).contains(&self.post_process.vignette)
-        {
-            return Err(EnvironmentError::InvalidPostProcess);
-        }
-        Ok(())
-    }
-
-    fn validate_bloom(self) -> Result<(), EnvironmentError> {
-        if !self.bloom.threshold.is_finite()
-            || self.bloom.threshold < 0.0
-            || !self.bloom.knee.is_finite()
-            || !(1.0e-4..=1.0).contains(&self.bloom.knee)
-            || !self.bloom.intensity.is_finite()
-            || self.bloom.intensity < 0.0
-            || !(1..=8).contains(&self.bloom.passes)
-        {
-            return Err(EnvironmentError::InvalidBloom);
-        }
-        Ok(())
-    }
 }
 
 /// Finds the single authored environment in a world.
 pub fn environment_of(world: &World) -> Result<Option<EnvironmentComponent>, EnvironmentError> {
     let mut found = None;
-    for (_, data) in world.entities() {
-        let Some(payload) = data.components.get(EnvironmentComponent::TYPE_NAME) else {
-            continue;
-        };
+    for (_, environment) in environments_in(world) {
         if found.is_some() {
             return Err(EnvironmentError::MultipleEnvironments);
         }
-        let environment: EnvironmentComponent = serde_json::from_value(payload.clone())
-            .map_err(|_| EnvironmentError::InvalidPayload)?;
-        found = Some(environment.validate()?);
+        found = Some(environment?);
     }
     Ok(found)
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
-pub enum EnvironmentError {
-    #[error("the scene contains more than one environment")]
-    MultipleEnvironments,
-    #[error("the environment payload does not match the authored schema")]
-    InvalidPayload,
-    #[error(
-        "environment colours and ambient intensity must be finite, with non-negative intensity"
-    )]
-    InvalidColourOrIntensity,
-    #[error("environment directional light needs a finite, non-zero direction")]
-    InvalidDirectionalLight,
-    #[error("environment shadow settings are outside their supported ranges")]
-    InvalidShadows,
-    #[error("environment ambient-occlusion settings are outside their supported ranges")]
-    InvalidAmbientOcclusion,
-    #[error("environment fog settings are outside their supported ranges")]
-    InvalidFog,
-    #[error("environment post-process settings are outside their supported ranges")]
-    InvalidPostProcess,
-    #[error("environment bloom settings are outside their supported ranges")]
-    InvalidBloom,
+/// Every entity carrying an environment, each with its own verdict.
+///
+/// The per-entity form of [`environment_of`], for a caller that has to say
+/// *which* environment is wrong rather than only that one is.
+pub fn environments_in(
+    world: &World,
+) -> Vec<(EntityId, Result<EnvironmentComponent, EnvironmentError>)> {
+    world
+        .entities()
+        .filter_map(|(entity, data)| {
+            let payload = data.components.get(EnvironmentComponent::TYPE_NAME)?;
+            let environment = serde_json::from_value::<EnvironmentComponent>(payload.clone())
+                .map_err(|_| EnvironmentError::InvalidPayload)
+                .and_then(EnvironmentComponent::validate);
+            Some((entity, environment))
+        })
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn default_environment_is_valid() {
-        assert!(EnvironmentComponent::default().validate().is_ok());
-    }
-
-    #[test]
-    fn zero_directional_light_direction_is_rejected() {
-        let mut environment = EnvironmentComponent::default();
-        environment.directional.direction = [0.0; 3];
-        assert_eq!(
-            environment.validate(),
-            Err(EnvironmentError::InvalidDirectionalLight)
-        );
-    }
 
     #[test]
     fn legacy_environment_does_not_gain_directional_light_or_shadows() {
@@ -415,49 +300,5 @@ mod tests {
         assert!(!environment.shadows.enabled);
         assert!(!environment.ambient_occlusion.enabled);
         assert!(!environment.fog.enabled);
-    }
-
-    #[test]
-    fn invalid_shadow_map_size_is_rejected() {
-        let mut environment = EnvironmentComponent::default();
-        environment.shadows.map_size = 4096;
-        assert_eq!(
-            environment.validate(),
-            Err(EnvironmentError::InvalidShadows)
-        );
-    }
-
-    #[test]
-    fn invalid_ambient_occlusion_strength_is_rejected() {
-        let mut environment = EnvironmentComponent::default();
-        environment.ambient_occlusion.strength = 1.5;
-        assert_eq!(
-            environment.validate(),
-            Err(EnvironmentError::InvalidAmbientOcclusion)
-        );
-    }
-
-    #[test]
-    fn invalid_fog_distance_is_rejected() {
-        let mut environment = EnvironmentComponent::default();
-        environment.fog.distance = 0.0;
-        assert_eq!(environment.validate(), Err(EnvironmentError::InvalidFog));
-    }
-
-    #[test]
-    fn invalid_post_process_is_rejected() {
-        let mut environment = EnvironmentComponent::default();
-        environment.post_process.vignette = 2.0;
-        assert_eq!(
-            environment.validate(),
-            Err(EnvironmentError::InvalidPostProcess)
-        );
-    }
-
-    #[test]
-    fn non_finite_bloom_is_rejected() {
-        let mut environment = EnvironmentComponent::default();
-        environment.bloom.intensity = f32::NAN;
-        assert_eq!(environment.validate(), Err(EnvironmentError::InvalidBloom));
     }
 }

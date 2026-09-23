@@ -139,7 +139,19 @@ pub fn trailing<R>(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui) -> R) -> R
 
 /// A row whose value is text the editor wrote rather than a control.
 pub fn readout(ui: &mut egui::Ui, label: &str, value: &str, why: Option<&str>) {
-    let mut row = Property::new(label);
+    readout_indented(ui, label, value, why, 0.0);
+}
+
+/// A readout nested under a heading, lined up with the editable rows beside
+/// it rather than with the heading.
+pub fn readout_indented(
+    ui: &mut egui::Ui,
+    label: &str,
+    value: &str,
+    why: Option<&str>,
+    indent: f32,
+) {
+    let mut row = Property::new(label).indent(indent);
     if let Some(why) = why {
         row = row.tip(why);
     }

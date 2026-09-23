@@ -6,6 +6,7 @@
 
 use eframe::egui::{self, Align, Color32, Layout, RichText};
 use sindri_core::{EngineState, EntityId};
+use sindri_scene::SceneExtractor;
 
 use crate::preferences::ConsoleFilter;
 use crate::ui::theme::{color, metric, text};
@@ -50,6 +51,51 @@ impl EditorApp {
             }
         }
     }
+}
+
+/// Reports what the last extraction drew around instead of failing.
+///
+/// The frame still drew, so this is not a render failure, but it is the line
+/// beside the viewport until it is fixed: an edit that made a voxel world or the
+/// environment invalid has to say so while it is invalid, and stop saying so
+/// the frame it is not. Each is about an entity, so the console offers the way
+/// to it.
+///
+/// Takes the three fields it touches rather than the app, because it runs
+/// while a viewport, another field of the app, is still borrowed.
+pub(super) fn record_extract_problems(
+    scene: &SceneExtractor,
+    console: &mut Console,
+    notice: &mut Option<String>,
+) {
+    for problem in scene.problems() {
+        let component = scene
+            .components()
+            .metadata(problem.component)
+            .map_or(problem.component, |metadata| metadata.display_name.as_str());
+        // An error that already names its component, as the environment's
+        // do, is not prefixed with the name a second time.
+        let message = if problem
+            .message
+            .to_lowercase()
+            .starts_with(&component.to_lowercase())
+        {
+            capitalized(&problem.message)
+        } else {
+            format!("{component}: {}", problem.message)
+        };
+        console.record_about(Level::Error, &message, Some(problem.entity));
+        if notice.is_none() {
+            *notice = Some(message);
+        }
+    }
+}
+
+fn capitalized(message: &str) -> String {
+    let mut characters = message.chars();
+    characters.next().map_or_else(String::new, |first| {
+        first.to_uppercase().chain(characters).collect()
+    })
 }
 
 /// The colour a line is written in, which is the only thing that distinguishes

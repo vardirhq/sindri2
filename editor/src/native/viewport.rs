@@ -10,7 +10,7 @@ use sindri_render::{
     SpriteBatchRenderer, TextRenderer, TexturedCubeRenderer, Viewport, ViewportTarget,
     encode_lit_frame, encode_prepared_frame,
 };
-use sindri_scene::{CameraView, EnvironmentComponent, SceneRuntime, UiCanvas, environment_of};
+use sindri_scene::{CameraView, EnvironmentComponent, SceneRuntime, UiCanvas};
 use weave::Viewport as WeaveViewport;
 
 use super::block_pointer::TileVolumeHover;
@@ -130,7 +130,13 @@ impl RuntimeViewport {
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Sindri editor runtime viewport encoder"),
                 });
-        let environment = environment_of(source.world).map_err(|error| error.to_string())?;
+        // The extractor's environment rather than the world's: tolerantly, an
+        // invalid one is the last valid one, so lighting holds still while a
+        // value is dragged out of range instead of the frame failing.
+        let environment = source
+            .scene
+            .environment(source.world)
+            .map_err(|error| error.to_string())?;
         renderers.cube.set_lighting(
             environment
                 .map(EnvironmentComponent::world_lighting)
@@ -332,6 +338,11 @@ impl EditorApp {
                 canvas,
             )
             .err();
+        super::console_view::record_extract_problems(
+            &self.scene,
+            &mut self.console,
+            &mut self.render_error,
+        );
         // Two views can be live at once, and the first thing to go wrong is the
         // thing worth reading, so a later success does not erase it.
         if let Some(failure) = failure {
@@ -377,7 +388,8 @@ impl EditorApp {
                     Color32::WHITE,
                 );
             }
-            paint_viewport_border(ui.painter(), rect, self.problem());
+            let visible = self.unobscured(rect);
+            paint_viewport_border(ui.painter(), rect, visible, self.problem());
         }
         context.request_repaint();
     }
@@ -560,6 +572,7 @@ impl EditorApp {
         paint_runtime_overlay(
             ui.painter(),
             rect,
+            self.unobscured(rect),
             &ViewportStatus {
                 selection: &selection,
                 mode: self.gizmo_mode.label(),

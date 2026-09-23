@@ -11,6 +11,7 @@
 
 mod camera;
 mod environment;
+mod environment_check;
 mod grid;
 mod mesh;
 mod sprite;
@@ -28,9 +29,10 @@ pub use camera::{
 };
 pub use environment::{
     EnvironmentAmbientOcclusion, EnvironmentBloom, EnvironmentComponent,
-    EnvironmentDirectionalLight, EnvironmentError, EnvironmentFog, EnvironmentPostProcess,
-    EnvironmentShadows, EnvironmentToneMapping, environment_of,
+    EnvironmentDirectionalLight, EnvironmentFog, EnvironmentPostProcess, EnvironmentShadows,
+    EnvironmentToneMapping, environment_of, environments_in,
 };
+pub use environment_check::EnvironmentError;
 pub use grid::{
     GridNavigationComponent, GridOccupantComponent, GridPlacementComponent, GridWallDocument,
 };
