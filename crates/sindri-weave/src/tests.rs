@@ -20,7 +20,7 @@ fn assert_number(actual: &serde_json::Value, expected: f64) {
 fn resolution_does_not_mutate_authored_world() {
     let document = SceneDocument::from_json(
         r#"{
-            "format_version": 9,
+            "format_version": 10,
             "metadata": { "name": "weave" },
             "entities": [{
                 "id": "panel",
@@ -80,7 +80,7 @@ fn resolution_does_not_mutate_authored_world() {
 fn class_rules_style_shape_and_text_components() {
     let document = SceneDocument::from_json(
         r#"{
-            "format_version": 9,
+            "format_version": 10,
             "metadata": { "name": "weave-visuals" },
             "entities": [{
                 "id": "panel",
@@ -193,7 +193,7 @@ fn class_rules_style_shape_and_text_components() {
 fn percentages_and_constraints_use_the_final_parent_box() {
     let document = SceneDocument::from_json(
         r#"{
-            "format_version": 9,
+            "format_version": 10,
             "metadata": { "name": "weave-sizing" },
             "entities": [
                 {
@@ -262,7 +262,7 @@ fn percentages_and_constraints_use_the_final_parent_box() {
 fn layout_alignment_maps_to_the_generic_sindri_layout_component() {
     let document = SceneDocument::from_json(
         r#"{
-            "format_version": 9,
+            "format_version": 10,
             "metadata": { "name": "weave-layout" },
             "entities": [{
                 "id": "hero",
@@ -320,7 +320,7 @@ fn layout_alignment_maps_to_the_generic_sindri_layout_component() {
 fn negative_sizes_are_rejected_with_the_authored_property() {
     let document = SceneDocument::from_json(
         r#"{
-            "format_version": 9,
+            "format_version": 10,
             "metadata": { "name": "weave-invalid-sizing" },
             "entities": [{
                 "id": "panel",

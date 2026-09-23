@@ -101,7 +101,7 @@ field meanings. Seen in the editor:
   should be the sprite picker, with a thumbnail.
 - Colours are X/Y/Z(/W) number boxes — Background is "X Y Z W". The inspector's
   colour row accepts only four-channel arrays, and Environment's
-  `ambient_color`, `directional.color` and `fog.color` are three-channel.
+  `ambient_color` and `fog.color` are three-channel (the sun's colour now lives on its light entity).
 - `generator.kind` is free text over an enum.
 - `shadows.map_size` is a number with four legal values. `Choice` is strings
   only; it needs a numeric counterpart.

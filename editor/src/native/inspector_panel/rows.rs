@@ -340,7 +340,7 @@ fn described_row(
             true
         }
         FieldMeaning::Key => {
-            super::keys::key_row(ui, label, value, indent);
+            super::keys::key_row(ui, at, label, value, indent);
             true
         }
         FieldMeaning::KeyOf(target) => {

@@ -7,9 +7,10 @@
 use std::path::Path;
 
 use sindri_core::{
-    CommandBuffer, EntityData, EntityId, SceneEntityId, Transform3D, World, WorldCommand,
+    CommandBuffer, EntityData, EntityId, SceneComponent, SceneEntityId, Transform3D, World,
+    WorldCommand,
 };
-use sindri_scene::SpriteAnimations;
+use sindri_scene::{LightComponent, SpriteAnimations, default_sun_transform};
 
 use crate::ordering;
 use crate::project::AssetKind;
@@ -37,6 +38,7 @@ use super::{EditorApp, UI_IMAGE_COMPONENT};
 pub(super) enum CreateGameObject {
     Empty { parent: Option<EntityId> },
     UiImage,
+    DirectionalLight,
 }
 
 /// The parents `entity` may legally be moved under, in the order the hierarchy
@@ -110,21 +112,29 @@ impl EditorApp {
     pub(super) fn create_game_object(&mut self, create: CreateGameObject) {
         match create {
             CreateGameObject::Empty { parent } => self.create_entity(parent),
-            CreateGameObject::UiImage => self.create_ui_image(),
+            CreateGameObject::UiImage => {
+                self.create_carrying(UI_IMAGE_COMPONENT, "UI Image", Transform3D::default());
+            }
+            CreateGameObject::DirectionalLight => self.create_carrying(
+                LightComponent::TYPE_NAME,
+                "Directional Light",
+                default_sun_transform(),
+            ),
         }
     }
 
-    /// Creates a UI element at the middle of the viewport.
+    /// Creates an entity carrying one component at its registered blank, and
+    /// selects it.
     ///
-    /// It arrives carrying `sindri.ui.image`, which is what puts it in the UI
-    /// group and what makes it visible: an empty entity called "UI something"
-    /// would be in neither space and would draw nothing.
-    fn create_ui_image(&mut self) {
-        // A UI image has an honest blank in the registry, so nothing from the
-        // project is needed to complete it.
+    /// A UI image arrives carrying `sindri.ui.image`, which is what puts it in
+    /// the UI group and what makes it visible: an empty entity called "UI
+    /// something" would be in neither space and would draw nothing. A
+    /// directional light arrives aimed down and across the world, so the first
+    /// thing it does is light it.
+    fn create_carrying(&mut self, type_name: &str, name: &str, transform: Transform3D) {
         let Some(payload) = component_default(
             self.scene.components(),
-            UI_IMAGE_COMPONENT,
+            type_name,
             ProjectDefaults::default(),
         ) else {
             return;
@@ -135,19 +145,17 @@ impl EditorApp {
             entity,
             data: Box::new(EntityData {
                 source_id: Some(next_game_object_id(&self.world)),
-                name: Some("UI Image".to_owned()),
-                transform_3d: Some(Transform3D::default()),
-                components: [(UI_IMAGE_COMPONENT.to_owned(), payload)]
-                    .into_iter()
-                    .collect(),
+                name: Some(name.to_owned()),
+                transform_3d: Some(transform),
+                components: [(type_name.to_owned(), payload)].into_iter().collect(),
                 ..EntityData::default()
             }),
         });
         self.history.break_merge_run();
-        if let Err(error) = self
-            .history
-            .apply(buffer.into_transaction("Create UI Image"), &mut self.world)
-        {
+        if let Err(error) = self.history.apply(
+            buffer.into_transaction(format!("Create {name}")),
+            &mut self.world,
+        ) {
             self.report(error.to_string());
             return;
         }

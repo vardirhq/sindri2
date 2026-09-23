@@ -144,13 +144,14 @@ fn each_discarding_action_says_what_it_is_about_to_do() {
 }
 
 /// A new scene loads, is named, and comes with the one thing a scene cannot
-/// draw the player's view without.
+/// draw the player's view without, and a sun to light it.
 ///
 /// An empty document is a legal scene and a black Game view — the extract draws
 /// through exactly one authored world camera — and "why is the game view empty"
-/// is not the first question a new project should raise.
+/// is not the first question a new project should raise. The sun is the
+/// second: without one, anything 3D arrives lit only by ambient light.
 #[test]
-fn a_new_scene_opens_with_a_camera_and_a_name() {
+fn a_new_scene_opens_with_a_camera_a_sun_and_a_name() {
     let extractor = extractor();
     let document = blank_scene(
         &extractor,
@@ -159,13 +160,20 @@ fn a_new_scene_opens_with_a_camera_and_a_name() {
 
     assert_eq!(document.metadata.name.as_deref(), Some("First Level"));
     let world = load_world(&extractor, &document).expect("a new scene loads");
-    assert_eq!(world.len(), 1, "one camera and nothing else");
-    assert!(
+    assert_eq!(world.len(), 2, "a camera and a sun, and nothing else");
+    let carrying = |component: &str| {
         world
             .entities()
-            .all(|(_, data)| data.components.contains_key("sindri.camera")),
-        "the one entity a new scene has is the camera"
-    );
+            .filter(|(_, data)| data.components.contains_key(component))
+            .count()
+    };
+    assert_eq!(carrying("sindri.camera"), 1);
+    assert_eq!(carrying("sindri.light"), 1);
+    let sun = extractor
+        .sun(&world)
+        .expect("the sun is valid")
+        .expect("the sun lights the scene");
+    assert!(sun.direction[1] < 0.0, "a new sun shines down");
 
     // And what New Scene writes is what reopening it reads.
     let written = document.to_canonical_json().unwrap();

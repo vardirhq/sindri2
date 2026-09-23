@@ -79,7 +79,6 @@ impl EnvironmentComponent {
             0.0,
             NON_NEGATIVE,
         )?;
-        self.validate_directional()?;
         self.validate_shadows()?;
         within(
             "ambient_occlusion.strength",
@@ -91,24 +90,6 @@ impl EnvironmentComponent {
         self.validate_post_process()?;
         self.validate_bloom()?;
         Ok(self)
-    }
-
-    fn validate_directional(self) -> Result<(), EnvironmentError> {
-        let direction = self.directional.direction;
-        let length_squared = direction.iter().map(|value| value * value).sum::<f32>();
-        if !direction.iter().all(|value| value.is_finite()) || length_squared <= f32::EPSILON {
-            return Err(refuse(
-                "directional.direction",
-                "must be finite and point somewhere: it cannot be zero",
-            ));
-        }
-        finite("directional.color", &self.directional.color)?;
-        at_least(
-            "directional.intensity",
-            self.directional.intensity,
-            0.0,
-            NON_NEGATIVE,
-        )
     }
 
     fn validate_shadows(self) -> Result<(), EnvironmentError> {
@@ -204,13 +185,6 @@ mod tests {
     #[test]
     fn default_environment_is_valid() {
         assert!(EnvironmentComponent::default().validate().is_ok());
-    }
-
-    #[test]
-    fn zero_directional_light_direction_is_rejected() {
-        let mut environment = EnvironmentComponent::default();
-        environment.directional.direction = [0.0; 3];
-        assert_eq!(refused(environment), "directional.direction");
     }
 
     #[test]

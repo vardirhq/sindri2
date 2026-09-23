@@ -13,6 +13,7 @@ mod camera;
 mod environment;
 mod environment_check;
 mod grid;
+mod light;
 mod mesh;
 mod sprite;
 mod tile_volume;
@@ -29,13 +30,17 @@ pub use camera::{
     add_camera_trauma, update_camera_behaviors,
 };
 pub use environment::{
-    EnvironmentAmbientOcclusion, EnvironmentBloom, EnvironmentComponent,
-    EnvironmentDirectionalLight, EnvironmentFog, EnvironmentPostProcess, EnvironmentShadows,
-    EnvironmentToneMapping, environment_of, environments_in,
+    EnvironmentAmbientOcclusion, EnvironmentBloom, EnvironmentComponent, EnvironmentFog,
+    EnvironmentPostProcess, EnvironmentShadows, EnvironmentToneMapping, environment_of,
+    environments_in,
 };
 pub use environment_check::EnvironmentError;
 pub use grid::{
     GridNavigationComponent, GridOccupantComponent, GridPlacementComponent, GridWallDocument,
+};
+pub use light::{
+    LightComponent, LightError, LightKind, Sun, default_sun_transform, light_direction, lights_in,
+    sun_in,
 };
 pub use mesh::{MeshComponent, MeshPrimitive};
 pub use sprite::{SpriteColorTransform, SpriteComponent};

@@ -2,6 +2,7 @@
 
 mod camera;
 mod chain;
+mod light;
 mod namespace;
 mod support;
 mod ui;

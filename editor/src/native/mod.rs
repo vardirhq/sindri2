@@ -18,6 +18,8 @@ use sindri_scene::{
     UiTextComponent,
 };
 
+pub use window::run;
+
 use crate::audition::Audition;
 use crate::preview::TextPreview;
 use crate::profile::ProfileEditor;
@@ -51,6 +53,7 @@ mod frame;
 mod hierarchy;
 mod history_view;
 mod inspector_panel;
+mod light_gizmo;
 mod occlusion_view;
 mod overlay;
 mod palette_view;
@@ -61,17 +64,20 @@ mod preview_view;
 mod profile_view;
 mod project_open;
 mod project_panel;
+mod projection;
 mod runtime;
 mod scene_io;
 mod scene_new;
 mod shortcuts;
 mod slicer_view;
+mod thumbnails;
 mod tools;
 mod unsaved;
 mod view_interaction;
 mod viewport;
 mod viewport_chrome;
 mod welcome;
+mod window;
 mod workspace;
 
 #[cfg(test)]
@@ -110,32 +116,6 @@ const AUDIO_SOURCE_COMPONENT: &str = AudioSourceComponent::TYPE_NAME;
 const SCRIPT_COMPONENT: &str = ScriptComponent::TYPE_NAME;
 const INITIAL_VIEWPORT_WIDTH: u32 = 960;
 const INITIAL_VIEWPORT_HEIGHT: u32 = 540;
-
-pub fn run() -> eframe::Result {
-    let options = eframe::NativeOptions {
-        renderer: eframe::Renderer::Wgpu,
-        viewport: egui::ViewportBuilder::default()
-            .with_title("Sindri Editor")
-            .with_inner_size([1_440.0, 1_024.0])
-            .with_min_inner_size([1_100.0, 720.0])
-            // Hidden until there is something to show. A launch that opens the
-            // welcome window would otherwise flash an empty editor up behind
-            // it, and the first frame is where the editor learns which of the
-            // two this launch is: the preferences it decides from live in
-            // eframe's storage, which does not exist until the app is built.
-            //
-            // eframe paints a hidden window directly, ten times a second, so
-            // that a `Visible` command still reaches it. That is what makes
-            // this safe rather than a window that can never be shown again.
-            .with_visible(false),
-        ..Default::default()
-    };
-    eframe::run_native(
-        "Sindri Editor",
-        options,
-        Box::new(|context| Ok(Box::new(EditorApp::new(context)))),
-    )
-}
 
 /// Which of the two views of the world is being drawn.
 ///
@@ -290,6 +270,7 @@ struct EditorApp {
     render_state: eframe::egui_wgpu::RenderState,
     /// The textures the open scene draws with, loaded from its own directory.
     textures: SceneTextures,
+    thumbnails: thumbnails::Thumbnails,
     /// The history revision the textures were last asked about.
     ///
     /// An edit can point a mesh at a different texture, and the world is the
@@ -540,6 +521,7 @@ impl EditorApp {
             renderers,
             render_state: state_for_textures,
             textures,
+            thumbnails: thumbnails::Thumbnails::default(),
             textured_revision: 0,
             scene_viewport,
             game_viewport,

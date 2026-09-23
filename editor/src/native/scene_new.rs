@@ -9,8 +9,9 @@
 
 use std::path::{Path, PathBuf};
 
+use sindri_core::SceneComponent;
 use sindri_core::{SceneDocument, SceneEntity, SceneEntityId, SceneMetadata, Transform3D};
-use sindri_scene::SceneExtractor;
+use sindri_scene::{LightComponent, SceneExtractor, default_sun_transform};
 
 use crate::scene_file::{SceneFile, scene_path};
 
@@ -21,7 +22,7 @@ use super::runtime::PLAYING_TIP;
 
 /// What a brand-new scene contains.
 ///
-/// One world camera, and a name taken from the file. A scene with no camera is
+/// One world camera, a sun, and a name taken from the file. A scene with no camera is
 /// a legal scene and a black Game view — the extract draws the player's view
 /// through exactly one authored world camera — and "why is the game view empty"
 /// is not the first question a new project should raise. Its transform is the
@@ -43,12 +44,25 @@ pub(super) fn blank_scene(scene: &SceneExtractor, path: &Path) -> SceneDocument 
             .components
             .insert(CAMERA_COMPONENT.to_owned(), payload.clone());
     }
+    // And a sun, as a new scene in most engines has: anything 3D put in the
+    // scene is lit from the first frame, and the light is an entity the author
+    // can see and turn rather than a setting they have to find.
+    let mut sun = SceneEntity::new(SceneEntityId::new("sun").expect("a literal ID is not empty"));
+    sun.name = Some("Sun".to_owned());
+    sun.transform_3d = Some(default_sun_transform());
+    if let Some(payload) = scene
+        .components()
+        .default_payload(LightComponent::TYPE_NAME)
+    {
+        sun.components
+            .insert(LightComponent::TYPE_NAME.to_owned(), payload.clone());
+    }
     SceneDocument {
         metadata: SceneMetadata {
             name: Some(scene_name(path)),
             ..SceneMetadata::default()
         },
-        entities: vec![camera],
+        entities: vec![sun, camera],
         ..SceneDocument::default()
     }
 }

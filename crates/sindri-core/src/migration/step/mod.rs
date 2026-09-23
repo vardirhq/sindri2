@@ -6,6 +6,7 @@
 //! exactly what it produced then.
 
 pub(super) mod camera;
+pub(super) mod light;
 pub(super) mod namespace;
 pub(super) mod sprites;
 pub(super) mod text;

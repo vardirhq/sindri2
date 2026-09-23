@@ -12,6 +12,7 @@ use egui_material_icons::{MaterialIcon, icons};
 
 // What a thing is.
 pub const CAMERA: MaterialIcon = icons::ICON_CAMERA_ALT;
+pub const LIGHT: MaterialIcon = icons::ICON_SUNNY;
 pub const MESH: MaterialIcon = icons::ICON_VIEW_IN_AR;
 pub const SPRITE: MaterialIcon = icons::ICON_IMAGE;
 pub const UI_ELEMENT: MaterialIcon = icons::ICON_WEB_ASSET;
@@ -118,6 +119,7 @@ pub fn for_component(type_name: &str) -> MaterialIcon {
 pub fn for_entity(carries: impl Fn(&str) -> bool) -> MaterialIcon {
     for type_name in [
         "sindri.camera",
+        "sindri.light",
         "sindri.mesh",
         "sindri.sprite",
         "sindri.ui.image",

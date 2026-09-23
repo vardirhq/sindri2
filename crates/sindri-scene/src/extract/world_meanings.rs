@@ -16,8 +16,8 @@ use super::voxel_source::{
 };
 use super::voxel_world::MAX_RESIDENCY_RADIUS;
 use crate::components::{
-    EnvironmentComponent, EnvironmentToneMapping, NaturalTerrainDocument, VoxelGeneratorDocument,
-    VoxelWorldComponent,
+    EnvironmentComponent, EnvironmentToneMapping, LightComponent, LightKind,
+    NaturalTerrainDocument, VoxelGeneratorDocument, VoxelWorldComponent,
 };
 
 const COLOUR: FieldMeaning = FieldMeaning::Colour;
@@ -39,6 +39,11 @@ pub(super) fn describe_world(
     components: &mut ComponentSchemaRegistry,
 ) -> Result<(), SceneExtractError> {
     describe_environment(components)?;
+    components.describe::<LightComponent>([
+        ("kind", FieldMeaning::choice(LightKind::NAMES)),
+        ("color", COLOUR),
+        ("intensity", at_least(0.0)),
+    ])?;
     describe_voxel_world(components)
 }
 
@@ -51,8 +56,6 @@ fn describe_environment(components: &mut ComponentSchemaRegistry) -> Result<(), 
         ("background", COLOUR),
         ("ambient_color", COLOUR),
         ("ambient_intensity", at_least(0.0)),
-        ("directional.color", COLOUR),
-        ("directional.intensity", at_least(0.0)),
         ("shadows.distance", at_least(1.0)),
         (
             "shadows.map_size",
@@ -253,7 +256,7 @@ mod tests {
             }
         }
         assert!(
-            checked >= 18,
+            checked >= 17,
             "only {checked} environment bounds were declared"
         );
     }

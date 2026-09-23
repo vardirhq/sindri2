@@ -16,6 +16,7 @@ mod sprite;
 mod text;
 mod tile_volume;
 pub(crate) use tile_volume::face_is_occluded;
+mod lighting;
 mod tilemap;
 mod tolerance;
 mod ui;
@@ -31,7 +32,8 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 
 use camera::ResolvedCamera;
-use camera::view::{place_overlay_in_scene, resolved_screen_overlay, safe_rotation};
+pub(crate) use camera::view::safe_rotation;
+use camera::view::{place_overlay_in_scene, resolved_screen_overlay};
 use glam::{Mat4, Vec3};
 use sindri_core::{
     ComponentRegistryError, ComponentSchemaRegistry, EntityId, FieldMeaning, SceneComponent,
@@ -112,6 +114,8 @@ pub enum SceneExtractError {
     Components(#[from] ComponentRegistryError),
     #[error(transparent)]
     Environment(#[from] EnvironmentError),
+    #[error(transparent)]
+    Light(#[from] crate::LightError),
     #[error(transparent)]
     Frame(#[from] FramePlanError),
     #[error(transparent)]

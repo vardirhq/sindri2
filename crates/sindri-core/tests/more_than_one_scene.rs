@@ -17,7 +17,7 @@ use sindri_core::{LoadedScenes, SceneDocument, SceneEntityId, SceneSwitchError, 
 fn cottage(door: &str) -> SceneDocument {
     SceneDocument::from_json(
         &json!({
-            "format_version": 9,
+            "format_version": 10,
             "entities": [
                 { "id": "room", "name": "Room" },
                 { "id": door, "name": "Door", "parent": "room" },

@@ -16,8 +16,10 @@ use sindri_core::{ComponentSchemaRegistry, FieldMeaning};
 
 use crate::inspector;
 use crate::ui::theme::{color, text};
+use crate::ui::widgets::cube::{self, Picture};
 use crate::ui::widgets::property;
 
+use super::super::thumbnails::Pictures;
 use super::rows::{At, join};
 
 /// Whether drawing this component needs the whole of it at hand: a reference
@@ -201,6 +203,11 @@ pub(crate) fn key_of_row(
         });
     let missing = !value.is_null() && !options.contains(value);
     let mut chosen = value.clone();
+    // A list of blocks shows each as the cube it is, so choosing water is
+    // choosing the water block rather than remembering that it is 12.
+    let pictures = at.described.map(|described| described.assets.pictures);
+    let faces = |key: &Value| pictures.and_then(|pictures| faces_of(whole, target, key, pictures));
+    let blocks = options.first().is_some_and(|key| faces(key).is_some());
     property::Property::new(label)
         .indent(indent)
         .show(ui, |ui| {
@@ -217,15 +224,31 @@ pub(crate) fn key_of_row(
             } else {
                 color::TEXT_MUTED
             });
+            let mut width = property::picker_width(ui);
+            if blocks {
+                let (top, side) = faces(value).unwrap_or_default();
+                cube::cube(ui, cube::ROW, top, side);
+                width -= cube::row_width();
+            }
             egui::ComboBox::from_id_salt(("key-of", at.path))
                 .selected_text(shown)
-                .width(property::picker_width(ui))
+                .width(width)
                 .show_ui(ui, |ui| {
                     if optional {
-                        ui.selectable_value(&mut chosen, Value::Null, NONE);
+                        ui.horizontal(|ui| {
+                            if blocks {
+                                ui.add_space(cube::row_width());
+                            }
+                            ui.selectable_value(&mut chosen, Value::Null, NONE);
+                        });
                     }
                     for option in &options {
-                        ui.selectable_value(&mut chosen, option.clone(), option.to_string());
+                        ui.horizontal(|ui| {
+                            if let Some((top, side)) = faces(option) {
+                                cube::cube(ui, cube::ROW, top, side);
+                            }
+                            ui.selectable_value(&mut chosen, option.clone(), option.to_string());
+                        });
                     }
                 })
                 .response
@@ -240,6 +263,31 @@ pub(crate) fn key_of_row(
     }
     true
 }
+
+/// The faces of the item a key names, when the item is a block: a list item
+/// with `top` and `side` textures, as a voxel material is.
+fn faces_of(
+    whole: &Value,
+    target: &str,
+    key: &Value,
+    pictures: &Pictures,
+) -> Option<(Option<Picture>, Option<Picture>)> {
+    let (list, field) = target.split_once("[].")?;
+    let item = value_at(whole, list)?
+        .as_array()?
+        .iter()
+        .find(|item| item.get(field) == Some(key))?;
+    faces(item, pictures)
+}
+
+fn faces(item: &Value, pictures: &Pictures) -> Option<(Option<Picture>, Option<Picture>)> {
+    let top = item.get("top")?.as_str()?;
+    let side = item.get("side")?.as_str()?;
+    Some((pictures.get(top).copied(), pictures.get(side).copied()))
+}
+
+const KEY_HINT: &str =
+    "This item's key. Other fields name it by this, so it is set when the item is added";
 
 /// What an unset optional reference is called in its picker.
 const NONE: &str = "None";
@@ -261,14 +309,29 @@ fn exemplar_path(path: &str) -> String {
 ///
 /// Other fields name the item by it, so changing it in place would leave them
 /// naming nothing; a new item is numbered when it is added instead.
-pub(crate) fn key_row(ui: &mut egui::Ui, label: &str, value: &Value, indent: f32) {
-    property::readout_indented(
-        ui,
-        label,
-        &value.to_string(),
-        Some("This item's key. Other fields name it by this, so it is set when the item is added"),
-        indent,
-    );
+///
+/// A block's key is drawn beside the block, so the list of materials is a list
+/// of what they look like.
+pub(crate) fn key_row(ui: &mut egui::Ui, at: At<'_>, label: &str, value: &Value, indent: f32) {
+    let item_faces = at.described.and_then(|described| {
+        let item = value_at(described.whole?, at.path.rsplit_once('.')?.0)?;
+        faces(item, described.assets.pictures)
+    });
+    if let Some((top, side)) = item_faces {
+        property::Property::new(label)
+            .indent(indent)
+            .show(ui, |ui| {
+                cube::cube(ui, cube::ROW, top, side);
+                ui.label(
+                    RichText::new(value.to_string())
+                        .size(text::LABEL)
+                        .color(color::TEXT_MUTED),
+                )
+                .on_hover_text(KEY_HINT);
+            });
+        return;
+    }
+    property::readout_indented(ui, label, &value.to_string(), Some(KEY_HINT), indent);
 }
 
 #[cfg(test)]

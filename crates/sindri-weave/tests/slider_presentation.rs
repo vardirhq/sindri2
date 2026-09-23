@@ -6,7 +6,7 @@ use weave::{Viewport, parse};
 fn slider_and_authored_parts_are_styleable_without_a_parallel_control_model() {
     let document = SceneDocument::from_json(
         r#"{
-            "format_version": 9,
+            "format_version": 10,
             "metadata": { "name": "weave-slider" },
             "entities": [
                 {

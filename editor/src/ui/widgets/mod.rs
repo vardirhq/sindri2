@@ -7,6 +7,7 @@
 
 pub mod asset;
 pub mod button;
+pub mod cube;
 pub mod dialog;
 pub mod menu;
 pub mod panel;

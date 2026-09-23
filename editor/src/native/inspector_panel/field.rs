@@ -42,6 +42,9 @@ pub(crate) struct FieldAssets<'a> {
     pub(crate) audio: &'a [String],
     pub(crate) profiles: &'a [String],
     pub(crate) tile_sets: &'a [String],
+    /// What each loaded texture reference looks like, for a field that can
+    /// show one: a voxel material as a cube.
+    pub(crate) pictures: &'a super::super::thumbnails::Pictures,
 }
 
 /// The rows of one payload, indented under its heading.

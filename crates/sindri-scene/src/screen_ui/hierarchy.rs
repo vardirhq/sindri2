@@ -268,7 +268,7 @@ mod tests {
     /// A world from a scene fragment, with the built-in schemas behind it.
     fn world(entities: &str) -> (World, SceneExtractor) {
         let document = format!(
-            r#"{{ "format_version": 9, "metadata": {{ "name": "t" }},
+            r#"{{ "format_version": 10, "metadata": {{ "name": "t" }},
                  "entities": [{entities}] }}"#
         );
         let extractor = SceneExtractor::new().expect("built-in schemas register");

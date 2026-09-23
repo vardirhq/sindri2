@@ -49,7 +49,7 @@ fn project(name: &str) -> Scratch {
     std::fs::write(
         root.join("main.scene.json"),
         r#"{
-          "format_version": 9,
+          "format_version": 10,
           "metadata": {"name": "Sheets"},
           "entities": [{
             "id": "walker",

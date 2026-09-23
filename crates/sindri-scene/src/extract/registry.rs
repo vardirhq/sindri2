@@ -24,10 +24,10 @@ use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
 use crate::components::{
     CameraBehaviorComponent, CameraComponent, EnvironmentComponent, GridNavigationComponent,
-    GridOccupantComponent, GridPlacementComponent, MeshComponent, NaturalTerrainDocument,
-    ShapeComponent, SpriteComponent, TileGridComponent, TileVolumeComponent, TilemapComponent,
-    UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextComponent,
-    VoxelGeneratorDocument, VoxelWorldComponent,
+    GridOccupantComponent, GridPlacementComponent, LightComponent, MeshComponent,
+    NaturalTerrainDocument, ShapeComponent, SpriteComponent, TileGridComponent,
+    TileVolumeComponent, TilemapComponent, UiImageComponent, UiShapeBlend, UiShapeComponent,
+    UiShapeKind, UiTextComponent, VoxelGeneratorDocument, VoxelWorldComponent,
 };
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
@@ -120,6 +120,16 @@ fn register_cameras(components: &mut ComponentSchemaRegistry) -> Result<(), Scen
     Ok(())
 }
 
+/// A light is aimed by its entity's rotation, so a fresh one is only its
+/// colour and strength: a warm sun at full intensity.
+fn register_light(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    components.register_with_default::<LightComponent>(
+        "Light",
+        serde_json::to_value(LightComponent::default()).expect("a light serializes"),
+    )?;
+    Ok(())
+}
+
 /// Scene-wide presentation defaults exposed by the component catalogue.
 fn register_environment(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
     components.register_with_default::<EnvironmentComponent>(
@@ -128,11 +138,6 @@ fn register_environment(components: &mut ComponentSchemaRegistry) -> Result<(), 
             "background": [0.035, 0.045, 0.065, 1.0],
             "ambient_color": [1.0, 1.0, 1.0],
             "ambient_intensity": 1.0,
-            "directional": {
-                "direction": [-0.45, -1.0, -0.35],
-                "color": [1.0, 0.95, 0.86],
-                "intensity": 0.85
-            },
             "shadows": {
                 "enabled": true,
                 "distance": 48.0,
@@ -179,6 +184,7 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
     // appear, or the author is left wondering whether the click worked.
     register_cameras(components)?;
     register_environment(components)?;
+    register_light(components)?;
     components.register_with_default::<MeshComponent>(
         "Mesh",
         serde_json::json!({

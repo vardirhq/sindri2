@@ -95,6 +95,7 @@ struct PanelContext {
     audio: Vec<String>,
     profiles: Vec<String>,
     tile_sets: Vec<String>,
+    pictures: super::thumbnails::Pictures,
     /// The first `.decay` source the project holds that declares a script, and
     /// the first script it declares.
     ///
@@ -141,6 +142,7 @@ impl PanelContext {
             audio: &self.audio,
             profiles: &self.profiles,
             tile_sets: &self.tile_sets,
+            pictures: &self.pictures,
         }
     }
 }
@@ -387,6 +389,7 @@ impl EditorApp {
             audio: self.project.audio(),
             profiles: self.project.profiles(),
             tile_sets: self.project.tile_sets(),
+            pictures: self.thumbnails.pictures().clone(),
             animation_sprites: animation_texture
                 .as_deref()
                 .map(|texture| self.project.sprites_for_texture(texture))
@@ -500,6 +503,9 @@ impl EditorApp {
         let mut removed = None;
         let mut added = None;
         let authoring = self.authoring_enabled();
+        let references = drawable_textures(&self.project, self.textures.bindings());
+        self.thumbnails
+            .refresh(&self.render_state, &self.textures, &references);
         let context = self.panel_context(&components);
         let addable = self.addable_components(&components, context.defaults());
         // The text the ID field is showing: whatever is being typed if this

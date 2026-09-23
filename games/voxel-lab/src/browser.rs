@@ -12,7 +12,9 @@ use sindri_render::{
     TextureRegistry, TexturedCubeRenderer, UvRect, UvRectError, Viewport, encode_lit_frame,
     encode_prepared_frame, look_at, orthographic_projection,
 };
-use sindri_scene::{EnvironmentComponent, VoxelRenderError, VoxelTexture, environment_of};
+use sindri_scene::{
+    EnvironmentComponent, SceneExtractor, VoxelRenderError, VoxelTexture, environment_of,
+};
 use sindri_voxel::{SectionCoord, VoxelCoord, VoxelFace, VoxelId};
 use thiserror::Error;
 
@@ -66,6 +68,9 @@ struct VoxelLabApp {
     shapes: ShapeRenderer,
     bloom: Bloom,
     environment: EnvironmentComponent,
+    /// Ambient from the environment and the scene's sun, resolved once: the
+    /// embedded scene does not change while the page runs.
+    lighting: sindri_render::WorldLighting,
     camera: CameraControls,
 }
 
@@ -83,6 +88,9 @@ impl DesktopApp for VoxelLabApp {
         let environment = environment_of(&world)
             .expect("Voxel Lab environment is valid")
             .expect("Voxel Lab authors an environment");
+        let lighting = SceneExtractor::new()
+            .and_then(|extractor| extractor.lighting(&world))
+            .expect("Voxel Lab's lights are valid");
         let mut bloom = Bloom::new(context.device(), context.format());
         bloom.resize(context.device(), context.width(), context.height());
         let mut camera = CameraControls::default();
@@ -99,6 +107,7 @@ impl DesktopApp for VoxelLabApp {
             shapes: ShapeRenderer::new(context.device(), Bloom::SCENE_FORMAT),
             bloom,
             environment,
+            lighting,
             camera,
         })
     }
@@ -168,7 +177,7 @@ impl DesktopApp for VoxelLabApp {
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Voxel Lab browser encoder"),
                 });
-        self.cubes.set_lighting(self.environment.world_lighting());
+        self.cubes.set_lighting(self.lighting);
         self.cubes.set_fog(self.environment.fog_settings());
         self.cubes
             .set_shadows(context.device(), self.environment.shadow_settings());
