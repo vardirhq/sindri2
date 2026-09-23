@@ -90,6 +90,11 @@ without hand-editing scene JSON.
 
 - [ ] Adapt Causeway's seed, biome, strata, decoration, and structure policy to
   engine generator interfaces while preserving a recognizable opening world.
+  The engine's `natural_terrain` generator now covers Causeway's landform,
+  climate, frayed-threshold and tree policy and goes further (warped
+  coastlines, rivers, blended biome relief and terraces, steep-slope rock,
+  caves, overhangs, ice); see [`voxel-terrain.md`](voxel-terrain.md). Causeway
+  itself has not moved onto it.
 - [ ] Move generic streaming/residency code out of `game/`.
 - [ ] Translate Causeway tile semantics—variants, buried looks, shapes,
   occlusion, face treatment, and material identity—rather than merely pointing
@@ -108,11 +113,15 @@ as its current tile-volume path while doing less rebuild work.
 
 - [ ] Generate true vertical terrain with strata, caves, tunnels, overhangs,
   ores/resources, structures, and multiple surfaces at one X/Z coordinate.
+  Caves, tunnels, overhangs and multiple surfaces exist in `natural_terrain`;
+  strata, ores and structures remain.
 - [ ] Save sparse edits independently from deterministic base generation, with
   versioning and migration for material/generator changes.
 - [ ] Stream saved edits and generated sections without serializing untouched
   terrain.
 - [ ] Add biome and material registries plus water/fluid surface rules.
+  Biomes are authored per world in `natural_terrain` and water fills to sea
+  level, freezing where cold; shared registries and flowing water remain.
 - [ ] Test digging through a mountain, unloading it, returning, and finding the
   tunnel and construction unchanged.
 

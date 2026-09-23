@@ -29,13 +29,13 @@ pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, Spr
 pub use audio::AudioSourceComponent;
 pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
-    CameraBehaviorComponent, CameraBounds, CameraComponent, CameraFit, CameraFollow, CameraShake,
-    EnvironmentAmbientOcclusion, EnvironmentBloom, EnvironmentComponent,
+    BiomeDocument, CameraBehaviorComponent, CameraBounds, CameraComponent, CameraFit, CameraFollow,
+    CameraShake, EnvironmentAmbientOcclusion, EnvironmentBloom, EnvironmentComponent,
     EnvironmentDirectionalLight, EnvironmentError, EnvironmentFog, EnvironmentPostProcess,
     EnvironmentShadows, EnvironmentToneMapping, GridNavigationComponent, GridOccupantComponent,
-    GridPlacementComponent, GridWallDocument, MeshComponent, MeshPrimitive, ShapeComponent,
-    ShapeGeometry, SpriteColorTransform, SpriteComponent, TileCellDocument, TileDraw,
-    TileGridComponent, TileGridError, TileProjection, TileSpace, TileVolumeComponent,
+    GridPlacementComponent, GridWallDocument, MeshComponent, MeshPrimitive, NaturalTerrainDocument,
+    ShapeComponent, ShapeGeometry, SpriteColorTransform, SpriteComponent, TileCellDocument,
+    TileDraw, TileGridComponent, TileGridError, TileProjection, TileSpace, TileVolumeComponent,
     TileVolumeError, TileVolumeIndex, TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge,
     UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase,
     UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,

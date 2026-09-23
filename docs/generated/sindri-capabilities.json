@@ -1315,14 +1315,37 @@
           0
         ],
         "generator": {
-          "base_height": 3,
-          "deep_voxel": 3,
-          "height_variation": 6,
-          "kind": "layered_terrain",
+          "beach_voxel": null,
+          "biomes": [
+            {
+              "moisture": 0.5,
+              "name": "Grassland",
+              "relief": 1.0,
+              "subsurface_depth": 3,
+              "subsurface_voxel": 2,
+              "surface_voxel": 1,
+              "temperature": 0.5,
+              "terraces": 0,
+              "trees": 0.0
+            }
+          ],
+          "caves": true,
+          "cliff_voxel": null,
+          "feature_size": 64,
+          "ice_voxel": null,
+          "kind": "natural_terrain",
+          "leaves_voxel": null,
+          "relief": 40,
+          "rivers": true,
+          "sea_bed_voxel": null,
+          "sea_level": 0,
           "seed": 0,
-          "subsurface_depth": 3,
-          "subsurface_voxel": 2,
-          "surface_voxel": 1
+          "snow_line": 30,
+          "snow_voxel": null,
+          "stone_voxel": 3,
+          "tree_line": 22,
+          "trunk_voxel": null,
+          "water_voxel": null
         },
         "layer": 0,
         "materials": [
@@ -1356,14 +1379,37 @@
           0
         ],
         "generator": {
-          "base_height": 3,
-          "deep_voxel": 3,
-          "height_variation": 6,
-          "kind": "layered_terrain",
+          "beach_voxel": null,
+          "biomes": [
+            {
+              "moisture": 0.5,
+              "name": "Grassland",
+              "relief": 1.0,
+              "subsurface_depth": 3,
+              "subsurface_voxel": 2,
+              "surface_voxel": 1,
+              "temperature": 0.5,
+              "terraces": 0,
+              "trees": 0.0
+            }
+          ],
+          "caves": true,
+          "cliff_voxel": null,
+          "feature_size": 64,
+          "ice_voxel": null,
+          "kind": "natural_terrain",
+          "leaves_voxel": null,
+          "relief": 40,
+          "rivers": true,
+          "sea_bed_voxel": null,
+          "sea_level": 0,
           "seed": 0,
-          "subsurface_depth": 3,
-          "subsurface_voxel": 2,
-          "surface_voxel": 1
+          "snow_line": 30,
+          "snow_voxel": null,
+          "stone_voxel": 3,
+          "tree_line": 22,
+          "trunk_voxel": null,
+          "water_voxel": null
         },
         "layer": 0,
         "materials": [
@@ -1390,25 +1436,145 @@
         "vertical_radius": 1
       },
       "meanings": {
+        "generator.beach_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
+        "generator.biomes[].moisture": {
+          "kind": "range",
+          "max": 1.0,
+          "min": 0.0
+        },
+        "generator.biomes[].relief": {
+          "kind": "range",
+          "max": 4.0,
+          "min": 0.0
+        },
+        "generator.biomes[].subsurface_depth": {
+          "kind": "range",
+          "max": 256.0,
+          "min": 0.0
+        },
+        "generator.biomes[].subsurface_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
+        "generator.biomes[].surface_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
+        "generator.biomes[].temperature": {
+          "kind": "range",
+          "max": 1.0,
+          "min": 0.0
+        },
+        "generator.biomes[].terraces": {
+          "kind": "range",
+          "max": 64.0,
+          "min": 0.0
+        },
+        "generator.biomes[].trees": {
+          "kind": "range",
+          "max": 1.0,
+          "min": 0.0
+        },
+        "generator.cliff_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
         "generator.deep_voxel": {
           "key_of": "materials[].voxel",
           "kind": "key_of"
+        },
+        "generator.feature_size": {
+          "kind": "range",
+          "max": 4096.0,
+          "min": 8.0
         },
         "generator.height_variation": {
           "kind": "range",
           "max": 4096.0,
           "min": 0.0
         },
+        "generator.ice_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
         "generator.kind": {
           "kind": "choice",
           "options": [
-            "layered_terrain"
-          ]
+            "layered_terrain",
+            "natural_terrain"
+          ],
+          "variants": {
+            "layered_terrain": {
+              "base_height": 3,
+              "deep_voxel": 3,
+              "height_variation": 6,
+              "seed": 0,
+              "subsurface_depth": 3,
+              "subsurface_voxel": 2,
+              "surface_voxel": 1
+            },
+            "natural_terrain": {
+              "beach_voxel": null,
+              "biomes": [
+                {
+                  "moisture": 0.5,
+                  "name": "Grassland",
+                  "relief": 1.0,
+                  "subsurface_depth": 3,
+                  "subsurface_voxel": 2,
+                  "surface_voxel": 1,
+                  "temperature": 0.5,
+                  "terraces": 0,
+                  "trees": 0.0
+                }
+              ],
+              "caves": true,
+              "cliff_voxel": null,
+              "feature_size": 64,
+              "ice_voxel": null,
+              "leaves_voxel": null,
+              "relief": 40,
+              "rivers": true,
+              "sea_bed_voxel": null,
+              "sea_level": 0,
+              "seed": 0,
+              "snow_line": 30,
+              "snow_voxel": null,
+              "stone_voxel": 3,
+              "tree_line": 22,
+              "trunk_voxel": null,
+              "water_voxel": null
+            }
+          }
+        },
+        "generator.leaves_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
+        "generator.relief": {
+          "kind": "range",
+          "max": 1024.0,
+          "min": 1.0
+        },
+        "generator.sea_bed_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
         },
         "generator.seed": {
           "kind": "range",
           "max": null,
           "min": 0.0
+        },
+        "generator.snow_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
+        "generator.stone_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
         },
         "generator.subsurface_depth": {
           "kind": "range",
@@ -1420,6 +1586,14 @@
           "kind": "key_of"
         },
         "generator.surface_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
+        "generator.trunk_voxel": {
+          "key_of": "materials[].voxel",
+          "kind": "key_of"
+        },
+        "generator.water_voxel": {
           "key_of": "materials[].voxel",
           "kind": "key_of"
         },
