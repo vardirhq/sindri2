@@ -142,15 +142,20 @@ pub(super) fn paint_runtime_overlay(
     axes: Option<Mat4>,
 ) {
     painter.rect_stroke(rect, 0.0, hairline(), StrokeKind::Inside);
-    paint_status_plate(painter, rect, status);
+    // Both placed in the part of the view no bar covers. Against the view's
+    // own edges, with the furniture floating, the plate sat half under the
+    // title bar and the axes under the transport.
+    paint_status_plate(painter, visible, status);
     if status.playing {
         paint_play_border(painter, rect);
     }
     paint_error_banner(painter, visible, error);
     if let Some(view) = axes {
+        // The bottom-right corner, which no arrangement anchors a panel to;
+        // the top-right one is the inspector's.
         paint_axis_gizmo(
             painter,
-            Pos2::new(rect.right() - 44.0, rect.top() + 46.0),
+            Pos2::new(visible.right() - 44.0, visible.bottom() - 44.0),
             view,
         );
     }

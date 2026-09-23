@@ -208,7 +208,11 @@ meanings; Angle, Mask and Entity controls, sprite thumbnails, template field
 order, and Camera Behaviour's meanings remain. Item 4 is done: current problems are kept
 apart from the log, counted and named on the status bar, badged on the
 console's tab, and opened from either; lines copy, and their entity links no
-longer run off the panel. Grouping by cause remains. Other components still
+longer run off the panel. Grouping by cause remains. Item 5 is done: the title bar
+collision, shared dock budget, squeezed sizes no longer persisted, Wide's
+assistant column, the bottom-dock project listing, status plate and axes
+placement, the Canvas inspector's height, and readout truncation. The viewport
+toolbar still scrolls rather than wraps when a view is very narrow. Other components still
 fail the frame when invalid; they adopt the same tolerance as they are reached.
 
 1. **Stop the freeze.** Per-component extraction diagnostics and fallback

@@ -81,6 +81,19 @@ impl Default for DockLayout {
 /// window whole; anything short of that is the user's business.
 const MAX_SHARE: f32 = 0.75;
 
+/// What every dock together leaves the scene, at the least.
+///
+/// Each dock was capped only against the window, so three columns could each
+/// take their share and leave the scene a few hundred points: Wide at 1366
+/// wide gave it about 450. Docks are drawn one after another, and each is now
+/// capped by what the ones before it left, less this.
+const CENTRE_MIN_WIDTH: f32 = 420.0;
+const CENTRE_MIN_HEIGHT: f32 = 240.0;
+
+/// How much of the view's bottom-right corner a top-right overlay leaves for
+/// the axis gizmo.
+const AXES_CLEARANCE: f32 = 96.0;
+
 /// The gap between an overlay and the edges of the scene it floats over, and
 /// between two overlays stacked in the same corner.
 const OVERLAY_GUTTER: f32 = 12.0;
@@ -121,11 +134,26 @@ impl EditorApp {
         };
         let size = group.size;
         let column = slot.is_column();
+        let left = ui.available_rect_before_wrap();
         let max = if column {
-            window.width() * MAX_SHARE
+            (window.width() * MAX_SHARE).min(left.width() - CENTRE_MIN_WIDTH)
         } else {
-            window.height() * MAX_SHARE
-        };
+            (window.height() * MAX_SHARE).min(left.height() - CENTRE_MIN_HEIGHT)
+        }
+        .max(place.min_size());
+        // Only a drag on an edge says what size the user wants. Otherwise egui's
+        // remembered size is put back to the preference each frame, so a dock
+        // squeezed by a small window grows back with it rather than keeping
+        // the squeezed size for good.
+        let dragging = ui.ctx().input(|input| input.pointer.primary_down());
+        if !dragging {
+            restore_size(
+                ui.ctx(),
+                slot.id(),
+                column,
+                size.clamp(place.min_size(), max),
+            );
+        }
         let edge = match slot {
             Slot::FarLeft | Slot::Left => egui::Panel::left(slot.id()),
             Slot::FarRight | Slot::Right => egui::Panel::right(slot.id()),
@@ -151,9 +179,9 @@ impl EditorApp {
         } else {
             response.response.rect.height()
         };
-        // Written back every frame, so the arrangement that is saved is the one
-        // on screen rather than the one it started as.
-        if (measured - size).abs() > 0.5 {
+        // Written back while an edge is dragged, so the arrangement that is saved
+        // is the one the user chose, not whatever a small window squeezed it to.
+        if dragging && (measured - size).abs() > 0.5 {
             self.preferences.workspace.resize(place, measured);
         }
     }
@@ -194,12 +222,19 @@ impl EditorApp {
             place.min_size(),
             (canvas.width() - OVERLAY_GUTTER * 2.0).max(place.min_size()),
         );
+        // A top-right overlay stops short of the corner below it, where the
+        // view draws its axes; reaching the bottom would cover them.
+        let reserved = if corner == Corner::TopRight {
+            AXES_CLEARANCE
+        } else {
+            0.0
+        };
         let height = if group.collapsed {
             metric::HEADER_HEIGHT
         } else {
             group.height.clamp(
                 metric::HEADER_HEIGHT,
-                (canvas.height() - OVERLAY_GUTTER * 2.0).max(metric::HEADER_HEIGHT),
+                (canvas.height() - OVERLAY_GUTTER * 2.0 - reserved).max(metric::HEADER_HEIGHT),
             )
         };
         let x = if corner.is_left() {
@@ -473,5 +508,63 @@ impl EditorApp {
             place,
             index: usize::MAX,
         })
+    }
+}
+
+/// Puts egui's remembered size for a dock back to `size`.
+///
+/// egui keeps the panel's last rectangle and starts each frame from it, so once
+/// a window squeezed a dock, that squeezed width was what every later frame
+/// began with.
+fn restore_size(context: &egui::Context, id: &'static str, column: bool, size: f32) {
+    let id = egui::Id::new(id);
+    let Some(mut state) = egui::containers::panel::PanelState::load(context, id) else {
+        return;
+    };
+    let current = if column {
+        state.outer_rect.width()
+    } else {
+        state.outer_rect.height()
+    };
+    if (current - size).abs() <= 0.5 {
+        return;
+    }
+    let mut extent = state.outer_rect.size();
+    if column {
+        extent.x = size;
+    } else {
+        extent.y = size;
+    }
+    state.outer_rect = Rect::from_min_size(state.outer_rect.min, extent);
+    context.data_mut(|data| data.insert_persisted(id, state));
+}
+
+#[cfg(test)]
+mod tests {
+    use eframe::egui::{self, Rect, containers::panel::PanelState, pos2, vec2};
+
+    use super::restore_size;
+
+    /// A dock egui remembers as squeezed is put back to the size the user
+    /// chose, so it grows back with the window instead of staying small.
+    #[test]
+    fn a_squeezed_dock_is_restored_to_its_preference() {
+        let context = egui::Context::default();
+        let id = egui::Id::new("dock-left");
+        context.data_mut(|data| {
+            data.insert_persisted(
+                id,
+                PanelState {
+                    outer_rect: Rect::from_min_size(pos2(0.0, 40.0), vec2(150.0, 600.0)),
+                },
+            );
+        });
+        restore_size(&context, "dock-left", true, 260.0);
+        let state = PanelState::load(&context, id).expect("still remembered");
+        assert!((state.size().x - 260.0).abs() < f32::EPSILON);
+        assert!(
+            (state.size().y - 600.0).abs() < f32::EPSILON,
+            "only the axis the dock resizes along changes"
+        );
     }
 }

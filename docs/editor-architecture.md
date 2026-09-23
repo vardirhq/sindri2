@@ -87,7 +87,16 @@ be made wider than its minimum, and why every panel opened narrower than its
 declared default.
 
 Every docked slot opens with `panel::fill_slot`, which claims the whole slot
-before anything else draws. `editor/src/ui/widgets/panel.rs` carries the
+before anything else draws.
+
+The other half of the trap is that egui remembers a panel's last rectangle and
+starts from it. A size written back every frame therefore ratcheted: a window
+made smaller squeezed a dock, the squeezed size became the saved one, and the
+dock stayed small after the window grew. A dock's size is now saved only while
+its edge is dragged, and otherwise egui's memory is reset to the saved size
+each frame. Docks are drawn one after another and each is capped by what the
+ones before it left, less a minimum for the scene, so together they cannot
+squeeze it out. `editor/src/ui/widgets/panel.rs` carries the
 headless regression test for both halves of it.
 
 ## Visual principles
