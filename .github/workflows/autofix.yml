@@ -71,8 +71,11 @@ jobs:
           PUSH_TOKEN: ${{ secrets.SINDRI_AUTOFIX_TOKEN || github.token }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Staged, so a newly generated document counts as a change too.
-          git add --all
+          # Tracked files, plus the generated directory so that a newly
+          # generated document counts as a change too. Nothing else a build
+          # leaves behind is committed.
+          git add --update
+          git add docs/generated/
           if git diff --cached --quiet; then
             echo "Formatting and generated capability documents are current."
             exit 0
@@ -114,12 +117,10 @@ jobs:
 
           fmt_changed=false
           generated_changed=false
-          lock_changed=false
           decay_changed=false
           for path in "${changed[@]}"; do
             case "$path" in
               docs/generated/*) generated_changed=true ;;
-              Cargo.lock | */Cargo.lock) lock_changed=true ;;
               *) fmt_changed=true ;;
             esac
             if [[ "$path" == decay/* ]]; then
@@ -135,10 +136,6 @@ jobs:
           if [[ $generated_changed == true ]]; then
             body+=$'\n\n'"cargo run -p sindri-capabilities -- --write regenerated"
             body+=" docs/generated/, which had fallen behind the host surface."
-          fi
-          if [[ $lock_changed == true ]]; then
-            body+=$'\n\n'"Building the generator updated Cargo.lock to match the"
-            body+=" manifests."
           fi
           body+=$'\n\n'"Pull this commit before making further changes to the branch."
 
