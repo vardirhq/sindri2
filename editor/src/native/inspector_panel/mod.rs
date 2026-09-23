@@ -38,7 +38,7 @@ use self::header::{
 use self::scene::{SceneSummary, scene_section};
 use self::section::components_sections;
 use self::section::grid::grid_choices;
-use sindri_scene::PROCEDURAL_TEXTURES;
+use sindri_scene::{PROCEDURAL_TEXTURES, TextureBindings};
 
 use crate::project::ProjectTree;
 use crate::ui::icons;
@@ -59,12 +59,17 @@ use super::{CAMERA_COMPONENT, EditorApp, SPRITE_COMPONENT, UI_IMAGE_COMPONENT};
 /// reference is deliberately not parseable as an asset path, so a picker built
 /// from the directory alone both refused to offer `procedural:checkerboard` and
 /// marked the fixture's own cube as naming a texture that does not exist.
-fn drawable_textures(project: &ProjectTree) -> Vec<String> {
+///
+/// The sprites cut from the project's sheets are references too: a voxel face
+/// or a sprite naming `blocks.png#stone-0` names something that draws, and a
+/// list without them marked every such reference as missing.
+fn drawable_textures(project: &ProjectTree, bindings: &TextureBindings) -> Vec<String> {
     let mut textures: Vec<String> = PROCEDURAL_TEXTURES
         .iter()
         .map(|texture| texture.reference.to_owned())
         .collect();
     textures.extend(project.textures());
+    textures.extend(bindings.sprite_references());
     textures
 }
 
@@ -377,7 +382,7 @@ impl EditorApp {
                     .map(|script| (source.clone(), script))
             }),
             fonts: self.project.fonts(),
-            textures: drawable_textures(&self.project),
+            textures: drawable_textures(&self.project, self.textures.bindings()),
             scripts,
             audio: self.project.audio(),
             profiles: self.project.profiles(),

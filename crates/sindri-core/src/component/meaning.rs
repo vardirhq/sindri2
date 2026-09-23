@@ -76,7 +76,15 @@ pub enum FieldMeaning {
     /// An angle in radians, however a tool chooses to show it.
     Angle,
     /// A number with both ends bounded, the same bounds the engine validates.
+    ///
+    /// An end the engine does not bound is infinite: `max: f64::INFINITY` is
+    /// "at least `min`".
     Range { min: f64, max: f64 },
+    /// One of a fixed set of whole numbers, such as a shadow map's size.
+    ///
+    /// The numeric counterpart of `Choice`: a drag over these passes through
+    /// every value between them, and all but the listed ones are refused.
+    OneOf(Vec<i64>),
     /// A bit mask over collision layers.
     Mask,
     /// Names another entity in the same scene.
@@ -114,6 +122,7 @@ impl FieldMeaning {
             Self::Colour => "colour",
             Self::Angle => "angle",
             Self::Range { .. } => "range",
+            Self::OneOf(_) => "one_of",
             Self::Mask => "mask",
             Self::Entity => "entity",
             Self::Key => "key",

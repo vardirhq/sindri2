@@ -20,6 +20,7 @@ mod tilemap;
 mod tolerance;
 mod ui;
 mod voxel_world;
+mod world_meanings;
 
 pub use tolerance::ExtractProblem;
 

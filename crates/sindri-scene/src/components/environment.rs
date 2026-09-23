@@ -160,6 +160,9 @@ pub enum EnvironmentToneMapping {
 }
 
 impl EnvironmentToneMapping {
+    /// Every spelling a scene may write, for a tool offering the choice.
+    pub const NAMES: [&'static str; 3] = ["none", "reinhard", "aces"];
+
     const fn renderer(self) -> ToneMapping {
         match self {
             Self::None => ToneMapping::None,
@@ -280,6 +283,23 @@ pub fn environments_in(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The spellings a tool offers are the ones serde accepts, all of them.
+    #[test]
+    fn every_tone_mapping_name_is_a_tone_mapping() {
+        let parsed: Vec<EnvironmentToneMapping> = EnvironmentToneMapping::NAMES
+            .iter()
+            .map(|name| serde_json::from_value(serde_json::json!(name)).expect(name))
+            .collect();
+        assert_eq!(
+            parsed,
+            [
+                EnvironmentToneMapping::None,
+                EnvironmentToneMapping::Reinhard,
+                EnvironmentToneMapping::Aces
+            ]
+        );
+    }
 
     #[test]
     fn legacy_environment_does_not_gain_directional_light_or_shadows() {

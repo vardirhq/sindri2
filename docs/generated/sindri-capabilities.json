@@ -292,7 +292,122 @@
           "map_size": 1024
         }
       },
-      "meanings": {},
+      "meanings": {
+        "ambient_color": {
+          "kind": "colour"
+        },
+        "ambient_intensity": {
+          "kind": "range",
+          "max": null,
+          "min": 0.0
+        },
+        "ambient_occlusion.strength": {
+          "kind": "range",
+          "max": 1.0,
+          "min": 0.0
+        },
+        "background": {
+          "kind": "colour"
+        },
+        "bloom.intensity": {
+          "kind": "range",
+          "max": null,
+          "min": 0.0
+        },
+        "bloom.knee": {
+          "kind": "range",
+          "max": 1.0,
+          "min": 0.0001
+        },
+        "bloom.passes": {
+          "kind": "range",
+          "max": 8.0,
+          "min": 1.0
+        },
+        "bloom.threshold": {
+          "kind": "range",
+          "max": null,
+          "min": 0.0
+        },
+        "directional.color": {
+          "kind": "colour"
+        },
+        "directional.intensity": {
+          "kind": "range",
+          "max": null,
+          "min": 0.0
+        },
+        "fog.color": {
+          "kind": "colour"
+        },
+        "fog.density": {
+          "kind": "range",
+          "max": 1.0,
+          "min": 0.0
+        },
+        "fog.distance": {
+          "kind": "range",
+          "max": null,
+          "min": 0.01
+        },
+        "fog.height_falloff": {
+          "kind": "range",
+          "max": 1.0,
+          "min": 0.0
+        },
+        "fog.start": {
+          "kind": "range",
+          "max": null,
+          "min": 0.0
+        },
+        "post_process.contrast": {
+          "kind": "range",
+          "max": 4.0,
+          "min": 0.0
+        },
+        "post_process.exposure": {
+          "kind": "range",
+          "max": 8.0,
+          "min": -8.0
+        },
+        "post_process.saturation": {
+          "kind": "range",
+          "max": 4.0,
+          "min": 0.0
+        },
+        "post_process.tone_mapping": {
+          "kind": "choice",
+          "options": [
+            "none",
+            "reinhard",
+            "aces"
+          ]
+        },
+        "post_process.vignette": {
+          "kind": "range",
+          "max": 1.0,
+          "min": 0.0
+        },
+        "shadows.bias": {
+          "kind": "range",
+          "max": 0.05,
+          "min": 0.0
+        },
+        "shadows.distance": {
+          "kind": "range",
+          "max": null,
+          "min": 1.0
+        },
+        "shadows.map_size": {
+          "kind": "one_of",
+          "options": [
+            256,
+            512,
+            1024,
+            2048
+          ]
+        }
+      },
       "schema_version": 1,
       "type_name": "sindri.environment"
     },
@@ -1279,6 +1394,27 @@
           "key_of": "materials[].voxel",
           "kind": "key_of"
         },
+        "generator.height_variation": {
+          "kind": "range",
+          "max": 4096.0,
+          "min": 0.0
+        },
+        "generator.kind": {
+          "kind": "choice",
+          "options": [
+            "layered_terrain"
+          ]
+        },
+        "generator.seed": {
+          "kind": "range",
+          "max": null,
+          "min": 0.0
+        },
+        "generator.subsurface_depth": {
+          "kind": "range",
+          "max": null,
+          "min": 0.0
+        },
         "generator.subsurface_voxel": {
           "key_of": "materials[].voxel",
           "kind": "key_of"
@@ -1287,8 +1423,30 @@
           "key_of": "materials[].voxel",
           "kind": "key_of"
         },
+        "materials[].bottom": {
+          "asset": "texture",
+          "kind": "asset"
+        },
+        "materials[].side": {
+          "asset": "texture",
+          "kind": "asset"
+        },
+        "materials[].top": {
+          "asset": "texture",
+          "kind": "asset"
+        },
         "materials[].voxel": {
           "kind": "key"
+        },
+        "render_radius": {
+          "kind": "range",
+          "max": 8.0,
+          "min": 0.0
+        },
+        "vertical_radius": {
+          "kind": "range",
+          "max": 8.0,
+          "min": 0.0
         }
       },
       "schema_version": 1,

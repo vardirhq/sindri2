@@ -100,7 +100,7 @@ pub(crate) fn object_rows(
         };
         let meaning = registry.meaning(type_name, &key);
         if let Some(list) = asset_list(meaning, assets) {
-            asset_row(ui, &key, &key, value, list);
+            asset_row(ui, &key, &key, value, list, 0.0);
             continue;
         }
         if is_colour(meaning, value) {
@@ -151,11 +151,11 @@ pub(crate) fn asset_list<'a>(
 /// The shape is still checked. A component may call a field a colour, but a
 /// payload that is not four numbers cannot be edited as one, and refusing here
 /// leaves it visible as what it is rather than clamped into what it is not.
-fn is_colour(meaning: Option<&FieldMeaning>, value: &Value) -> bool {
+pub(crate) fn is_colour(meaning: Option<&FieldMeaning>, value: &Value) -> bool {
     matches!(meaning, Some(FieldMeaning::Colour))
         && matches!(
             inspector::value_kind(value),
-            inspector::ValueKind::Numbers(4)
+            inspector::ValueKind::Numbers(3 | 4)
         )
 }
 
@@ -222,12 +222,13 @@ pub(crate) fn asset_row(
     key: &str,
     value: &mut Value,
     available: &[String],
+    indent: f32,
 ) {
     let mut typed = value.as_str().unwrap_or_default().to_owned();
     let known = typed.is_empty() || available.contains(&typed);
     let mut changed = false;
     let label = inspector::humanize(key);
-    let mut row = property::Property::new(&label);
+    let mut row = property::Property::new(&label).indent(indent);
     if !known {
         row = row.tip("This reference is not in the project");
     }
@@ -288,6 +289,9 @@ pub(crate) fn asset_row(
 /// numbers stay beside it, because a tint is also a number someone may want to
 /// type exactly.
 pub(crate) fn colour_row(ui: &mut egui::Ui, key: &str, value: &mut Value) {
+    // Three channels is a colour with no alpha, such as a light's: it gets the
+    // same swatch, opaque, and three numbers rather than four.
+    let channels = value.as_array().map_or(4, Vec::len).clamp(3, 4);
     let mut rgba = [0.0_f32; 4];
     for (index, channel) in rgba.iter_mut().enumerate() {
         // A channel outside 0..1 is not a colour anything can show, and the
@@ -312,7 +316,13 @@ pub(crate) fn colour_row(ui: &mut egui::Ui, key: &str, value: &mut Value) {
         );
         // The swatch comes first: it is what the row is about, and the numbers
         // are how it is said exactly.
-        if ui.color_edit_button_srgba(&mut colour).changed() {
+        if channels == 3 {
+            let mut rgb = [rgba[0], rgba[1], rgba[2]];
+            if ui.color_edit_button_rgb(&mut rgb).changed() {
+                rgba[..3].copy_from_slice(&rgb);
+                changed = true;
+            }
+        } else if ui.color_edit_button_srgba(&mut colour).changed() {
             let [r, g, b, a] = colour.to_srgba_unmultiplied();
             rgba = [
                 f32::from(r) / 255.0,
@@ -322,8 +332,26 @@ pub(crate) fn colour_row(ui: &mut egui::Ui, key: &str, value: &mut Value) {
             ];
             changed = true;
         }
-        let width = ((property::value_width(ui) - 12.0) / 4.0).clamp(34.0, 64.0);
-        for (index, channel) in rgba.iter_mut().enumerate() {
+        // Sized from what is left after the swatch, with no floor above what
+        // fits: a floor made a four-channel colour wider than a narrow
+        // inspector, which pushed every row of the panel sideways and cut off
+        // the start of every label.
+        //
+        // A number box grows to fit its text whatever width it is given, so
+        // when the channels do not fit beside the swatch they are left to the
+        // picker the swatch opens, which has a field for every channel. Four
+        // boxes squeezed in anyway made the row wider than a narrow inspector
+        // and cut off its end.
+        let spacing = ui.spacing().item_spacing.x;
+        let swatch = ui.spacing().interact_size.x + spacing;
+        #[allow(clippy::cast_precision_loss)]
+        let width = ((property::value_width(ui) - swatch - spacing * channels as f32)
+            / channels as f32)
+            .min(64.0);
+        if width < CHANNEL_MIN_WIDTH {
+            return;
+        }
+        for (index, channel) in rgba.iter_mut().take(channels).enumerate() {
             changed |= ui
                 .add_sized(
                     [width, metric::CONTROL_HEIGHT],
@@ -337,7 +365,106 @@ pub(crate) fn colour_row(ui: &mut egui::Ui, key: &str, value: &mut Value) {
         }
     });
     if changed {
-        *value = Value::Array(rgba.iter().map(|channel| Value::from(*channel)).collect());
+        *value = Value::Array(
+            rgba.iter()
+                .take(channels)
+                .map(|channel| Value::from(*channel))
+                .collect(),
+        );
+    }
+}
+
+/// The narrowest a channel's number box reads at: a letter and three digits.
+const CHANNEL_MIN_WIDTH: f32 = 46.0;
+
+/// A number the engine bounds, which the control cannot take outside them.
+///
+/// Dragging a value the renderer refuses used to fail the frame; now it cannot
+/// be dragged there. A value already outside, from a hand-edited file, is shown
+/// as it is rather than silently clamped, so opening a scene does not change
+/// it. The drag speed follows the span, so a 0-1 strength and a distance in
+/// the hundreds both move at a usable rate.
+pub(crate) fn range_row(
+    ui: &mut egui::Ui,
+    label: &str,
+    value: &mut Value,
+    (min, max): (f64, f64),
+    indent: f32,
+) {
+    let whole = value.is_u64() || value.is_i64();
+    let mut number = value.as_f64().unwrap_or(min);
+    let speed = if whole {
+        0.1
+    } else if max.is_finite() {
+        ((max - min) / 300.0).max(1.0e-4)
+    } else {
+        0.01
+    };
+    let mut changed = false;
+    property::Property::new(label)
+        .indent(indent)
+        .show(ui, |ui| {
+            let drag = egui::DragValue::new(&mut number)
+                .range(min..=max)
+                .clamp_existing_to_range(false)
+                .speed(speed);
+            let drag = if whole {
+                drag.fixed_decimals(0)
+            } else {
+                drag.max_decimals(4)
+            };
+            let hint = if max.is_finite() {
+                format!("From {min} to {max}")
+            } else {
+                format!("At least {min}")
+            };
+            changed = ui
+                .add_sized([property::value_width(ui), metric::CONTROL_HEIGHT], drag)
+                .on_hover_text(hint)
+                .changed();
+        });
+    if changed {
+        #[allow(clippy::cast_possible_truncation)]
+        let written = if whole {
+            Value::from(number.round() as i64)
+        } else {
+            Value::from(number)
+        };
+        *value = written;
+    }
+}
+
+/// A whole number from a fixed set, chosen rather than dragged.
+pub(crate) fn one_of_row(
+    ui: &mut egui::Ui,
+    at: &str,
+    label: &str,
+    value: &mut Value,
+    options: &[i64],
+    indent: f32,
+) {
+    let current = value.as_i64();
+    let mut chosen = current;
+    property::Property::new(label)
+        .indent(indent)
+        .show(ui, |ui| {
+            egui::ComboBox::from_id_salt(("one-of", at))
+                .selected_text(
+                    RichText::new(current.map_or_else(|| value.to_string(), |n| n.to_string()))
+                        .size(text::LABEL)
+                        .color(color::TEXT_MUTED),
+                )
+                .width(property::picker_width(ui))
+                .show_ui(ui, |ui| {
+                    for option in options {
+                        ui.selectable_value(&mut chosen, Some(*option), option.to_string());
+                    }
+                });
+        });
+    if chosen != current
+        && let Some(chosen) = chosen
+    {
+        *value = Value::from(chosen);
     }
 }
 

@@ -215,6 +215,12 @@ impl EditorApp {
         let rect = Rect::from_min_size(egui::pos2(x, y), egui::vec2(width, height));
         egui::Area::new(egui::Id::new(place.id()))
             .fixed_pos(rect.min)
+            // Not kept on screen by egui. A row even slightly wider than the
+            // overlay grew the area past the window edge, egui moved the
+            // whole area left to bring it back, and the clip below stayed
+            // where the overlay is: every row lost the start of its label. An
+            // overflow now costs only the end of the row that overflows.
+            .constrain(false)
             .order(egui::Order::Middle)
             // Interactable so a click on an overlay is a click on the overlay
             // rather than a camera drag through it onto the scene behind.

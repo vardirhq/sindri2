@@ -22,8 +22,8 @@ use super::camera::{ResolvedCamera, ResolvedCameras};
 use super::frustum::aabb_in_view;
 use super::{SceneExtractError, SceneExtractor, transform_matrix};
 
-const MAX_RESIDENCY_RADIUS: u32 = 8;
-const MAX_HEIGHT_VARIATION: u32 = 4_096;
+pub(super) const MAX_RESIDENCY_RADIUS: u32 = 8;
+pub(super) const MAX_HEIGHT_VARIATION: u32 = 4_096;
 const TERRAIN_SAMPLE_SCALE: i32 = 8;
 
 #[derive(Clone, Debug, Eq, PartialEq)]

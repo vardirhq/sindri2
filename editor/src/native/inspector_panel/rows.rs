@@ -156,8 +156,24 @@ pub(crate) fn value_row(
                         .collect()
                 })
                 .unwrap_or_default();
-            if numbers_row(ui, &label, &labels, &mut numbers, indent) {
-                *value = Value::Array(numbers.into_iter().map(Value::from).collect());
+            // A section coordinate is whole numbers, and showing it as
+            // `0.00` invited a fraction the engine would refuse.
+            let whole = value
+                .as_array()
+                .is_some_and(|items| items.iter().all(|item| item.is_i64() || item.is_u64()));
+            if numbers_row(ui, &label, &labels, &mut numbers, indent, whole) {
+                #[allow(clippy::cast_possible_truncation)]
+                let written = numbers
+                    .into_iter()
+                    .map(|number| {
+                        if whole {
+                            Value::from(number.round() as i64)
+                        } else {
+                            Value::from(number)
+                        }
+                    })
+                    .collect();
+                *value = Value::Array(written);
             }
         }
         inspector::ValueKind::Object => {
@@ -308,16 +324,19 @@ fn described_row(
             let Some(list) = asset_list(Some(meaning), described.assets) else {
                 return false;
             };
-            super::field::asset_row(ui, at.path, key, value, list);
+            super::field::asset_row(ui, at.path, key, value, list, indent);
             true
         }
-        FieldMeaning::Colour
-            if matches!(
-                inspector::value_kind(value),
-                inspector::ValueKind::Numbers(4)
-            ) =>
-        {
+        FieldMeaning::Colour if super::field::is_colour(Some(meaning), value) => {
             colour_row(ui, key, value);
+            true
+        }
+        FieldMeaning::Range { min, max } if value.is_number() => {
+            super::field::range_row(ui, label, value, (*min, *max), indent);
+            true
+        }
+        FieldMeaning::OneOf(options) if value.is_number() => {
+            super::field::one_of_row(ui, at.path, label, value, options, indent);
             true
         }
         FieldMeaning::Key => {
@@ -472,6 +491,7 @@ pub(crate) fn numbers_row(
     axes: &[String],
     values: &mut [f64],
     indent: f32,
+    whole: bool,
 ) -> bool {
     let mut changed = false;
     property::Property::new(label)
@@ -488,6 +508,7 @@ pub(crate) fn numbers_row(
                     index,
                     value,
                     width,
+                    whole,
                 );
             }
         });
@@ -501,15 +522,17 @@ fn labelled_drag(
     index: usize,
     value: &mut f64,
     width: f32,
+    whole: bool,
 ) -> bool {
+    let (speed, decimals) = if whole { (0.1, 0) } else { (0.01, 3) };
     if letter.eq_ignore_ascii_case(vector::AXES[index.min(2)]) {
-        return vector::axis(ui, index, value, width, 0.01, 3);
+        return vector::axis(ui, index, value, width, speed, decimals);
     }
     ui.add_sized(
         [width, metric::CONTROL_HEIGHT],
         egui::DragValue::new(value)
-            .speed(0.01)
-            .max_decimals(3)
+            .speed(speed)
+            .max_decimals(decimals)
             .prefix(format!("{letter} ")),
     )
     .changed()
