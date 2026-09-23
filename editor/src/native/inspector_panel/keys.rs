@@ -26,9 +26,12 @@ use super::rows::{At, join};
 /// is checked against the list it names, which is somewhere else in the
 /// component than the field being drawn.
 pub(crate) fn has_keys(registry: &ComponentSchemaRegistry, type_name: &str) -> bool {
-    registry
-        .meanings(type_name)
-        .any(|(_, meaning)| matches!(meaning, FieldMeaning::Key | FieldMeaning::KeyOf(_)))
+    registry.meanings(type_name).any(|(_, meaning)| {
+        matches!(
+            meaning,
+            FieldMeaning::Key | FieldMeaning::KeyOf(_) | FieldMeaning::Block { .. }
+        )
+    })
 }
 
 /// The fields of a list item that are its keys.
@@ -294,7 +297,7 @@ const NONE: &str = "None";
 
 /// The template path for a field path: `biomes.2.surface_voxel` is
 /// `biomes[].surface_voxel`, which is what an exemplar is looked up by.
-fn exemplar_path(path: &str) -> String {
+pub(crate) fn exemplar_path(path: &str) -> String {
     let mut steps: Vec<String> = Vec::new();
     for step in path.split('.') {
         match steps.last_mut() {

@@ -28,6 +28,8 @@ use crate::inspector::{self, choices, fields};
 use crate::ui::theme::{color, metric, text};
 use crate::ui::widgets::{cube, property};
 
+use sindri_scene::TileSetBindings;
+
 use super::super::thumbnails::Pictures;
 use super::rows::{At, Authored, Described, value_row};
 
@@ -46,6 +48,8 @@ pub(crate) struct FieldAssets<'a> {
     /// What each loaded texture reference looks like, for a field that can
     /// show one: a voxel material as a cube.
     pub(crate) pictures: &'a Pictures,
+    /// The block set the component names, when it names one that is loaded.
+    pub(crate) block_sets: Option<&'a TileSetBindings>,
 }
 
 /// The rows of one payload, indented under its heading.

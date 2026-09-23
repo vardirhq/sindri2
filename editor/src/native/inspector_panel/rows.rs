@@ -347,6 +347,10 @@ fn described_row(
         FieldMeaning::KeyOf(target) => {
             super::keys::key_of_row(ui, at, label, target, value, indent)
         }
+        FieldMeaning::Block { set, or_key_of } => {
+            super::blocks::block_row(ui, at, label, set, value, indent)
+                || super::keys::key_of_row(ui, at, label, or_key_of, value, indent)
+        }
         FieldMeaning::Choice(options) => {
             if described
                 .registry

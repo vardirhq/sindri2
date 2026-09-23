@@ -10,6 +10,7 @@
 //! claims it, and `draft` turns the whole of it into commands.
 
 pub(super) mod add_component;
+mod blocks;
 pub(super) mod draft;
 pub(super) mod field;
 pub(super) mod header;
@@ -38,7 +39,7 @@ use self::header::{
 use self::scene::{SceneSummary, scene_section};
 use self::section::components_sections;
 use self::section::grid::grid_choices;
-use sindri_scene::{PROCEDURAL_TEXTURES, TextureBindings};
+use sindri_scene::{PROCEDURAL_TEXTURES, TextureBindings, TileSetBindings};
 
 use crate::project::ProjectTree;
 use crate::ui::icons;
@@ -96,6 +97,7 @@ struct PanelContext {
     profiles: Vec<String>,
     tile_sets: Vec<String>,
     pictures: super::thumbnails::Pictures,
+    block_sets: TileSetBindings,
     /// The first `.decay` source the project holds that declares a script, and
     /// the first script it declares.
     ///
@@ -143,6 +145,7 @@ impl PanelContext {
             profiles: &self.profiles,
             tile_sets: &self.tile_sets,
             pictures: &self.pictures,
+            block_sets: Some(&self.block_sets),
         }
     }
 }
@@ -388,8 +391,13 @@ impl EditorApp {
             scripts,
             audio: self.project.audio(),
             profiles: self.project.profiles(),
-            tile_sets: self.project.tile_sets(),
+            // The engine's own block set is always there to choose, first,
+            // beside whatever sets the project holds.
+            tile_sets: std::iter::once(sindri_core::BUILTIN_BLOCKS.to_owned())
+                .chain(self.project.tile_sets())
+                .collect(),
             pictures: self.thumbnails.pictures().clone(),
+            block_sets: blocks::named_block_set(components, self.textures.tile_sets()),
             animation_sprites: animation_texture
                 .as_deref()
                 .map(|texture| self.project.sprites_for_texture(texture))
@@ -503,7 +511,16 @@ impl EditorApp {
         let mut removed = None;
         let mut added = None;
         let authoring = self.authoring_enabled();
-        let references = drawable_textures(&self.project, self.textures.bindings());
+        let mut references = drawable_textures(&self.project, self.textures.bindings());
+        let named = blocks::named_block_set(&components, self.textures.tile_sets());
+        if let Some(reference) = components
+            .values()
+            .filter_map(|payload| payload.get("blocks"))
+            .find_map(Value::as_str)
+            && let Some(tile_set) = named.get(reference)
+        {
+            references.extend(blocks::block_sprites(tile_set));
+        }
         self.thumbnails
             .refresh(&self.render_state, &self.textures, &references);
         let context = self.panel_context(&components);

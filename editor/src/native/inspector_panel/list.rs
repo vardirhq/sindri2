@@ -269,6 +269,7 @@ mod tests {
                         profiles: &[],
                         tile_sets: &[],
                         pictures: &crate::native::thumbnails::NO_PICTURES,
+                        block_sets: None,
                     },
                     whole: Some(whole),
                 }),
