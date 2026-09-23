@@ -110,15 +110,7 @@ impl EditorApp {
                     }
                 }
                 ui.add_space(metric::GAP);
-                let mut name = editor.selected.clone().unwrap_or_default();
-                if editor.selected.is_some() {
-                    let before = name.clone();
-                    crate::native::inspector_panel::rows::text_row(ui, "Name", &mut name, 0.0);
-                    if name != before && !editor.rename_selected(&name) {
-                        // Taken or empty: the field shows what it was until a
-                        // name that can be used is typed.
-                    }
-                }
+                name_field(ui, editor);
                 let Some(block) = editor.selected_block_mut() else {
                     return;
                 };
@@ -128,6 +120,42 @@ impl EditorApp {
         if save && let Err(error) = editor.save() {
             editor.error = Some(error);
         }
+    }
+}
+
+/// The chosen block's name, renamed when the field is left.
+///
+/// Typed into a draft rather than renamed on every keystroke: renaming
+/// `clay` to `stones` passes through `stone`, which another block may
+/// already be, and refusing that halfway would leave the name impossible
+/// to type. A name that is taken or empty when the field is left puts the
+/// old one back.
+fn name_field(ui: &mut egui::Ui, editor: &mut crate::block_set::BlockSetEditor) {
+    let Some(selected) = editor.selected.clone() else {
+        return;
+    };
+    if editor.naming.as_ref().is_none_or(|(of, _)| *of != selected) {
+        editor.naming = Some((selected.clone(), selected));
+    }
+    let mut left = false;
+    if let Some((_, draft)) = editor.naming.as_mut() {
+        property::Property::new("Name").show(ui, |ui| {
+            left = ui
+                .add_sized(
+                    [property::value_width(ui), metric::CONTROL_HEIGHT],
+                    egui::TextEdit::singleline(draft),
+                )
+                .on_hover_text("What voxel worlds and tile volumes call this block")
+                .lost_focus();
+        });
+    }
+    if left {
+        let wanted = editor
+            .naming
+            .take()
+            .map(|(_, draft)| draft)
+            .unwrap_or_default();
+        editor.rename_selected(&wanted);
     }
 }
 

@@ -21,6 +21,8 @@ pub struct BlockSetEditor {
     pub dirty: bool,
     /// The block the panel is showing, by name.
     pub selected: Option<String>,
+    /// A name being typed for the selected block, and which block it is for.
+    pub naming: Option<(String, String)>,
 }
 
 impl BlockSetEditor {
@@ -41,6 +43,7 @@ impl BlockSetEditor {
             error,
             dirty: false,
             selected,
+            naming: None,
         }
     }
 
