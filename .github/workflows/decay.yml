@@ -12,6 +12,8 @@ on:
     paths:
       - 'decay/**'
       - '.github/workflows/decay.yml'
+  # Started by the autofix workflow when it reformats Decay sources.
+  workflow_dispatch:
 
 permissions:
   contents: read

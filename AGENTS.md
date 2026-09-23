@@ -5,6 +5,12 @@ Repository guidance for AI coding agents working on Sindri Engine.
 Read this file before making changes. Repository documents and the current code
 are authoritative over remembered context from earlier sessions.
 
+**If you cannot run commands in this checkout** (for example, you edit through a
+GitHub connector and CI is the first place anything compiles), read
+[Working without local execution](#working-without-local-execution) before
+writing code. It lists the failures that have actually cost this repository the
+most round trips, and what CI already fixes for you.
+
 ## Product direction
 
 Sindri Engine is a pre-alpha Rust game engine targeting native desktop and WebGPU
@@ -140,7 +146,8 @@ When a capability changes, update the relevant documentation in the same commit:
 - `docs/generated/` when the Decay host surface or a component registration
   changes — regenerate with `cargo run -p sindri-capabilities -- --write`.
   These files are never hand-edited, and a stale one fails the workspace
-  tests.
+  tests. On a pull request from this repository, the autofix workflow
+  regenerates and commits them when they are stale.
 - `CHANGELOG.md` for user-visible behaviour.
 - `ROADMAP.md` only when an item's real acceptance criteria are complete.
 
@@ -206,8 +213,9 @@ surface-specific checks below. For Rust changes, the minimum pre-push sequence i
    - files approaching repository size limits.
 
 When local command execution is unavailable, do not silently substitute CI for
-this gate. Perform the strongest static review available, explicitly checking
-the items above, and treat the subsequent CI run as unverified until it
+this gate. Work through
+[Working without local execution](#working-without-local-execution), explicitly
+checking the items above, and treat the subsequent CI run as unverified until it
 completes.
 
 A CI-fix commit must pass the same gate. "Only one line changed" is not an
@@ -248,7 +256,10 @@ script before pushing; its runtime-contract reminders must be reviewed even
 though only syntax and semantic diagnostics make the command fail.
 
 Do not introduce temporary self-modifying workflows or repository automation to
-work around ordinary development problems. If the implementation approach starts
+work around ordinary development problems. The permanent autofix workflow
+(`.github/workflows/autofix.yml`) is the reviewed exception: it only runs rustfmt
+and the capability generator in write mode. Do not widen it to anything that
+changes behaviour. If the implementation approach starts
 requiring machinery whose only purpose is to repair the branch, stop and reassess
 the approach.
 
@@ -301,6 +312,83 @@ cargo test --workspace
 Run additional subsystem-specific tests described by the relevant docs and CI
 workflow. Do not claim a target or surface works merely because another target
 compiled.
+
+## Working without local execution
+
+Some agents edit this repository without a shell: every check first runs in CI.
+The rules above still apply; this section makes the static review concrete.
+Every item here is a failure that has repeatedly cost a push.
+
+### What CI fixes for you
+
+On a pull request from a branch of this repository, the **Autofix** workflow
+runs `cargo fmt --all` (root and `decay/`) and
+`cargo run -p sindri-capabilities -- --write`, and commits any change to the
+branch as `Apply automatic formatting and regeneration`. So:
+
+- Do not spend a commit on formatting alone, and never hand-edit
+  `docs/generated/`. Write code in rustfmt's style as well as you can and let
+  autofix settle the rest.
+- **After an autofix commit lands, re-read every file you are about to edit from
+  the branch head.** Writing a file from content you fetched before the autofix
+  commit silently reverts its fixes, and autofix then has to run again.
+- The CI run on the commit before the autofix commit is cancelled. The run that
+  matters is the one on the autofix commit.
+
+### One push should carry one complete repair
+
+CI reports everything in one run: the compiling jobs no longer wait for the
+formatting gate, Clippy and the WASM check use `--keep-going`, and tests run
+with `--no-fail-fast`. Read the whole run — the `CI failure summary` job and
+every failed job's step summary — and fix every reported occurrence before the
+next push. Fixing the first diagnostic and pushing again is the pattern this
+section exists to stop.
+
+### Before adding code to a file
+
+- **File length.** Rust files are capped at 600 lines, and several are already
+  within a few lines of it. Before adding to a file, check its length. If the
+  result would pass about 580 lines, split the file by responsibility first
+  (`docs/module-layout.md`), in the same change.
+- **Function length.** Clippy's `too_many_lines` rejects a function body over
+  100 lines. It is the most frequent Clippy failure here. When a function you are
+  extending is already near that, extract a helper rather than adding to it.
+  Adding `#[allow(clippy::too_many_lines)]` is not a fix.
+
+### Clippy patterns that have actually failed CI here
+
+CI runs Clippy with `pedantic` enabled and warnings denied. Write these forms
+from the start:
+
+| Rejected | Write instead | Lint |
+| --- | --- | --- |
+| A type or identifier in a doc comment without backticks: `/// Uses VoxelSource` | ``/// Uses `VoxelSource` `` | `doc_markdown` |
+| `output.push_str(&format!("…{x}"))` | `let _ = write!(output, "…{x}");` with `use std::fmt::Write;` | `format_push_string` |
+| `format!("{}", name)` | `format!("{name}")` | `uninlined_format_args` |
+| `assert_eq!(value, 0.0)` on floats | `assert!(value.abs() < f32::EPSILON)` or an explicit tolerance | `float_cmp` |
+| `x as f32`, `len as u32`, `i as usize` | `f32::from`/`u32::from` where lossless, `u32::try_from(…)` where it is not, or an `#[allow]` on the smallest item with a comment saying why the cast is safe | `cast_precision_loss`, `cast_possible_truncation`, `cast_sign_loss` |
+| `r#"…"#` for a string with no `"` in it | `r"…"` | `needless_raw_string_hashes` |
+| `const` or `fn` declared after statements inside a function | declare it at the top of the function or at module level | `items_after_statements` |
+| `3 \| 4 \| 5 =>` | `3..=5 =>` | `manual_range_patterns` |
+| `match option { Some(x) => …, None => … }` with a block in each arm | `if let Some(x) = option { … } else { … }` | `single_match_else` |
+| `if` nested directly inside a match arm or another `if` | a match guard or a combined condition | `collapsible_if`, `collapsible_match` |
+| `let mut s = T::default(); s.field = …;` | `T { field: …, ..T::default() }` | `field_reassign_with_default` |
+| `.map(\|v\| v.as_f64())` | `.map(serde_json::Value::as_f64)` | `redundant_closure_for_method_calls` |
+| a non-public `&self` method that never reads `self` | an associated function, or a free function | `unused_self` |
+| taking `String`/`Vec`/a struct by value and only reading it | take `&str`/`&[T]`/`&T` | `needless_pass_by_value` |
+
+Also check, for every change:
+
+- every new `use` is used on every target (`#[cfg(target_arch = "wasm32")]`
+  code included), and every removed use leaves no orphaned import;
+- every `match` on an enum you extended has the new variant;
+- every new public item that `sindri-capabilities` documents is reflected in
+  `docs/generated/` (autofix handles this when the generator runs cleanly);
+- any Decay script you changed uses only syntax and host calls that appear in
+  `decay/LANGUAGE.md`, `docs/decay-agent-guide.md`, or an existing checked script.
+
+When CI reports a lint not in this table and it recurs, add it here in the same
+pull request that fixes it.
 
 ## Core conventions
 
