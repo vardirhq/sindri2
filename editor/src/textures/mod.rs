@@ -14,6 +14,7 @@
 //! generates. `procedural:` cannot parse as an ID because a colon is reserved in
 //! one, so the two kinds cannot be confused and no rule has to be remembered.
 
+mod builtin;
 mod poll;
 mod request;
 

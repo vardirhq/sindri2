@@ -79,6 +79,53 @@ impl Default for NaturalTerrainDocument {
     }
 }
 
+impl NaturalTerrainDocument {
+    /// A whole world built from the engine's own blocks: seven biomes from
+    /// swamp to tundra, water, beaches, bare cliffs, snow, ice and trees.
+    ///
+    /// What a new voxel world is, so the first thing an author sees is land
+    /// rather than three checkered layers.
+    #[must_use]
+    pub fn with_builtin_blocks() -> Self {
+        let biome = |name: &str, climate: (f32, f32), ground: (&str, &str, u32), trees, relief| {
+            BiomeDocument {
+                name: name.to_owned(),
+                temperature: climate.0,
+                moisture: climate.1,
+                surface_voxel: ground.0.into(),
+                subsurface_voxel: ground.1.into(),
+                subsurface_depth: ground.2,
+                trees,
+                relief,
+                terraces: 0,
+            }
+        };
+        let mut biomes = vec![
+            biome("Grassland", (0.55, 0.4), ("grass", "dirt", 3), 0.06, 0.8),
+            biome("Forest", (0.55, 0.72), ("grass", "dirt", 3), 0.55, 1.0),
+            biome("Swamp", (0.75, 0.92), ("mud", "mud", 3), 0.2, 0.3),
+            biome("Desert", (0.92, 0.12), ("sand", "sand", 5), 0.0, 0.6),
+            biome("Badlands", (0.85, 0.35), ("clay", "clay", 6), 0.0, 1.4),
+            biome("Taiga", (0.28, 0.65), ("moss", "dirt", 3), 0.45, 1.1),
+            biome("Tundra", (0.1, 0.3), ("snow", "dirt", 2), 0.03, 0.7),
+        ];
+        biomes[4].terraces = 3;
+        Self {
+            stone_voxel: "stone".into(),
+            water_voxel: Some("water".into()),
+            beach_voxel: Some("sand".into()),
+            sea_bed_voxel: Some("gravel".into()),
+            cliff_voxel: Some("rock".into()),
+            snow_voxel: Some("snow".into()),
+            ice_voxel: Some("ice".into()),
+            trunk_voxel: Some("log".into()),
+            leaves_voxel: Some("leaves".into()),
+            biomes,
+            ..Self::default()
+        }
+    }
+}
+
 /// One biome: where it sits on the climate map, and what its ground is.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct BiomeDocument {

@@ -43,6 +43,14 @@ impl SceneTextures {
             );
             bindings.bind(procedural.reference, texture);
         }
+        let mut tile_set_bindings = TileSetBindings::new();
+        super::builtin::bind_builtins(
+            device,
+            queue,
+            &mut registry,
+            &mut bindings,
+            &mut tile_set_bindings,
+        );
         let root = root_of(scene);
         Self {
             loader: root.as_deref().and_then(|root| {
@@ -83,7 +91,7 @@ impl SceneTextures {
             last_examined: Instant::now(),
             registry,
             bindings,
-            tile_set_bindings: TileSetBindings::new(),
+            tile_set_bindings,
         }
     }
 
