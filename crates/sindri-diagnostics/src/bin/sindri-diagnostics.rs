@@ -170,7 +170,14 @@ fn github_summary(report: &DiagnosticReport, command: &str) -> String {
     let start = actionable
         .iter()
         .find_map(|diagnostic| diagnostic.location.as_ref())
-        .map(|location| format!("`{}:{}:{}`", location.path.display(), location.line, location.column))
+        .map(|location| {
+            format!(
+                "`{}:{}:{}`",
+                location.path.display(),
+                location.line,
+                location.column
+            )
+        })
         .unwrap_or_else(|| "the first diagnostic below".into());
 
     let mut output = format!(
@@ -196,7 +203,9 @@ fn github_summary(report: &DiagnosticReport, command: &str) -> String {
 
     if command == "rustfmt" && errors > 0 {
         output.push_str("**Why:** committed Rust does not match the repository formatter.\n\n");
-        output.push_str("**How:** run `cargo fmt --all`, review the diff, and commit every affected file.\n\n");
+        output.push_str(
+            "**How:** run `cargo fmt --all`, review the diff, and commit every affected file.\n\n",
+        );
         output.push_str("**Verify:** `cargo fmt --all --check`\n");
     }
     if command == "cargo" && errors > 0 {
@@ -215,10 +224,10 @@ fn github_summary(report: &DiagnosticReport, command: &str) -> String {
 fn group_diagnostics<'a>(diagnostics: &[&'a Diagnostic]) -> BTreeMap<String, Vec<&'a Diagnostic>> {
     let mut groups = BTreeMap::<String, Vec<&Diagnostic>>::new();
     for diagnostic in diagnostics {
-        let key = diagnostic.code.as_ref().map_or_else(
-            || "uncoded diagnostic".into(),
-            |code| code.0.clone(),
-        );
+        let key = diagnostic
+            .code
+            .as_ref()
+            .map_or_else(|| "uncoded diagnostic".into(), |code| code.0.clone());
         groups.entry(key).or_default().push(*diagnostic);
     }
     groups
@@ -260,14 +269,24 @@ mod tests {
         assert!(summary.contains("crates/a/src/lib.rs"));
         assert!(summary.contains("crates/b/src/lib.rs"));
         assert!(summary.contains("2 rustfmt error(s)"));
-        assert!(summary.contains("fix every occurrence" ) == false);
+        assert!(summary.contains("fix every occurrence") == false);
     }
 
     #[test]
     fn cargo_summary_groups_all_occurrences_and_keeps_locations() {
         let report = DiagnosticReport::new(vec![
-            rust_error("clippy::too_many_lines", "first is too long", "src/a.rs", 10),
-            rust_error("clippy::too_many_lines", "second is too long", "src/b.rs", 20),
+            rust_error(
+                "clippy::too_many_lines",
+                "first is too long",
+                "src/a.rs",
+                10,
+            ),
+            rust_error(
+                "clippy::too_many_lines",
+                "second is too long",
+                "src/b.rs",
+                20,
+            ),
             rust_error("unused_imports", "unused import", "src/c.rs", 30),
         ]);
         let summary = github_summary(&report, "cargo");
