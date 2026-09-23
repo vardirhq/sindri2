@@ -31,16 +31,17 @@ pub use camera_math::camera_rotation_from_look_at;
 pub use components::{
     BiomeDocument, CameraBehaviorComponent, CameraBounds, CameraComponent, CameraFit, CameraFollow,
     CameraShake, EnvironmentAmbientOcclusion, EnvironmentBloom, EnvironmentComponent,
-    EnvironmentDirectionalLight, EnvironmentError, EnvironmentFog, EnvironmentPostProcess,
-    EnvironmentShadows, EnvironmentToneMapping, GridNavigationComponent, GridOccupantComponent,
-    GridPlacementComponent, GridWallDocument, MeshComponent, MeshPrimitive, NaturalTerrainDocument,
-    ShapeComponent, ShapeGeometry, SpriteColorTransform, SpriteComponent, TileCellDocument,
-    TileDraw, TileGridComponent, TileGridError, TileProjection, TileSpace, TileVolumeComponent,
-    TileVolumeError, TileVolumeIndex, TilemapComponent, TilemapError, UiAnchor, UiFill, UiFillEdge,
-    UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind, UiTextAutoSize, UiTextCase,
-    UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,
-    VoxelGeneratorDocument, VoxelMaterialDocument, VoxelWorldComponent, add_camera_trauma,
-    cell_to_local_in, environment_of, environments_in, ui_text_template, update_camera_behaviors,
+    EnvironmentError, EnvironmentFog, EnvironmentPostProcess, EnvironmentShadows,
+    EnvironmentToneMapping, GridNavigationComponent, GridOccupantComponent, GridPlacementComponent,
+    GridWallDocument, LightComponent, LightError, LightKind, MeshComponent, MeshPrimitive,
+    NaturalTerrainDocument, ShapeComponent, ShapeGeometry, SpriteColorTransform, SpriteComponent,
+    Sun, TileCellDocument, TileDraw, TileGridComponent, TileGridError, TileProjection, TileSpace,
+    TileVolumeComponent, TileVolumeError, TileVolumeIndex, TilemapComponent, TilemapError,
+    UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiShapeBlend, UiShapeComponent, UiShapeKind,
+    UiTextAutoSize, UiTextCase, UiTextComponent, UiTextLineAlign, UiTextOutline, UiTextShadow,
+    UiTextWrap, VoxelGeneratorDocument, VoxelMaterialDocument, VoxelWorldComponent,
+    add_camera_trauma, cell_to_local_in, default_sun_transform, environment_of, environments_in,
+    light_direction, lights_in, sun_in, ui_text_template, update_camera_behaviors,
 };
 pub use effects::{EffectBurstComponent, Effects2d, Fleck};
 pub use extract::{

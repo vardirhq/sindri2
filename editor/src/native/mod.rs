@@ -51,6 +51,7 @@ mod frame;
 mod hierarchy;
 mod history_view;
 mod inspector_panel;
+mod light_gizmo;
 mod occlusion_view;
 mod overlay;
 mod palette_view;

@@ -40,7 +40,7 @@ impl Project {
             relative,
             format!(
                 r#"{{
-                  "format_version": 9,
+                  "format_version": 10,
                   "metadata": {{ "name": "A scene" }},
                   "entities": [
                     {{

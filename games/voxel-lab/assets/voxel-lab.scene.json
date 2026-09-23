@@ -1,6 +1,36 @@
 {
-  "format_version": 9,
+  "format_version": 10,
   "entities": [
+    {
+      "id": "camera",
+      "name": "Camera",
+      "transform_3d": {
+        "position": [
+          -28,
+          54,
+          -15
+        ],
+        "rotation": [
+          -0.239118,
+          0.369644,
+          0.099046,
+          0.892399
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": {
+        "sindri.camera": {
+          "projection": "orthographic",
+          "vertical_size": 64,
+          "near": 0.1,
+          "far": 400
+        }
+      }
+    },
     {
       "id": "environment",
       "name": "Environment",
@@ -36,19 +66,6 @@
             "intensity": 0.38,
             "passes": 3
           },
-          "directional": {
-            "direction": [
-              -0.55,
-              -1,
-              -0.4
-            ],
-            "color": [
-              1,
-              0.91,
-              0.72
-            ],
-            "intensity": 1.05
-          },
           "shadows": {
             "enabled": true,
             "distance": 110,
@@ -72,19 +89,19 @@
       }
     },
     {
-      "id": "camera",
-      "name": "Camera",
+      "id": "sun",
+      "name": "Sun",
       "transform_3d": {
         "position": [
-          42,
-          60,
-          50
+          0,
+          30,
+          0
         ],
         "rotation": [
-          -0.239118,
-          0.369644,
-          0.099046,
-          0.892399
+          -0.416852,
+          0.401068,
+          0.212271,
+          0.787604
         ],
         "scale": [
           1,
@@ -93,11 +110,14 @@
         ]
       },
       "components": {
-        "sindri.camera": {
-          "projection": "orthographic",
-          "vertical_size": 64,
-          "near": 0.1,
-          "far": 400
+        "sindri.light": {
+          "kind": "directional",
+          "color": [
+            1,
+            0.91,
+            0.72
+          ],
+          "intensity": 1.05
         }
       }
     },
@@ -106,9 +126,9 @@
       "name": "Engine Voxel World",
       "transform_3d": {
         "position": [
-          -80,
-          0,
-          0
+          -150,
+          -6,
+          -65
         ],
         "rotation": [
           0,
@@ -310,9 +330,9 @@
             }
           ],
           "focus": [
-            4,
+            7,
             1,
-            0
+            2
           ],
           "render_radius": 4,
           "vertical_radius": 2,

@@ -182,7 +182,7 @@ fn project_clip(rect: Rect, clip: Vec4) -> Option<Pos2> {
     ))
 }
 
-fn project_point(rect: Rect, view_projection: Mat4, point: Vec3) -> Option<Pos2> {
+pub(super) fn project_point(rect: Rect, view_projection: Mat4, point: Vec3) -> Option<Pos2> {
     let clip = clip_of(view_projection, point)?;
     in_front(clip).then(|| project_clip(rect, clip)).flatten()
 }
@@ -213,7 +213,12 @@ fn clipped_segment(start: Vec4, end: Vec4) -> Option<(Vec4, Vec4)> {
 }
 
 /// One world-space segment as a line on screen, clipped to what is visible.
-fn project_segment(rect: Rect, view_projection: Mat4, start: Vec3, end: Vec3) -> Option<[Pos2; 2]> {
+pub(super) fn project_segment(
+    rect: Rect,
+    view_projection: Mat4,
+    start: Vec3,
+    end: Vec3,
+) -> Option<[Pos2; 2]> {
     let (start, end) = clipped_segment(
         clip_of(view_projection, start)?,
         clip_of(view_projection, end)?,
@@ -376,7 +381,7 @@ fn camera_visual(
     })
 }
 
-fn distance_to_segment(point: Pos2, a: Pos2, b: Pos2) -> f32 {
+pub(super) fn distance_to_segment(point: Pos2, a: Pos2, b: Pos2) -> f32 {
     let ab = b - a;
     let length_squared = ab.length_sq();
     if length_squared <= f32::EPSILON {

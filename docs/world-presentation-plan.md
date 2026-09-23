@@ -40,7 +40,7 @@ Exit criteria:
 
 ### 2. Directional and ambient lighting
 
-**Implemented.** `sindri.environment` authors ambient colour/intensity and one directional light with direction, colour, and intensity. Textured world geometry and engine-owned voxel meshes use the same renderer-owned lighting model in editor viewports and browser Voxel Lab. Scenes without authored lighting retain the previous full-white ambient appearance.
+**Implemented.** `sindri.environment` authors ambient colour/intensity. The sun is a light entity: `sindri.light` with kind `directional`, colour and intensity, aimed by its entity's rotation along local -Z (the axis a camera looks along). The first active one lights the world; the Scene view draws each light as a sun with an arrow the way it shines, and a selected one with a trail along its light. Format 10 migrated the old `environment.directional` vector into such an entity, and new scenes start with one. Textured world geometry and engine-owned voxel meshes use the same renderer-owned lighting model in editor viewports and browser Voxel Lab. Scenes without authored lighting retain the previous full-white ambient appearance.
 
 The next slice adds shadows from this same directional light rather than inventing a second sun.
 

@@ -137,10 +137,13 @@ impl RuntimeViewport {
             .scene
             .environment(source.world)
             .map_err(|error| error.to_string())?;
+        // The sun is a light entity now; the extractor puts it together with
+        // the environment's ambient, tolerantly, as it does the environment.
         renderers.cube.set_lighting(
-            environment
-                .map(EnvironmentComponent::world_lighting)
-                .unwrap_or_default(),
+            source
+                .scene
+                .lighting(source.world)
+                .map_err(|error| error.to_string())?,
         );
         renderers.cube.set_shadows(
             &self.render_state.device,
@@ -415,6 +418,7 @@ impl EditorApp {
             );
         if editing {
             self.move_camera(context, response, rect.height(), painting || gizmo_owned);
+            self.light_overlay(context, response, painting || gizmo_owned);
         }
         let camera = if editing {
             self.scene_camera()

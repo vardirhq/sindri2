@@ -43,7 +43,7 @@ fn references_resolve_against_the_scene_s_own_directory() {
 #[test]
 fn a_tile_volume_keeps_the_sheet_that_cuts_its_blocks() {
     let document = sindri_core::SceneDocument::from_json(
-        r#"{ "format_version": 9, "entities": [
+        r#"{ "format_version": 10, "entities": [
                  { "id": "floor", "transform_3d": {}, "components": {
                    "sindri.tile_grid": {
                      "columns": 2, "rows": 2, "cell_size": [1.0, 0.5],

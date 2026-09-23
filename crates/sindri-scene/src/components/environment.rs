@@ -8,18 +8,18 @@ use sindri_render::{
     BloomSettings, FogSettings, PostProcessSettings, ShadowSettings, ToneMapping, WorldLighting,
 };
 
-/// Scene-wide visual environment.
+/// Scene-wide visual environment: the sky, ambient light, shadows, fog and
+/// the grade.
 ///
-/// Phase one deliberately authors ambient values before the lighting renderer
-/// consumes them. That keeps the environment contract stable while the next
-/// slice adds directional and ambient lighting.
+/// The sun is not here. It is a light entity (`sindri.light`), aimed by its
+/// rotation and drawn in the Scene view; scenes that held a direction here are
+/// migrated to one.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct EnvironmentComponent {
     pub background: [f32; 4],
     pub ambient_color: [f32; 3],
     pub ambient_intensity: f32,
-    pub directional: EnvironmentDirectionalLight,
     pub shadows: EnvironmentShadows,
     pub ambient_occlusion: EnvironmentAmbientOcclusion,
     pub fog: EnvironmentFog,
@@ -37,31 +37,11 @@ impl Default for EnvironmentComponent {
             background: [0.035, 0.045, 0.065, 1.0],
             ambient_color: [1.0, 1.0, 1.0],
             ambient_intensity: 1.0,
-            directional: EnvironmentDirectionalLight::default(),
             shadows: EnvironmentShadows::default(),
             ambient_occlusion: EnvironmentAmbientOcclusion::default(),
             fog: EnvironmentFog::default(),
             post_process: EnvironmentPostProcess::default(),
             bloom: EnvironmentBloom::default(),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(default, deny_unknown_fields)]
-pub struct EnvironmentDirectionalLight {
-    /// Direction light travels from its source toward the world.
-    pub direction: [f32; 3],
-    pub color: [f32; 3],
-    pub intensity: f32,
-}
-
-impl Default for EnvironmentDirectionalLight {
-    fn default() -> Self {
-        Self {
-            direction: [-0.45, -1.0, -0.35],
-            color: [1.0, 0.95, 0.86],
-            intensity: 0.0,
         }
     }
 }
@@ -195,15 +175,15 @@ impl Default for EnvironmentBloom {
 }
 
 impl EnvironmentComponent {
-    /// Converts authored environment light into renderer-neutral frame state.
+    /// The environment's share of the light: ambient only. The sun comes
+    /// from a light entity; see `SceneExtractor::lighting`.
     #[must_use]
-    pub const fn world_lighting(self) -> WorldLighting {
+    pub fn world_lighting(self) -> WorldLighting {
         WorldLighting {
             ambient_color: self.ambient_color,
             ambient_intensity: self.ambient_intensity,
-            directional_direction: self.directional.direction,
-            directional_color: self.directional.color,
-            directional_intensity: self.directional.intensity,
+            directional_intensity: 0.0,
+            ..WorldLighting::default()
         }
     }
 
@@ -302,7 +282,7 @@ mod tests {
     }
 
     #[test]
-    fn legacy_environment_does_not_gain_directional_light_or_shadows() {
+    fn legacy_environment_does_not_gain_shadows_or_effects() {
         let environment: EnvironmentComponent = serde_json::from_value(serde_json::json!({
             "background": [0.0, 0.0, 0.0, 1.0],
             "ambient_color": [1.0, 1.0, 1.0],
@@ -316,7 +296,6 @@ mod tests {
             }
         }))
         .expect("legacy environment should deserialize");
-        assert!(environment.directional.intensity.abs() < f32::EPSILON);
         assert!(!environment.shadows.enabled);
         assert!(!environment.ambient_occlusion.enabled);
         assert!(!environment.fog.enabled);

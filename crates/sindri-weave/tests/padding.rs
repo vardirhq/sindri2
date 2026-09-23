@@ -6,7 +6,7 @@ use weave::{Viewport, parse};
 fn percentage_children_use_the_parent_content_box() {
     let document = SceneDocument::from_json(
         r#"{
-            "format_version": 9,
+            "format_version": 10,
             "metadata": { "name": "weave-padding" },
             "entities": [
                 {
@@ -82,7 +82,7 @@ fn percentage_children_use_the_parent_content_box() {
 fn negative_padding_is_rejected() {
     let document = SceneDocument::from_json(
         r#"{
-            "format_version": 9,
+            "format_version": 10,
             "metadata": { "name": "weave-padding-invalid" },
             "entities": [{
                 "id": "panel",

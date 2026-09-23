@@ -109,6 +109,10 @@ impl EditorApp {
                         ui.close();
                     }
                     ui.separator();
+                    if ui.button("Create Directional Light").clicked() {
+                        create = Some(CreateGameObject::DirectionalLight);
+                        ui.close();
+                    }
                     if ui.button("Create UI Image").clicked() {
                         create = Some(CreateGameObject::UiImage);
                         ui.close();

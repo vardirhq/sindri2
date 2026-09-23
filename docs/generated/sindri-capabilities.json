@@ -187,19 +187,6 @@
           "passes": 3,
           "threshold": 0.65
         },
-        "directional": {
-          "color": [
-            1.0,
-            0.95,
-            0.86
-          ],
-          "direction": [
-            -0.45,
-            -1.0,
-            -0.35
-          ],
-          "intensity": 0.85
-        },
         "fog": {
           "color": [
             0.55,
@@ -251,19 +238,6 @@
           "knee": 0.2,
           "passes": 3,
           "threshold": 0.65
-        },
-        "directional": {
-          "color": [
-            1.0,
-            0.95,
-            0.86
-          ],
-          "direction": [
-            -0.45,
-            -1.0,
-            -0.35
-          ],
-          "intensity": 0.85
         },
         "fog": {
           "color": [
@@ -325,14 +299,6 @@
           "min": 1.0
         },
         "bloom.threshold": {
-          "kind": "range",
-          "max": null,
-          "min": 0.0
-        },
-        "directional.color": {
-          "kind": "colour"
-        },
-        "directional.intensity": {
           "kind": "range",
           "max": null,
           "min": 0.0
@@ -471,6 +437,46 @@
       "meanings": {},
       "schema_version": 1,
       "type_name": "sindri.grid.placement"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "color": [
+          1.0,
+          0.949999988079071,
+          0.8600000143051147
+        ],
+        "intensity": 1.0,
+        "kind": "directional"
+      },
+      "display_name": "Light",
+      "fields": {
+        "color": [
+          1.0,
+          0.949999988079071,
+          0.8600000143051147
+        ],
+        "intensity": 1.0,
+        "kind": "directional"
+      },
+      "meanings": {
+        "color": {
+          "kind": "colour"
+        },
+        "intensity": {
+          "kind": "range",
+          "max": null,
+          "min": 0.0
+        },
+        "kind": {
+          "kind": "choice",
+          "options": [
+            "directional"
+          ]
+        }
+      },
+      "schema_version": 1,
+      "type_name": "sindri.light"
     },
     {
       "addable": true,
@@ -1629,6 +1635,6 @@
   ],
   "engine_version": "0.1.0",
   "generated_by": "cargo run -p sindri-capabilities -- --write",
-  "scene_format_version": 9,
+  "scene_format_version": 10,
   "schema_version": 1
 }

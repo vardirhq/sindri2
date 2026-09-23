@@ -4,8 +4,8 @@
   "assets": {
     "demo.scene.json": {
       "kind": "scene",
-      "bytes": 2958,
-      "hash": "sha256:965838469e172d60ea89ef212b9e83e62e651e80f552d3079c8bc213dea2750c"
+      "bytes": 2959,
+      "hash": "sha256:9049f7e13b613b995d969ae70f8ebedc3b4b8cfd1f5e5f675d01b2aad9a23ef5"
     },
     "textures/badge.png": {
       "kind": "texture",
