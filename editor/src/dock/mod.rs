@@ -274,8 +274,10 @@ impl Workspace {
                     Place::Dock(Bottom),
                     &[Panel::Project, Panel::Console, Panel::History],
                 ),
-                (Place::Dock(Right), &[Panel::Assistant]),
-                (Place::Dock(FarRight), &[Panel::Inspector]),
+                // The assistant shares the inspector's column rather than
+                // taking one of its own: a third column left the scene about
+                // a third of a laptop screen, to show an install prompt.
+                (Place::Dock(FarRight), &[Panel::Inspector, Panel::Assistant]),
             ],
         };
         let mut workspace = Self {
@@ -293,9 +295,11 @@ impl Workspace {
             // height is a note's worth. Given its own figure rather than a
             // taller default for every overlay, which would make the hierarchy
             // and the project browser cover the scene for no reason.
+            // As tall as the corner allows: a fixed 560 ended a voxel world's
+            // fields halfway down a screen with room to spare below them.
             let inspector = workspace.group_mut(Place::Overlay(TopRight));
             inspector.size = 320.0;
-            inspector.height = 560.0;
+            inspector.height = 2_000.0;
         }
         workspace
     }

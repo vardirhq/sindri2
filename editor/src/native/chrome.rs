@@ -187,8 +187,18 @@ impl EditorApp {
                     // is: the inline tabs before it leave the cursor at the far
                     // end of the bar, so anything allocated after them lands
                     // off the edge and is never seen.
+                    //
+                    // Centred only when the furniture floats, where the
+                    // transport sits at the right end. Docked, the transport
+                    // is the one centred, and both drawn at the centre
+                    // printed "Ctrl K" over Pause and Step.
+                    let hint_centre = if floating {
+                        base.center().x
+                    } else {
+                        base.right() - 16.0 - super::palette_view::HINT_WIDTH / 2.0
+                    };
                     let hint = Rect::from_center_size(
-                        egui::pos2(base.center().x, base.center().y),
+                        egui::pos2(hint_centre, base.center().y),
                         Vec2::new(super::palette_view::HINT_WIDTH, 24.0),
                     );
                     let mut child = ui.new_child(

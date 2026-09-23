@@ -192,14 +192,28 @@ pub fn readout_indented(
         row = row.tip(why);
     }
     row.show(ui, |ui| {
-        let shown = ui.add(
-            egui::Label::new(
-                RichText::new(value)
-                    .size(text::LABEL)
-                    .color(color::TEXT_FAINT),
+        // Sized to the value column: in a row, egui gives a label no width to
+        // truncate at, so a long path ran off the panel with no ellipsis.
+        let width = value_width(ui);
+        let shown = ui
+            .allocate_ui_with_layout(
+                Vec2::new(width, metric::CONTROL_HEIGHT),
+                Layout::left_to_right(Align::Center),
+                |ui| {
+                    ui.set_max_width(width);
+                    ui.add(
+                        egui::Label::new(
+                            RichText::new(value)
+                                .size(text::LABEL)
+                                .color(color::TEXT_FAINT),
+                        )
+                        .truncate(),
+                    )
+                },
             )
-            .truncate(),
-        );
+            .inner;
+        // The whole value on hover, since the row may be showing only part.
+        let shown = shown.on_hover_text(value);
         if let Some(why) = why {
             shown.on_hover_text(why);
         }

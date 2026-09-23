@@ -199,45 +199,52 @@ fn project_browser(
         );
     }
     let mut action = BrowserAction::None;
-    ui.horizontal(|ui| {
-        ui.vertical(|ui| {
-            ui.set_width(176.0);
-            ui.add_space(4.0);
-            // The pane navigates: choosing a folder lists that folder. It used
-            // to be labels with no sense, so it named the project's folders and
-            // did nothing with any of them.
-            //
-            // Named for the project even when the listing starts below it: the
-            // root row is where "back" goes, and "assets" is what the folder is
-            // called rather than what the person is working on.
-            if folder_row(ui, &listing.project.label(), !browser.is_scoped(), 0).clicked() {
-                action = BrowserAction::LookInProject;
-            }
-            for (folder, depth) in listing.project.folders_in(listing.base) {
-                let chosen = browser.folder.as_deref() == Some(folder.path.as_path());
-                if folder_row(ui, &folder.name, chosen, depth + 1).clicked() {
-                    action = BrowserAction::LookIn(folder.path.clone());
+    // The whole remaining height, not a row's: `ui.horizontal` is as tall as
+    // its tallest child so far, which was the folder tree, and the listing
+    // beside it scrolled inside those two rows and showed one file.
+    ui.allocate_ui_with_layout(
+        ui.available_size(),
+        egui::Layout::left_to_right(egui::Align::Min),
+        |ui| {
+            ui.vertical(|ui| {
+                ui.set_width(176.0);
+                ui.add_space(4.0);
+                // The pane navigates: choosing a folder lists that folder. It used
+                // to be labels with no sense, so it named the project's folders and
+                // did nothing with any of them.
+                //
+                // Named for the project even when the listing starts below it: the
+                // root row is where "back" goes, and "assets" is what the folder is
+                // called rather than what the person is working on.
+                if folder_row(ui, &listing.project.label(), !browser.is_scoped(), 0).clicked() {
+                    action = BrowserAction::LookInProject;
                 }
-            }
-        });
-        // A hairline rather than egui's separator: the dock already has enough
-        // horizontal rules without one of them being three shades lighter.
-        let (rule, _) =
-            ui.allocate_exact_size(egui::vec2(1.0, ui.available_height()), egui::Sense::hover());
-        ui.painter().vline(
-            rule.center().x,
-            rule.y_range(),
-            crate::ui::theme::hairline(),
-        );
-        ui.vertical(|ui| {
-            let listed = asset_column(
-                ui, search, view, scope, browser, true, listing, scenes, renaming,
+                for (folder, depth) in listing.project.folders_in(listing.base) {
+                    let chosen = browser.folder.as_deref() == Some(folder.path.as_path());
+                    if folder_row(ui, &folder.name, chosen, depth + 1).clicked() {
+                        action = BrowserAction::LookIn(folder.path.clone());
+                    }
+                }
+            });
+            // A hairline rather than egui's separator: the dock already has enough
+            // horizontal rules without one of them being three shades lighter.
+            let (rule, _) = ui
+                .allocate_exact_size(egui::vec2(1.0, ui.available_height()), egui::Sense::hover());
+            ui.painter().vline(
+                rule.center().x,
+                rule.y_range(),
+                crate::ui::theme::hairline(),
             );
-            if listed != BrowserAction::None {
-                action = listed;
-            }
-        });
-    });
+            ui.vertical(|ui| {
+                let listed = asset_column(
+                    ui, search, view, scope, browser, true, listing, scenes, renaming,
+                );
+                if listed != BrowserAction::None {
+                    action = listed;
+                }
+            });
+        },
+    );
     action
 }
 
