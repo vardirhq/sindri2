@@ -1,5 +1,10 @@
 # Changelog
 
+- Blocks are premade and chosen by name. The engine ships a block set, `builtin:blocks` (grass, dirt, stone, sand, snow, ice, mud, moss, gravel, clay, planks, log, leaves, water, lava and more), and a voxel world can name a block set and have its generator say "grass" and "water" instead of material numbers. A new Voxel World is built from the built-in blocks, and Voxel Lab now is too. The inspector offers blocks as a menu of cubes.
+- Block sets are edited in the inspector: select a `.tileset.json` to see its blocks as cubes and edit each block's faces (with pictures), whether it hides its neighbours, supports, is walkable, its height and its tags. "New block set here" starts one as a copy of the built-in set.
+- Blocks can carry tags (`hot`, `liquid`, …) that scripts ask about with `Grid.tagged(volume, column, row, level, tag)`.
+- Exports no longer look for engine-provided `procedural:` and `builtin:` assets on disk.
+- Texture fields in the inspector show the picture they name beside the reference, and the reference picker shows each texture and sprite as a picture. A long reference is cut off before its sprite name, so fields naming different parts of one sheet no longer look identical.
 - The inspector draws voxel materials as the blocks they are: every material picker (a biome's surface, the water, the trunk…) shows each option as a small cube with its own top and side textures, and each material in a Voxel World's list shows its cube beside its ID.
 - The sun is now an object in the scene, like a camera: a Directional Light entity aimed by its rotation. The Scene view draws it as a sun with an arrow showing which way the light goes (and, when selected, a trail across the world), it can be clicked and rotated, and Create GameObject offers Directional Light. New scenes start with one. Scenes that stored a sun direction in the Environment are migrated to a Sun entity aimed the same way (scene format 10), so a light shining upwards, which put shadows on hilltops, is now visible as an arrow pointing up.
 - Voxel Lab's Scene view now starts on open ground by the coast instead of inside a mountain.

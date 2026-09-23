@@ -1,0 +1,683 @@
+{
+  "format_version": 1,
+  "tiles": {
+    "grass": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/grass-top.png#grass-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/dirt.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/grass-side.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/grass-side.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "covered": {
+        "top": {
+          "sprite": "builtin:blocks/dirt.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/dirt.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/dirt.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "variants": [
+        {
+          "faces": {
+            "top": {
+              "sprite": "builtin:blocks/grass-top.png#grass-1",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "bottom": {
+              "sprite": "builtin:blocks/dirt.png",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "south": {
+              "sprite": "builtin:blocks/grass-side.png",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "east": {
+              "sprite": "builtin:blocks/grass-side.png",
+              "size": [
+                1.0,
+                1.0
+              ]
+            }
+          }
+        },
+        {
+          "faces": {
+            "top": {
+              "sprite": "builtin:blocks/grass-top.png#grass-2",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "bottom": {
+              "sprite": "builtin:blocks/dirt.png",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "south": {
+              "sprite": "builtin:blocks/grass-side.png",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "east": {
+              "sprite": "builtin:blocks/grass-side.png",
+              "size": [
+                1.0,
+                1.0
+              ]
+            }
+          }
+        },
+        {
+          "faces": {
+            "top": {
+              "sprite": "builtin:blocks/grass-top.png#grass-3",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "bottom": {
+              "sprite": "builtin:blocks/dirt.png",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "south": {
+              "sprite": "builtin:blocks/grass-side.png",
+              "size": [
+                1.0,
+                1.0
+              ]
+            },
+            "east": {
+              "sprite": "builtin:blocks/grass-side.png",
+              "size": [
+                1.0,
+                1.0
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "dirt": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/dirt.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/dirt.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/dirt.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/dirt.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "earth": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#earth-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#earth-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/sides.png#earth-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/sides.png#earth-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "sand": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#sand-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#sand-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/sides.png#sand-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/sides.png#sand-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "snow": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#snow-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#snow-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/sides.png#snow-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/sides.png#snow-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "ice": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#ice-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#ice-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/sides.png#ice-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/sides.png#ice-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "mud": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#mud-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#mud-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/sides.png#mud-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/sides.png#mud-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "moss": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#moss-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#moss-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/sides.png#moss-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/sides.png#moss-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "gravel": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#gravel-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#gravel-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/sides.png#gravel-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/sides.png#gravel-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "clay": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#clay-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#clay-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/sides.png#clay-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/sides.png#clay-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "stone": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#stone-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#stone-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/tops.png#stone-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/tops.png#stone-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "rock": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#rock-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#rock-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/tops.png#rock-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/tops.png#rock-0",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "planks": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#plank",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#plank",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/sides.png#plank",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/sides.png#plank",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "log": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/log-end.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/log-end.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/log-bark.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/log-bark.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      }
+    },
+    "leaves": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/leaves.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/leaves.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/leaves.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/leaves.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "occludes": false
+    },
+    "water": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/tops.png#water",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/tops.png#water",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/sides.png#water",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/sides.png#water",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "occludes": false,
+      "walkable": false,
+      "tags": [
+        "liquid",
+        "wet"
+      ]
+    },
+    "lava": {
+      "faces": {
+        "top": {
+          "sprite": "builtin:blocks/lava.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "bottom": {
+          "sprite": "builtin:blocks/lava.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "south": {
+          "sprite": "builtin:blocks/lava.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        },
+        "east": {
+          "sprite": "builtin:blocks/lava.png",
+          "size": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "occludes": false,
+      "walkable": false,
+      "tags": [
+        "liquid",
+        "hot"
+      ]
+    }
+  }
+}

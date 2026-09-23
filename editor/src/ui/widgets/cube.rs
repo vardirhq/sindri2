@@ -102,6 +102,26 @@ fn face(painter: &egui::Painter, points: [Pos2; 4], picture: Option<Picture>, sh
     painter.add(Shape::mesh(mesh));
 }
 
+/// A picture drawn flat, `extent` points square, allocated in the layout.
+///
+/// For a texture reference, where a cube would claim the picture is a block.
+/// No picture draws an empty frame, so a row keeps its shape while a texture
+/// is still loading.
+pub fn swatch(ui: &mut egui::Ui, extent: f32, picture: Option<Picture>) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(Vec2::splat(extent), Sense::hover());
+    let painter = ui.painter();
+    if let Some(picture) = picture {
+        painter.image(picture.texture, rect, picture.uv, Color32::WHITE);
+    }
+    painter.rect_stroke(
+        rect,
+        2.0,
+        Stroke::new(1.0, color::LINE_SOFT),
+        egui::StrokeKind::Inside,
+    );
+    response
+}
+
 /// The size a cube is drawn at beside a row's value.
 pub const ROW: f32 = 18.0;
 

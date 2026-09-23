@@ -10,6 +10,7 @@
 //! claims it, and `draft` turns the whole of it into commands.
 
 pub(super) mod add_component;
+pub(super) mod blocks;
 pub(super) mod draft;
 pub(super) mod field;
 pub(super) mod header;
@@ -38,9 +39,8 @@ use self::header::{
 use self::scene::{SceneSummary, scene_section};
 use self::section::components_sections;
 use self::section::grid::grid_choices;
-use sindri_scene::{PROCEDURAL_TEXTURES, TextureBindings};
+use sindri_scene::TileSetBindings;
 
-use crate::project::ProjectTree;
 use crate::ui::icons;
 use crate::ui::theme::color;
 use crate::ui::widgets::{panel, toolbar};
@@ -51,27 +51,8 @@ use crate::{
 
 use super::editing::reparent_choices;
 use super::hierarchy::row::entity_icon;
+use super::thumbnails::drawable_textures;
 use super::{CAMERA_COMPONENT, EditorApp, SPRITE_COMPONENT, UI_IMAGE_COMPONENT};
-
-/// Every texture reference the engine can actually draw.
-///
-/// The project's own files, plus the handful the engine generates. A procedural
-/// reference is deliberately not parseable as an asset path, so a picker built
-/// from the directory alone both refused to offer `procedural:checkerboard` and
-/// marked the fixture's own cube as naming a texture that does not exist.
-///
-/// The sprites cut from the project's sheets are references too: a voxel face
-/// or a sprite naming `blocks.png#stone-0` names something that draws, and a
-/// list without them marked every such reference as missing.
-fn drawable_textures(project: &ProjectTree, bindings: &TextureBindings) -> Vec<String> {
-    let mut textures: Vec<String> = PROCEDURAL_TEXTURES
-        .iter()
-        .map(|texture| texture.reference.to_owned())
-        .collect();
-    textures.extend(project.textures());
-    textures.extend(bindings.sprite_references());
-    textures
-}
 
 /// Stateful authoring surfaces shared across component sections.
 pub(super) struct InspectorTools<'a> {
@@ -96,6 +77,7 @@ struct PanelContext {
     profiles: Vec<String>,
     tile_sets: Vec<String>,
     pictures: super::thumbnails::Pictures,
+    block_sets: TileSetBindings,
     /// The first `.decay` source the project holds that declares a script, and
     /// the first script it declares.
     ///
@@ -143,6 +125,7 @@ impl PanelContext {
             profiles: &self.profiles,
             tile_sets: &self.tile_sets,
             pictures: &self.pictures,
+            block_sets: Some(&self.block_sets),
         }
     }
 }
@@ -388,8 +371,13 @@ impl EditorApp {
             scripts,
             audio: self.project.audio(),
             profiles: self.project.profiles(),
-            tile_sets: self.project.tile_sets(),
+            // The engine's own block set is always there to choose, first,
+            // beside whatever sets the project holds.
+            tile_sets: std::iter::once(sindri_core::BUILTIN_BLOCKS.to_owned())
+                .chain(self.project.tile_sets())
+                .collect(),
             pictures: self.thumbnails.pictures().clone(),
+            block_sets: blocks::named_block_set(components, self.textures.tile_sets()),
             animation_sprites: animation_texture
                 .as_deref()
                 .map(|texture| self.project.sprites_for_texture(texture))
@@ -413,6 +401,10 @@ impl EditorApp {
         }
         if self.profile.is_some() {
             self.profile_panel(ui);
+            return;
+        }
+        if self.block_set.is_some() {
+            self.block_set_panel(ui);
             return;
         }
         if self.prefab_brush.is_some() {
@@ -462,6 +454,8 @@ impl EditorApp {
             toolbar::chip(ui, "Slicing", color::FORGE);
         } else if self.profile.is_some() {
             toolbar::chip(ui, "Profile", color::FORGE);
+        } else if self.block_set.is_some() {
+            toolbar::chip(ui, "Block set", color::FORGE);
         } else if self.preview.is_some() || self.heard.is_some() || self.shown_font.is_some() {
             toolbar::chip(ui, "Preview", color::TEXT_FAINT);
         } else if selected > 1 {
@@ -503,7 +497,11 @@ impl EditorApp {
         let mut removed = None;
         let mut added = None;
         let authoring = self.authoring_enabled();
-        let references = drawable_textures(&self.project, self.textures.bindings());
+        let mut references = drawable_textures(&self.project, self.textures.bindings());
+        references.extend(blocks::named_set_sprites(
+            &components,
+            self.textures.tile_sets(),
+        ));
         self.thumbnails
             .refresh(&self.render_state, &self.textures, &references);
         let context = self.panel_context(&components);

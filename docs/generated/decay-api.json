@@ -625,6 +625,18 @@
         },
         {
           "kind": "function",
+          "name": "tagged",
+          "parameters": [
+            "Entity",
+            "f32",
+            "f32",
+            "f32",
+            "String"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
           "name": "tile",
           "parameters": [
             "Entity",

@@ -14,6 +14,7 @@
 //! generates. `procedural:` cannot parse as an ID because a colon is reserved in
 //! one, so the two kinds cannot be confused and no rule has to be remembered.
 
+mod builtin;
 mod poll;
 mod request;
 
@@ -21,7 +22,7 @@ mod request;
 mod tests;
 
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
@@ -97,6 +98,10 @@ pub struct SceneTextures {
     registry: TextureRegistry,
     bindings: TextureBindings,
     tile_set_bindings: TileSetBindings,
+    /// Sprites a panel is showing that the world may not draw with, such as
+    /// the faces of a block set open for editing. Loaded as though the world
+    /// named them, so the panel has pictures of them.
+    pinned: BTreeSet<String>,
 }
 
 /// The project's manifest, if it ships one.
@@ -143,6 +148,17 @@ impl SceneTextures {
 
     pub const fn tile_sets(&self) -> &TileSetBindings {
         &self.tile_set_bindings
+    }
+
+    /// Keeps these sprites loaded whether or not the world draws with them.
+    /// Returns whether the set changed, which is when the caller should ask
+    /// for textures again.
+    pub fn pin(&mut self, sprites: BTreeSet<String>) -> bool {
+        if self.pinned == sprites {
+            return false;
+        }
+        self.pinned = sprites;
+        true
     }
 
     /// Whether anything is still on its way.

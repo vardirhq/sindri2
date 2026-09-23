@@ -4,14 +4,14 @@
 //! material defines, or a value outside what the generator can use, is an
 //! error naming the field rather than a world that draws wrongly.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use sindri_voxel::{
     NaturalTerrain, NaturalTerrainSettings, SectionCoord, TerrainBiome, TerrainPalette, VoxelCoord,
     VoxelId, VoxelSection, VoxelSource,
 };
 
-use crate::{NaturalTerrainDocument, VoxelGeneratorDocument};
+use crate::{NaturalTerrainDocument, VoxelBlock, VoxelGeneratorDocument};
 
 use super::SceneExtractError;
 
@@ -49,19 +49,46 @@ impl VoxelSource for SceneTerrain {
     }
 }
 
-/// The source a generator document describes, if every material it names is
-/// one of `ids` and every value is one it can use.
+/// What a world's generator may name: its materials by number, or the
+/// blocks of its block set by name, each with the ID the engine stores it as.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(super) struct Palette {
+    pub(super) materials: BTreeSet<u16>,
+    pub(super) blocks: BTreeMap<String, u16>,
+}
+
+impl Palette {
+    pub(super) fn of_materials(materials: impl IntoIterator<Item = u16>) -> Self {
+        Self {
+            materials: materials.into_iter().collect(),
+            blocks: BTreeMap::new(),
+        }
+    }
+
+    fn resolve(&self, block: &VoxelBlock) -> Result<VoxelId, SceneExtractError> {
+        match block {
+            VoxelBlock::Material(voxel)
+                if *voxel != VoxelId::AIR.value() && self.materials.contains(voxel) =>
+            {
+                Ok(VoxelId::new(*voxel))
+            }
+            VoxelBlock::Material(voxel) => Err(SceneExtractError::MissingVoxelMaterial(*voxel)),
+            VoxelBlock::Named(name) => self
+                .blocks
+                .get(name)
+                .map(|voxel| VoxelId::new(*voxel))
+                .ok_or_else(|| SceneExtractError::UnknownVoxelBlock(name.clone())),
+        }
+    }
+}
+
+/// The source a generator document describes, if every block it names is in
+/// `palette` and every value is one it can use.
 pub(super) fn terrain_source(
     generator: &VoxelGeneratorDocument,
-    ids: &BTreeSet<u16>,
+    palette: &Palette,
 ) -> Result<SceneTerrain, SceneExtractError> {
-    let defined = |voxel: u16| {
-        if voxel == VoxelId::AIR.value() || !ids.contains(&voxel) {
-            Err(SceneExtractError::MissingVoxelMaterial(voxel))
-        } else {
-            Ok(VoxelId::new(voxel))
-        }
-    };
+    let defined = |block: &VoxelBlock| palette.resolve(block);
     match generator {
         VoxelGeneratorDocument::LayeredTerrain {
             seed,
@@ -82,9 +109,9 @@ pub(super) fn terrain_source(
                 seed: *seed,
                 base_height: *base_height,
                 height_variation: *height_variation,
-                surface_voxel: defined(*surface_voxel)?,
-                subsurface_voxel: defined(*subsurface_voxel)?,
-                deep_voxel: defined(*deep_voxel)?,
+                surface_voxel: defined(surface_voxel)?,
+                subsurface_voxel: defined(subsurface_voxel)?,
+                deep_voxel: defined(deep_voxel)?,
                 subsurface_depth: *subsurface_depth,
             }))
         }
@@ -95,9 +122,9 @@ pub(super) fn terrain_source(
 
 fn natural(
     document: &NaturalTerrainDocument,
-    defined: &dyn Fn(u16) -> Result<VoxelId, SceneExtractError>,
+    defined: &dyn Fn(&VoxelBlock) -> Result<VoxelId, SceneExtractError>,
 ) -> Result<NaturalTerrainSettings, SceneExtractError> {
-    let optional = |voxel: Option<u16>| voxel.map(defined).transpose();
+    let optional = |voxel: &Option<VoxelBlock>| voxel.as_ref().map(defined).transpose();
     within(
         "relief",
         f64::from(document.relief),
@@ -150,8 +177,8 @@ fn natural(
             Ok(TerrainBiome {
                 temperature: biome.temperature,
                 moisture: biome.moisture,
-                surface: defined(biome.surface_voxel)?,
-                subsurface: defined(biome.subsurface_voxel)?,
+                surface: defined(&biome.surface_voxel)?,
+                subsurface: defined(&biome.subsurface_voxel)?,
                 subsurface_depth: biome.subsurface_depth,
                 trees: biome.trees,
                 relief: biome.relief,
@@ -169,15 +196,15 @@ fn natural(
         caves: document.caves,
         rivers: document.rivers,
         palette: TerrainPalette {
-            stone: defined(document.stone_voxel)?,
-            water: optional(document.water_voxel)?,
-            beach: optional(document.beach_voxel)?,
-            sea_bed: optional(document.sea_bed_voxel)?,
-            cliff: optional(document.cliff_voxel)?,
-            snow: optional(document.snow_voxel)?,
-            ice: optional(document.ice_voxel)?,
-            trunk: optional(document.trunk_voxel)?,
-            leaves: optional(document.leaves_voxel)?,
+            stone: defined(&document.stone_voxel)?,
+            water: optional(&document.water_voxel)?,
+            beach: optional(&document.beach_voxel)?,
+            sea_bed: optional(&document.sea_bed_voxel)?,
+            cliff: optional(&document.cliff_voxel)?,
+            snow: optional(&document.snow_voxel)?,
+            ice: optional(&document.ice_voxel)?,
+            trunk: optional(&document.trunk_voxel)?,
+            leaves: optional(&document.leaves_voxel)?,
         },
         biomes,
     })
@@ -281,8 +308,8 @@ impl VoxelSource for LayeredTerrain {
 mod tests {
     use super::*;
 
-    fn ids(values: &[u16]) -> BTreeSet<u16> {
-        values.iter().copied().collect()
+    fn ids(values: &[u16]) -> Palette {
+        Palette::of_materials(values.iter().copied())
     }
 
     #[test]
@@ -308,6 +335,34 @@ mod tests {
     }
 
     #[test]
+    fn a_generator_names_blocks_by_name() {
+        let palette = Palette {
+            materials: BTreeSet::new(),
+            blocks: [("dirt", 1), ("grass", 2), ("stone", 3)]
+                .into_iter()
+                .map(|(name, voxel)| (name.to_owned(), voxel))
+                .collect(),
+        };
+        let generator = VoxelGeneratorDocument::LayeredTerrain {
+            seed: 0,
+            base_height: 3,
+            height_variation: 6,
+            surface_voxel: "grass".into(),
+            subsurface_voxel: "dirt".into(),
+            deep_voxel: "stone".into(),
+            subsurface_depth: 3,
+        };
+        let Ok(SceneTerrain::Layered(source)) = terrain_source(&generator, &palette) else {
+            panic!("every block is in the set");
+        };
+        let height = source.height(0, 0);
+        assert_eq!(source.voxel(VoxelCoord::new(0, height, 0)), VoxelId::new(2));
+        // A number names a material, and a world built from blocks has none.
+        let numbered = VoxelGeneratorDocument::default();
+        assert!(terrain_source(&numbered, &palette).is_err());
+    }
+
+    #[test]
     fn a_default_natural_terrain_needs_only_the_starting_materials() {
         let generator = VoxelGeneratorDocument::NaturalTerrain(NaturalTerrainDocument::default());
         assert!(matches!(
@@ -319,12 +374,20 @@ mod tests {
     #[test]
     fn a_natural_terrain_names_the_field_it_cannot_use() {
         let mut document = NaturalTerrainDocument {
-            water_voxel: Some(9),
+            water_voxel: Some(VoxelBlock::Material(9)),
             ..NaturalTerrainDocument::default()
         };
         let generator = VoxelGeneratorDocument::NaturalTerrain(document.clone());
         let error = terrain_source(&generator, &ids(&[1, 2, 3])).unwrap_err();
         assert!(error.to_string().contains("material ID 9"), "{error}");
+
+        document.water_voxel = Some(VoxelBlock::from("lava"));
+        let generator = VoxelGeneratorDocument::NaturalTerrain(document.clone());
+        let error = terrain_source(&generator, &ids(&[1, 2, 3])).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "no block called `lava` in the world's block set"
+        );
 
         document.water_voxel = None;
         document.biomes[0].trees = 1.5;

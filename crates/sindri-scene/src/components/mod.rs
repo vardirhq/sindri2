@@ -55,7 +55,9 @@ pub use ui_text_options::{
     UiTextAutoSize, UiTextCase, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,
 };
 pub use voxel_terrain::{BiomeDocument, NaturalTerrainDocument};
-pub use voxel_world::{VoxelGeneratorDocument, VoxelMaterialDocument, VoxelWorldComponent};
+pub use voxel_world::{
+    VoxelBlock, VoxelGeneratorDocument, VoxelMaterialDocument, VoxelWorldComponent,
+};
 
 /// The tint a component that does not name one draws with.
 ///

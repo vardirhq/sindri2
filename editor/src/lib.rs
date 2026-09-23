@@ -15,6 +15,9 @@ pub mod animation;
 pub mod assistant;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod audition;
+/// A block set opened for editing: its blocks, their faces and flags.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod block_set;
 /// Scene-view geometry for authored camera frustums.
 #[cfg(not(target_arch = "wasm32"))]
 pub mod camera_visualization;

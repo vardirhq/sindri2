@@ -74,6 +74,8 @@ impl EditorApp {
         self.prefab_brush = None;
         self.preview = None;
         self.profile = None;
+        self.block_set = None;
+        self.textures.pin(std::collections::BTreeSet::new());
         self.heard = None;
         // The font stays registered with egui until the panel stops showing
         // one, so a project font does not outlive the row that asked for it.
@@ -93,6 +95,10 @@ impl EditorApp {
                 .is_some_and(|open| open.path() == path)
             || self
                 .profile
+                .as_ref()
+                .is_some_and(|open| open.path() == path)
+            || self
+                .block_set
                 .as_ref()
                 .is_some_and(|open| open.path() == path)
             || self.heard.as_deref() == Some(path)
@@ -122,6 +128,8 @@ impl EditorApp {
         self.show_nothing();
         if AssetKind::of_path(path) == AssetKind::Profile {
             self.profile = Some(ProfileEditor::open(path));
+        } else if AssetKind::of_path(path) == AssetKind::TileSet {
+            self.block_set = Some(crate::block_set::BlockSetEditor::open(path));
         } else if crate::prefab::is_a_prefab(path) {
             // A prefab is readable text, so without this it showed as a file to
             // scroll rather than a thing to place.

@@ -213,7 +213,7 @@ impl ProjectExport {
             .filter(|(_, kind)| **kind == AssetKind::TileSet)
             .map(|(id, _)| id.clone())
             .collect::<Vec<_>>();
-        for id in tile_sets {
+        for id in tile_sets.into_iter().filter(|id| !engine_provided(id)) {
             let text = std::fs::read_to_string(resolve(project, &id))
                 .map_err(|error| ExportError::unreadable(&resolve(project, &id), &error))?;
             let tile_set = sindri_core::TileSetDocument::from_json(&text)
@@ -257,10 +257,10 @@ impl ProjectExport {
         }
 
         for (id, kind) in wanted {
-            // A procedural texture is drawn by the engine and has no file. It
-            // is named like an asset and is not one, so shipping it would mean
-            // failing to find it.
-            if id.starts_with("sindri:") {
+            // A procedural texture or a built-in block set is the engine's own
+            // and has no file in the project. It is named like an asset and is
+            // not one, so shipping it would mean failing to find it.
+            if engine_provided(&id) {
                 continue;
             }
             let path = resolve(project, &id);
@@ -373,4 +373,11 @@ fn leaf(path: &str) -> String {
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_else(|| path.to_owned())
+}
+
+/// Whether a reference names something the engine provides rather than a file:
+/// `procedural:checkerboard`, `builtin:blocks` and whatever it names. A colon
+/// cannot appear in an asset ID, which is what keeps the two kinds apart.
+fn engine_provided(reference: &str) -> bool {
+    reference.contains(':')
 }

@@ -52,12 +52,37 @@ and generating one never depends on another.
 | `water_voxel`, `beach_voxel`, `sea_bed_voxel`, `cliff_voxel`, `snow_voxel`, `ice_voxel`, `trunk_voxel`, `leaves_voxel` | Optional. `null` leaves that feature out: no water leaves the sea empty; trees need both trunk and leaves. |
 | `biomes[]` | `name`, climate point (`temperature`, `moisture`, 0–1), `surface_voxel`, `subsurface_voxel`, `subsurface_depth`, `trees` (0–1), `relief` (0–4, a multiple of the world's hills), and `terraces` (step height; 0 for none). |
 
-Every voxel field names a material by its ID. In the inspector each is a menu
-of the materials the world defines, and the optional ones also offer *None*.
-Switching a world's generator between `layered_terrain` and `natural_terrain`
-writes the arriving generator's fields and drops the other's. A new Voxel
-World component starts as a natural terrain that needs only its three starting
-materials.
+Every voxel field names a block. A world that sets `blocks` to a block set
+(`builtin:blocks`, or a project's own `.tileset.json`) names blocks from it by
+name — `"surface_voxel": "grass"` — and the engine numbers the set's blocks
+itself; each face draws with the block's art, a tile's south face being the
+voxel's front. A world with no block set names its own `materials` by number,
+as every world did before block sets, and still loads unchanged. In the
+inspector each field is a menu of the set's blocks drawn as cubes (or of the
+world's materials), and the optional ones also offer *None*. Switching a
+world's generator between `layered_terrain` and `natural_terrain` writes the
+arriving generator's fields and drops the other's. A new Voxel World component
+starts as a natural terrain built from `builtin:blocks`: seven biomes, water,
+beaches, cliffs, snow, ice and trees.
+
+## Blocks
+
+`builtin:blocks` is the block set the engine ships, with its art compiled into
+`sindri-assets`: grass, dirt, earth, stone, rock, sand, snow, ice, mud, moss,
+gravel, clay, planks, log, leaves, water and lava. `builtin:` references are
+not asset IDs (a colon cannot appear in one), so no loader looks for them on
+disk: a host binds them from `sindri_assets::builtin_textures()` and
+`builtin_tile_sets()`, as it binds `procedural:` textures, and the exporter
+leaves them out of a build. The editor binds them for every scene.
+
+A block set is an ordinary tile set, the same asset a tile volume uses, so a
+block defined once serves both. Selecting one in the Project panel opens the
+block set editor: the set's blocks as cubes, and the chosen block's name, a
+texture picker for each face (an empty face borrows the opposite one), whether
+it hides its neighbours, supports, is walkable, its height and its tags.
+*New block set here* starts a project's own set as a copy of the built-in one.
+Tags are words a game gives a block (`hot`, `liquid`) that the engine never
+reads and scripts ask about with `Grid.tagged`.
 
 An invalid value is reported against the field, for example
 ``voxel generator `biomes.2.trees` must be from 0 to 1``, and the editor keeps
@@ -67,5 +92,7 @@ drawing the last valid world meanwhile.
 
 Everything is drawn as opaque cubes, so water and leaves are solid until cutout
 and transparent rendering lands; Voxel Lab uses a leaves texture flattened
-onto green for that reason. There are no strata, ores or structures, and
-water does not flow. Causeway still uses its own generator.
+onto green for that reason. A block's variants and its `occludes` flag are not
+yet read by the voxel mesher, block faces do not animate, and lava does not
+glow. There are no strata, ores or structures, and water does not flow.
+Causeway still uses its own generator.

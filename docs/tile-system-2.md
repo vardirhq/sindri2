@@ -83,6 +83,8 @@ Project asset describing semantic terrain:
   stand on it — water does the first and not the second, and one flag saying
   "solid" could not tell a pond from a hole
 - face visuals for top, bottom, and four horizontal neighbours
+- `tags`: words a game gives a tile (`hot`, `slippery`) that the engine never
+  reads and scripts ask about with `Grid.tagged`
 - adjacency groups and allowed transitions
 - deterministic weighted variants: one tile ID with several looks, chosen from
   a hash of the cell, the tile's name and the volume's seed. The scene stores
@@ -117,7 +119,10 @@ would fray it too, but into salt and pepper — single cells of snow scattered
 through grass read as dirt on the screen, not as snow lying in the hollows.
 
 Tile sets are assets rather than components so several scenes and volumes can
-share one definition without copying it into every scene. Optional terrain
+share one definition without copying it into every scene. A voxel world names
+one as its block set, so the same blocks build a tile volume and a voxel world;
+the engine ships `builtin:blocks`, and the editor edits any tile set as a grid
+of cubes (see [`voxel-terrain.md`](voxel-terrain.md#blocks)). Optional terrain
 rules describe high-level surface painting: the surface tile, supporting fill,
 transitions, and which tiles count as the same terrain family.
 

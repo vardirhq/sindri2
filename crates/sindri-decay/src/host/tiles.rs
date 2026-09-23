@@ -51,7 +51,10 @@ impl WorldHost<'_> {
     ) -> Result<Value, RuntimeError> {
         // A volume's cells are named and stacked rather than indexed and flat,
         // so they never reach the shape a flat map describes.
-        if matches!(call, GridCall::Block | GridCall::SetBlock) {
+        if matches!(
+            call,
+            GridCall::Block | GridCall::SetBlock | GridCall::Tagged
+        ) {
             return self.block_call(call, path, args);
         }
         // Answered from the volume's walkable surface, so it needs no flat
@@ -100,7 +103,7 @@ impl WorldHost<'_> {
             | GridCall::StepToward => {
                 unreachable!("dispatched to the entity-and-grid calls instead")
             }
-            GridCall::Block | GridCall::SetBlock | GridCall::Walkable => {
+            GridCall::Block | GridCall::SetBlock | GridCall::Walkable | GridCall::Tagged => {
                 unreachable!("answered above, before a flat map was looked for")
             }
         }

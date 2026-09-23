@@ -5,6 +5,7 @@
 //! use the same pipeline without pretending browser fetches are synchronous.
 
 mod audio;
+mod builtin;
 mod decode;
 mod loader;
 mod manifest;
@@ -21,6 +22,9 @@ mod filesystem;
 mod watch;
 
 pub use audio::{AudioAsset, AudioAssetDecoder, AudioFormat};
+pub use builtin::{
+    BUILTIN_BLOCKS, BuiltinError, BuiltinTexture, builtin_textures, builtin_tile_sets,
+};
 pub use decode::{
     AssetCompletionApplyError, AssetDecodeError, AssetDecoder, DecodedAssetCompletion, FontAsset,
     FontAssetDecoder, PrefabAssetDecoder, ProfileAssetDecoder, SceneAssetDecoder,

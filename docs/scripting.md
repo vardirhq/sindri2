@@ -978,6 +978,7 @@ the entity never had holds no tiles.
 | --- | --- |
 | `Grid.block(volume, column, row, level)` | `String` |
 | `Grid.set_block(volume, column, row, level, tile)` | nothing |
+| `Grid.tagged(volume, column, row, level, tag)` | `bool` |
 
 A volume's cells sit at an integer level as well as a column and row, and they
 name tiles in a tile set several scenes may share rather than indexing a palette
@@ -989,6 +990,12 @@ Empty is the empty string, in both directions. A volume stores absence as
 absence — a cell that is not there — so unlike the flat map it needs no sentinel
 number standing in for nothing, and writing `""` removes the cell rather than
 putting something blank in it.
+
+`tagged` asks whether the block in a cell carries one of the words its tile set
+gives it: `"tags": ["hot", "liquid"]` on lava, say. The engine reads no tag
+itself; tags are how a game says what its blocks mean to *it*, so a script can
+burn whoever stands in something `hot` without the engine growing a flag for
+every game's idea of ground. An empty cell carries no tags and answers `false`.
 
 Column, row and level must be whole. A cell between two levels is not a cell,
 and a script computing one from a float it got wrong should hear about it where

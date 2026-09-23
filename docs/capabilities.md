@@ -451,9 +451,14 @@ either a deterministic layered generator or a natural terrain generator
 from one seed; see [`voxel-terrain.md`](voxel-terrain.md)), per-face voxel
 material textures, bounded
 horizontal/vertical residency, and a section focus. The same scene path renders
-in games and in the editor Scene view. Material IDs are declared keys
+in games and in the editor Scene view. A world may instead name a block set in
+`blocks` (the engine ships `builtin:blocks`, and new worlds use it), and then
+its generator names blocks by name, drawn with each block's per-face art; the
+generator's fields are `FieldMeaning::Block`, which the editor offers as a
+menu of the set's blocks drawn as cubes. Without a block set, material IDs are
+declared keys
 (`FieldMeaning::Key`) and the generator's surface, subsurface, and deep layers
-reference them (`FieldMeaning::KeyOf`, including the natural terrain's biome
+reference them (`FieldMeaning::Block` falling back to `KeyOf`, including the natural terrain's biome
 and optional palette voxels, which also offer *None*), so the editor numbers an added material
 past every ID in use, refuses to remove one a layer still names, and offers the
 layers only the IDs that exist. The editor's extractor tolerates an invalid

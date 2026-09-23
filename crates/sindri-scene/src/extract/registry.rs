@@ -18,7 +18,7 @@
 //! Conflating the two is what made `sindri.ui.text` inspect as two rows when it
 //! has seven.
 
-use sindri_core::{ComponentSchemaRegistry, TagsComponent};
+use sindri_core::{BUILTIN_BLOCKS, ComponentSchemaRegistry, TagsComponent};
 
 use crate::animation::SpriteAnimationComponent;
 use crate::audio::AudioSourceComponent;
@@ -342,13 +342,14 @@ fn register_tiles(components: &mut ComponentSchemaRegistry) -> Result<(), SceneE
     components.register_with_default::<VoxelWorldComponent>(
         "Voxel World",
         serde_json::json!({
-            // A new world is a natural one: continents, ranges and biomes
-            // from the three starting materials, rather than the rolling
-            // field of the simpler generator.
+            // A new world is a natural one built from the engine's own
+            // blocks: continents, ranges, biomes, water and trees that look
+            // like themselves, rather than three checkered layers.
             "generator": serde_json::to_value(VoxelGeneratorDocument::NaturalTerrain(
-                NaturalTerrainDocument::default(),
+                NaturalTerrainDocument::with_builtin_blocks(),
             ))
             .expect("a generator serializes"),
+            "blocks": BUILTIN_BLOCKS,
             "materials": [
                 {
                     "voxel": 1,

@@ -140,6 +140,7 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `set_block(Entity, f32, f32, f32, String)` → `unit`
 - `set_tile(Entity, f32, f32, f32)` → `unit`
 - `step_toward(Entity, Entity, Entity)` → `bool`
+- `tagged(Entity, f32, f32, f32, String)` → `bool`
 - `tile(Entity, f32, f32)` → `f32`
 - `walkable(Entity, f32, f32)` → `bool`
 

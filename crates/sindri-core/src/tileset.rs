@@ -14,6 +14,11 @@ use crate::SpriteRef;
 pub const TILESET_FORMAT_VERSION: u32 = 1;
 pub const TILESET_SUFFIX: &str = ".tileset.json";
 
+/// The block set the engine ships: grass, dirt, stone, water, lava and the
+/// rest. Its bytes live in `sindri-assets`; the name lives here so a scene can
+/// default to it without depending on where its art comes from.
+pub const BUILTIN_BLOCKS: &str = "builtin:blocks";
+
 /// One face of an axis-aligned logical tile cell.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum TileFace {
@@ -256,6 +261,14 @@ pub struct TileDefinition {
     /// field is not the same as changing what a document meant.
     #[serde(default = "yes", alias = "solid", skip_serializing_if = "is_true")]
     pub walkable: bool,
+    /// Words a game gives this block, for its scripts to ask about: `hot`,
+    /// `slippery`, `harvestable`.
+    ///
+    /// The engine reads none of them. They are how a block carries what a
+    /// particular game means by it, without the engine growing a flag for
+    /// every game's idea of what ground can be.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
 }
 
 impl TileDefinition {

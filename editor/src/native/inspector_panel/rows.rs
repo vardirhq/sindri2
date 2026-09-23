@@ -324,7 +324,8 @@ fn described_row(
             let Some(list) = asset_list(Some(meaning), described.assets) else {
                 return false;
             };
-            super::field::asset_row(ui, at.path, key, value, list, indent);
+            let pictures = super::field::pictures_for(Some(meaning), described.assets);
+            super::field::asset_row(ui, at.path, key, value, list, pictures, indent);
             true
         }
         FieldMeaning::Colour if super::field::is_colour(Some(meaning), value) => {
@@ -345,6 +346,10 @@ fn described_row(
         }
         FieldMeaning::KeyOf(target) => {
             super::keys::key_of_row(ui, at, label, target, value, indent)
+        }
+        FieldMeaning::Block { set, or_key_of } => {
+            super::blocks::block_row(ui, at, label, set, value, indent)
+                || super::keys::key_of_row(ui, at, label, or_key_of, value, indent)
         }
         FieldMeaning::Choice(options) => {
             if described
