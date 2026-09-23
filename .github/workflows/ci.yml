@@ -4,6 +4,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  # The autofix workflow starts CI this way on the commit it pushes, because a
+  # push made with the workflow's own token starts no workflows by itself.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -31,9 +34,13 @@ env:
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
-  # Nothing here compiles anything, so it reports in well under a minute and
-  # catches the cheapest failures before a runner has spent four minutes on a
-  # build that a missing newline was going to fail anyway.
+  # Nothing here compiles anything, so it reports in well under a minute. It
+  # used to gate every compiling job, which saved their runners when a missing
+  # newline was going to fail the run anyway, but it also hid every Clippy and
+  # test failure behind that newline until the next push. An agent that cannot
+  # run the checks itself then found one class of failure per round trip. The
+  # compiling jobs now run regardless, so one run reports everything, and the
+  # autofix workflow repairs formatting on its own.
   quick:
     name: Format and file sizes
     runs-on: ubuntu-latest
@@ -104,17 +111,21 @@ jobs:
           exit "$status"
 
   # Compile changed gameplay scripts against the same typed Sindri host surface
-  # the editor uses. This gate stays ahead of the expensive native, WASM, and
-  # browser jobs so a script typo does not consume their runners first.
+  # the editor uses. Like the quick job, it no longer gates the compiling jobs,
+  # so a script typo and a Rust failure are reported by the same run.
   decay_preflight:
     name: Decay project preflight
     runs-on: ubuntu-latest
     outputs:
       failure: ${{ steps.decay.outputs.failure }}
     steps:
+      # A pull request run checks out the merge commit, whose first parent is
+      # the base branch, so HEAD^ is the whole pull request's diff. A manual
+      # run checks out the branch itself, where HEAD^ is only its last commit,
+      # so it diffs against its merge base with main instead.
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 2
+          fetch-depth: ${{ github.event_name == 'workflow_dispatch' && 0 || 2 }}
       - uses: dtolnay/rust-toolchain@1.95.0
       - uses: Swatinem/rust-cache@v2
         with:
@@ -123,11 +134,16 @@ jobs:
         id: decay
         shell: bash
         run: |
+          base=HEAD^
+          if [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            base="$(git merge-base origin/main HEAD)"
+          fi
+
           mapfile -t scripts < <(
-            git diff --name-only --diff-filter=ACMRT HEAD^ HEAD -- '*.decay'
+            git diff --name-only --diff-filter=ACMRT "$base" HEAD -- '*.decay'
           )
 
-          if ! git diff --quiet HEAD^ HEAD -- tools/decay-lsp crates/sindri-decay \
+          if ! git diff --quiet "$base" HEAD -- tools/decay-lsp crates/sindri-decay \
             decay/crates/decay-semantic decay/crates/decay-syntax
           then
             cargo test --quiet --package decay-lsp
@@ -229,7 +245,6 @@ jobs:
           done
 
   clippy:
-    needs: [quick, decay_preflight]
     name: Clippy
     runs-on: ubuntu-latest
     outputs:
@@ -257,7 +272,11 @@ jobs:
         run: |
           output="$(mktemp)"
           set +e
-          cargo clippy --workspace --all-targets --all-features --message-format=json >"$output"
+          # --keep-going: a crate that fails to compile would otherwise stop
+          # Clippy before it reached the crates after it, hiding their lints
+          # until the next push.
+          cargo clippy --workspace --all-targets --all-features --keep-going \
+            --message-format=json >"$output"
           status=$?
           set -e
 
@@ -281,7 +300,6 @@ jobs:
           exit "$status"
 
   test:
-    needs: [quick, decay_preflight]
     name: Test and render captures
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -312,14 +330,16 @@ jobs:
         env:
           WGPU_BACKEND: vulkan
           SINDRI_REQUIRE_GPU: 1
-        run: cargo nextest run --workspace --all-features
+        # nextest stops at the first failing test by default, which reports
+        # one failure per push. Every failure is wanted from the same run.
+        run: cargo nextest run --workspace --all-features --no-fail-fast
       # nextest does not run doctests -- it has no way to, they are compiled
       # and run by rustdoc rather than built into a test binary. Left out, the
       # switch above would have quietly dropped every example in the public
       # API's documentation from CI, so they are run here instead.
       - name: Test the documented examples
         id: doctests
-        run: cargo test --workspace --all-features --doc
+        run: cargo test --workspace --all-features --doc --no-fail-fast
       # The captures stay in this job rather than a parallel one of their own:
       # they run the same crates the tests just built, and a separate job would
       # spend longer recompiling them than the captures take.
@@ -416,7 +436,6 @@ jobs:
           fi
 
   wasm:
-    needs: [quick, decay_preflight]
     name: Browser target
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -446,7 +465,7 @@ jobs:
           tool: wasm-bindgen-cli@0.2.128
       - name: Check browser workspace
         id: wasm_check
-        run: cargo check --workspace --all-features --target wasm32-unknown-unknown
+        run: cargo check --workspace --all-features --keep-going --target wasm32-unknown-unknown
       # A texture that decodes natively and not in the browser build is the
       # failure the asset system's whole promise rests on, so the decode corpus
       # is run on the browser target too, in Node through wasm-bindgen's runner.
@@ -487,7 +506,6 @@ jobs:
   # nothing but a blank canvas is what that looked like before the engine
   # started announcing it.
   browser:
-    needs: [quick, decay_preflight]
     name: Run the engine in a browser
     runs-on: ubuntu-latest
     timeout-minutes: 25

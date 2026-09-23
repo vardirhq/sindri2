@@ -41,6 +41,13 @@ the companion game part-way through a scripted run — and uploads all of them,
 because several classes of rendering mistake compile, lint, test, and run while
 producing the wrong picture.
 
+On a pull request from a branch of this repository, the Autofix workflow runs
+`cargo fmt --all` and `cargo run -p sindri-capabilities -- --write` and commits
+whatever they change back to the branch. Pull before pushing again. Pushes it
+makes with the workflow's own token start CI through `workflow_dispatch`; set a
+`SINDRI_AUTOFIX_TOKEN` secret (a fine-grained token with contents write access
+to this repository) to make them ordinary pushes that start every workflow.
+
 Dependency changes additionally run `cargo deny`; see
 [`docs/dependency-policy.md`](docs/dependency-policy.md).
 

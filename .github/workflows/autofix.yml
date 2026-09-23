@@ -1,0 +1,189 @@
+name: Autofix
+
+# Formatting and regenerated capability documents are mechanical: there is
+# exactly one right answer, and a tool produces it. Agents that edit through a
+# GitHub connector cannot run those tools before they push, and about one
+# commit in seven on main was a follow-up that did nothing but apply them. This
+# workflow applies them instead and commits the result to the pull request
+# branch, so a mechanical failure costs a bot commit rather than a round trip.
+#
+# It never changes behaviour. rustfmt and the capability generator are the
+# same authorities CI checks against; this only runs them in write mode.
+on:
+  pull_request:
+  # Runs on main only to keep the capability generator's build cache warm for
+  # pull requests, which restore what main saves. Nothing is committed there.
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  # Cancelling the superseded CI run and, without a dedicated token, starting
+  # CI on the autofix commit.
+  actions: write
+
+concurrency:
+  group: autofix-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  AUTOFIX_SUBJECT: Apply automatic formatting and regeneration
+
+jobs:
+  autofix:
+    name: Apply mechanical fixes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # The branch head rather than the merge commit: the fix is committed on
+      # top of what the author pushed. Credentials are not persisted, so the
+      # pull request's own build scripts never see a token that can push; only
+      # the push step below receives one.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: autofix
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Format
+        run: |
+          cargo fmt --all
+          (cd decay && cargo fmt --all)
+      - name: Regenerate capability documents
+        run: cargo run --quiet --package sindri-capabilities -- --write
+      - name: Commit and push
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        env:
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPOSITORY: ${{ github.repository }}
+          HAS_AUTOFIX_TOKEN: ${{ secrets.SINDRI_AUTOFIX_TOKEN != '' }}
+          PUSH_TOKEN: ${{ secrets.SINDRI_AUTOFIX_TOKEN || github.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Staged, so a newly generated document counts as a change too.
+          git add --all
+          if git diff --cached --quiet; then
+            echo "Formatting and generated capability documents are current."
+            exit 0
+          fi
+
+          mapfile -t changed < <(git diff --cached --name-only)
+          {
+            echo "## Autofix"
+            echo
+            echo "rustfmt and the capability generator changed these files:"
+            echo
+            printf -- '- `%s`\n' "${changed[@]}"
+            echo
+          } >>"$GITHUB_STEP_SUMMARY"
+
+          # A second autofix commit in a row means one of the tools does not
+          # reach a fixed point. Pushing again would loop, so stop and say so.
+          if [[ "$(git log -1 --format=%s)" == "$AUTOFIX_SUBJECT" ]]; then
+            echo "::error title=Autofix did not converge::The previous commit was already an autofix commit, yet the tools changed files again."
+            exit 1
+          fi
+
+          if [[ "$SAME_REPO" != "true" ]]; then
+            {
+              echo "This pull request comes from a fork, so the fix cannot be pushed to it."
+              echo "Apply it locally:"
+              echo
+              echo '```bash'
+              echo 'cargo fmt --all && (cd decay && cargo fmt --all)'
+              echo 'cargo run -p sindri-capabilities -- --write'
+              echo '```'
+              echo
+              echo "The exact changes are attached to this run as the \`autofix-patch\` artifact."
+            } >>"$GITHUB_STEP_SUMMARY"
+            git diff --cached >autofix.patch
+            echo "::warning title=Mechanical fixes needed::$(IFS=', '; echo "${changed[*]}")"
+            exit 0
+          fi
+
+          fmt_changed=false
+          generated_changed=false
+          lock_changed=false
+          decay_changed=false
+          for path in "${changed[@]}"; do
+            case "$path" in
+              docs/generated/*) generated_changed=true ;;
+              Cargo.lock | */Cargo.lock) lock_changed=true ;;
+              *) fmt_changed=true ;;
+            esac
+            if [[ "$path" == decay/* ]]; then
+              decay_changed=true
+            fi
+          done
+
+          body="These changes were produced by tools, not written by hand."
+          if [[ $fmt_changed == true ]]; then
+            body+=$'\n\n'"cargo fmt --all (repository root and decay/) reformatted Rust"
+            body+=" sources that did not match rustfmt."
+          fi
+          if [[ $generated_changed == true ]]; then
+            body+=$'\n\n'"cargo run -p sindri-capabilities -- --write regenerated"
+            body+=" docs/generated/, which had fallen behind the host surface."
+          fi
+          if [[ $lock_changed == true ]]; then
+            body+=$'\n\n'"Building the generator updated Cargo.lock to match the"
+            body+=" manifests."
+          fi
+          body+=$'\n\n'"Pull this commit before making further changes to the branch."
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet --message "$AUTOFIX_SUBJECT" --message "$body"
+
+          # The branch may have moved while this ran. Then the new push has its
+          # own autofix run, and this one has nothing left to do.
+          if ! git push --quiet \
+            "https://x-access-token:${PUSH_TOKEN}@github.com/${REPOSITORY}.git" \
+            "HEAD:refs/heads/${HEAD_REF}"
+          then
+            echo "::notice title=Autofix not pushed::${HEAD_REF} moved while autofix ran; the newer push gets its own run."
+            exit 0
+          fi
+          echo "Pushed $(git rev-parse --short HEAD) to ${HEAD_REF}." >>"$GITHUB_STEP_SUMMARY"
+
+          # The run on the superseded commit can only report what was just
+          # fixed, so its runners are released.
+          gh run list --repo "$REPOSITORY" --commit "$HEAD_SHA" \
+            --json databaseId,status,workflowName \
+            --jq '.[] | select(.status != "completed" and .workflowName != "Autofix") | .databaseId' |
+            while read -r run; do gh run cancel --repo "$REPOSITORY" "$run" || true; done ||
+            echo "::notice::Could not cancel the superseded CI run; it will finish on its own."
+
+          # A push made with the workflow's own token deliberately starts no
+          # workflows, so CI on the new commit is started explicitly. With a
+          # dedicated token the push is an ordinary pull request update and
+          # every workflow starts on its own.
+          if [[ "$HAS_AUTOFIX_TOKEN" != "true" ]]; then
+            gh workflow run ci.yml --repo "$REPOSITORY" --ref "$HEAD_REF"
+            if [[ $decay_changed == true ]]; then
+              gh workflow run decay.yml --repo "$REPOSITORY" --ref "$HEAD_REF"
+            fi
+            {
+              echo
+              echo "CI was started on the autofix commit with \`workflow_dispatch\`."
+              echo "Path-filtered workflows other than Decay do not re-run on it;"
+              echo "set the \`SINDRI_AUTOFIX_TOKEN\` secret to make autofix pushes behave like ordinary pushes."
+            } >>"$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload fork patch
+        if: ${{ hashFiles('autofix.patch') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: autofix-patch
+          path: autofix.patch
