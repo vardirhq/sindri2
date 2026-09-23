@@ -10,7 +10,7 @@
 //! claims it, and `draft` turns the whole of it into commands.
 
 pub(super) mod add_component;
-mod blocks;
+pub(super) mod blocks;
 pub(super) mod draft;
 pub(super) mod field;
 pub(super) mod header;
@@ -64,7 +64,7 @@ use super::{CAMERA_COMPONENT, EditorApp, SPRITE_COMPONENT, UI_IMAGE_COMPONENT};
 /// The sprites cut from the project's sheets are references too: a voxel face
 /// or a sprite naming `blocks.png#stone-0` names something that draws, and a
 /// list without them marked every such reference as missing.
-fn drawable_textures(project: &ProjectTree, bindings: &TextureBindings) -> Vec<String> {
+pub(super) fn drawable_textures(project: &ProjectTree, bindings: &TextureBindings) -> Vec<String> {
     let mut textures: Vec<String> = PROCEDURAL_TEXTURES
         .iter()
         .map(|texture| texture.reference.to_owned())
@@ -423,6 +423,10 @@ impl EditorApp {
             self.profile_panel(ui);
             return;
         }
+        if self.block_set.is_some() {
+            self.block_set_panel(ui);
+            return;
+        }
         if self.prefab_brush.is_some() {
             self.prefab_panel(ui);
             return;
@@ -470,6 +474,8 @@ impl EditorApp {
             toolbar::chip(ui, "Slicing", color::FORGE);
         } else if self.profile.is_some() {
             toolbar::chip(ui, "Profile", color::FORGE);
+        } else if self.block_set.is_some() {
+            toolbar::chip(ui, "Block set", color::FORGE);
         } else if self.preview.is_some() || self.heard.is_some() || self.shown_font.is_some() {
             toolbar::chip(ui, "Preview", color::TEXT_FAINT);
         } else if selected > 1 {

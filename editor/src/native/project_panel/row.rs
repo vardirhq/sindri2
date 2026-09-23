@@ -274,6 +274,10 @@ pub(crate) fn row_menu(
             asked = Some(BrowserAction::NewProfile(entry.path.clone()));
             ui.close();
         }
+        if menu::item(ui, "New block set here").clicked() {
+            asked = Some(BrowserAction::NewBlockSet(entry.path.clone()));
+            ui.close();
+        }
         if menu::item(ui, "Import files…").clicked() {
             asked = Some(BrowserAction::Import(entry.path.clone()));
             ui.close();

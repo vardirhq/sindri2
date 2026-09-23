@@ -43,6 +43,7 @@ use crate::{
 
 mod assistant_view;
 mod block_pointer;
+mod block_set_view;
 mod camera;
 mod chrome;
 mod console_view;
@@ -184,6 +185,7 @@ struct EditorApp {
     preview: Option<TextPreview>,
     /// A reusable data profile selected in the project browser.
     profile: Option<ProfileEditor>,
+    block_set: Option<crate::block_set::BlockSetEditor>,
     /// The clip the inspector is offering to play, and the device that plays it.
     heard: Option<PathBuf>,
     audition: Audition,
@@ -487,6 +489,7 @@ impl EditorApp {
             scene_name_edit: None,
             preview: None,
             profile: None,
+            block_set: None,
             heard: None,
             audition: Audition::default(),
             shown_font: None,

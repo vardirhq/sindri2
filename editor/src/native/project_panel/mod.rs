@@ -58,6 +58,7 @@ pub(super) enum BrowserAction {
     NewScript(PathBuf),
     /// Make a reusable `.profile.json` data asset there.
     NewProfile(PathBuf),
+    NewBlockSet(PathBuf),
     /// Copy a file or folder beside itself.
     Duplicate(PathBuf),
     /// Ask before removing a file from disk. There is no undo for a disk
@@ -448,6 +449,7 @@ impl EditorApp {
             BrowserAction::NewFolder(beside) => self.new_folder(&beside),
             BrowserAction::NewScript(beside) => self.new_script(&beside),
             BrowserAction::NewProfile(beside) => self.new_profile(&beside),
+            BrowserAction::NewBlockSet(beside) => self.new_block_set(&beside),
             BrowserAction::Duplicate(path) => self.duplicate_asset(&path),
             BrowserAction::ConfirmDelete(path) => self.deleting = Some(path),
             BrowserAction::Import(into) => self.import_assets(&into),

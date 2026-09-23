@@ -10,7 +10,7 @@ use sindri_assets::{
     AssetLoader, AssetWatch, FileSystemAssetSource, FontAssetDecoder, SpriteSheetAssetDecoder,
     TextureAssetDecoder, TileSetAssetDecoder,
 };
-use sindri_core::{AssetId, World, sheet_id_for};
+use sindri_core::{AssetId, SpriteRef, World, sheet_id_for};
 use sindri_render::{TextRenderer, Texture2D, TextureRegistry};
 use sindri_scene::{
     PROCEDURAL_TEXTURES, TextureBindings, TileSetBindings, referenced_fonts, referenced_sheets,
@@ -92,6 +92,7 @@ impl SceneTextures {
             registry,
             bindings,
             tile_set_bindings,
+            pinned: BTreeSet::new(),
         }
     }
 
@@ -147,6 +148,12 @@ impl SceneTextures {
         let (wanted_tile_sets, tile_notes) = self.request_tile_sets(world);
         notes.extend(tile_notes);
         let mut referenced = referenced_textures(world);
+        let pinned: Vec<SpriteRef> = self
+            .pinned
+            .iter()
+            .filter_map(|sprite| SpriteRef::parse(sprite).ok())
+            .collect();
+        referenced.extend(pinned.iter().map(|sprite| sprite.texture().to_owned()));
         for id in &wanted_tile_sets {
             if let Some(tile_set) = self.tile_set_bindings.get(id.as_str()) {
                 referenced.extend(tile_set_textures(tile_set));
@@ -203,7 +210,8 @@ impl SceneTextures {
                 Some((sheet_id_for(&id)?, reference.clone()))
             })
             .collect();
-        let slices = wanted_sheets(world, &self.tile_set_bindings, &wanted_tile_sets);
+        let mut slices = wanted_sheets(world, &self.tile_set_bindings, &wanted_tile_sets);
+        slices.extend(pinned_sheets(&pinned));
         if let Some(sheets) = &mut self.sheets {
             let released = sheets.retain(&slices);
             for id in &slices {
@@ -317,6 +325,16 @@ impl SceneTextures {
 /// into every cell — a comb of vertical stripes, appearing on the first edit,
 /// because that is when this pass runs again. The tile set's arrival had
 /// requested the sheet; nothing afterwards said it was still wanted.
+/// The sheets that cut pinned sprites, so a named sprite a panel shows is
+/// found in its texture rather than drawn as the whole image.
+fn pinned_sheets(pinned: &[SpriteRef]) -> impl Iterator<Item = AssetId> + '_ {
+    pinned
+        .iter()
+        .filter(|sprite| sprite.sprite().is_some())
+        .filter_map(SpriteRef::asset)
+        .filter_map(|texture| sheet_id_for(&texture))
+}
+
 pub(super) fn wanted_sheets(
     world: &World,
     tile_sets: &TileSetBindings,

@@ -136,6 +136,37 @@ impl EditorApp {
         }
     }
 
+    /// Makes a block set beside `beside`, starting as a copy of the engine's
+    /// own, and opens it.
+    ///
+    /// A copy rather than an empty set: the blocks it starts with already
+    /// look right, so a project's own set begins as "the built-in one, with
+    /// my changes" instead of as a list to fill before anything draws.
+    pub(super) fn new_block_set(&mut self, beside: &Path) {
+        let Some(root) = self.project.root().map(Path::to_path_buf) else {
+            return;
+        };
+        let Some(parent) = directory_for(beside) else {
+            return;
+        };
+        let name = unused_name(&parent, "blocks", sindri_core::TILESET_SUFFIX);
+        let Some(Ok((_, built_in))) = sindri_assets::builtin_tile_sets().next() else {
+            return;
+        };
+        let starter = match crate::block_set::block_set_json(&built_in) {
+            Ok(json) => json,
+            Err(error) => return self.report(error),
+        };
+        match ops::create_file(&root, &parent, &name, &starter) {
+            Ok(path) => {
+                self.refresh_project();
+                self.select_asset(&path);
+                self.begin_asset_rename(&path);
+            }
+            Err(error) => self.report(error.to_string()),
+        }
+    }
+
     /// Copies a file or folder beside itself.
     pub(in crate::native) fn duplicate_asset(&mut self, path: &Path) {
         let Some(root) = self.project.root().map(Path::to_path_buf) else {
@@ -186,6 +217,10 @@ impl EditorApp {
                 {
                     profile.adopt(&target);
                 }
+                if let Some(block_set) = self.block_set.as_mut().filter(|open| open.path() == path)
+                {
+                    block_set.adopt(&target);
+                }
             }
             Err(error) => self.report(error.to_string()),
         }
@@ -222,6 +257,13 @@ impl EditorApp {
                     .is_some_and(|open| open.path() == path)
                 {
                     self.profile = None;
+                }
+                if self
+                    .block_set
+                    .as_ref()
+                    .is_some_and(|open| open.path() == path)
+                {
+                    self.block_set = None;
                 }
                 self.refresh_project();
                 self.console.info(format!("Deleted {}", named(path)));
