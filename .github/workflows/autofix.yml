@@ -144,13 +144,21 @@ jobs:
           git commit --quiet --message "$AUTOFIX_SUBJECT" --message "$body"
 
           # The branch may have moved while this ran. Then the new push has its
-          # own autofix run, and this one has nothing left to do.
+          # own autofix run, and this one has nothing left to do. If it has not
+          # moved, the push was refused for another reason -- most likely an
+          # expired or unapproved SINDRI_AUTOFIX_TOKEN -- and that must fail
+          # loudly rather than pass as a race.
           if ! git push --quiet \
             "https://x-access-token:${PUSH_TOKEN}@github.com/${REPOSITORY}.git" \
             "HEAD:refs/heads/${HEAD_REF}"
           then
-            echo "::notice title=Autofix not pushed::${HEAD_REF} moved while autofix ran; the newer push gets its own run."
-            exit 0
+            current="$(gh api "repos/${REPOSITORY}/branches/${HEAD_REF}" --jq .commit.sha || true)"
+            if [[ -n "$current" && "$current" != "$HEAD_SHA" ]]; then
+              echo "::notice title=Autofix not pushed::${HEAD_REF} moved while autofix ran; the newer push gets its own run."
+              exit 0
+            fi
+            echo "::error title=Autofix push refused::${HEAD_REF} has not moved, so the push was refused for another reason. If SINDRI_AUTOFIX_TOKEN is set, check that it has not expired, still has contents write access to this repository, and is approved by the organization."
+            exit 1
           fi
           echo "Pushed $(git rev-parse --short HEAD) to ${HEAD_REF}." >>"$GITHUB_STEP_SUMMARY"
 
