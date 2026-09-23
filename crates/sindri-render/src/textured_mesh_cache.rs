@@ -22,6 +22,24 @@ impl CachedMeshId {
     }
 }
 
+/// How one cached mesh's surface is drawn, beyond its texture.
+///
+/// Per draw rather than per vertex, so a lake's ripple or a lava field's
+/// glow changes by writing four numbers each frame instead of re-uploading
+/// its geometry.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct MeshSurface {
+    /// Added to every texture coordinate: which frame of an animation strip
+    /// the faces show, as an offset from the frame they were meshed with.
+    pub uv_offset: [f32; 2],
+    /// How much the surface lights itself, from nothing to fully self-lit and
+    /// brighter: lava glows in shadow, and the bloom pass picks it up.
+    pub glow: f32,
+    /// Texels less opaque than this are not drawn, so leaves have holes rather
+    /// than a solid square. Zero draws every texel.
+    pub alpha_cutoff: f32,
+}
+
 /// Replacement geometry for one persistent textured mesh.
 ///
 /// Indices are 32-bit because a maximally fragmented 16³ voxel section can

@@ -259,6 +259,31 @@ fn block_fields(
             .map(str::to_owned)
             .collect();
     }
+    property::Property::new("Glow").show(ui, |ui| {
+        ui.add(
+            egui::DragValue::new(&mut block.glow)
+                .range(0.0..=4.0)
+                .speed(0.01)
+                .fixed_decimals(2),
+        )
+        .on_hover_text(
+            "How much the block lights itself. Lava glows in the dark; most blocks do not.",
+        );
+    });
+    if let Some(animation) = block
+        .faces
+        .iter()
+        .find_map(|(_, visual)| visual.animation.as_ref())
+    {
+        panel::note(
+            ui,
+            &format!(
+                "Animated: {} frames at {} a second.",
+                animation.frames.len() + 1,
+                animation.fps
+            ),
+        );
+    }
     property::Property::new("Height").show(ui, |ui| {
         ui.add(
             egui::DragValue::new(&mut block.height)

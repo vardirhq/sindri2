@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use glam::{Mat4, Vec3};
-use sindri_render::{CachedMeshId, CachedTexturedMeshUpload, FrameCommand, TextureId};
+use sindri_render::{CachedMeshId, CachedTexturedMeshUpload, FrameCommand, MeshSurface, TextureId};
 use sindri_voxel::{
     RenderClass, SectionBounds, SectionCoord, SectionMeshCache, SectionMeshJob, SectionMeshKey,
 };
@@ -13,6 +13,9 @@ use super::{CompiledVoxelSection, VoxelRenderError};
 struct BatchKey {
     mesh: SectionMeshKey,
     texture: TextureId,
+    look: u16,
+    /// Whether the batch is cut out, which is part of how it is drawn.
+    cutout: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -22,6 +25,9 @@ struct ResidentBatch {
     texture: TextureId,
     triangles: usize,
 }
+
+/// Texels less opaque than this are holes in a cut-out face.
+const CUTOUT_ALPHA: f32 = 0.5;
 
 #[derive(Clone, Debug)]
 struct ResidentSection {
@@ -66,10 +72,12 @@ impl VoxelRenderBridge {
         if self.sections.pending_revision(job.key) != Some(job.revision) {
             return Ok(false);
         }
+        // Cut-out faces draw in the opaque pass with holes; blended ones
+        // need a sorted pass this bridge does not have yet.
         if let Some(batch) = compiled
             .batches
             .iter()
-            .find(|batch| batch.render_class != RenderClass::Opaque)
+            .find(|batch| batch.render_class == RenderClass::Transparent)
         {
             return Err(VoxelRenderError::UnsupportedRenderClass(batch.render_class));
         }
@@ -93,7 +101,15 @@ impl VoxelRenderBridge {
     ///
     /// A newly finished revision moves its replacement geometry into the first
     /// command. Later frames carry no replacement and reuse the GPU buffers.
-    pub fn draw_commands(&mut self, key: SectionMeshKey) -> Vec<FrameCommand> {
+    ///
+    /// `looks` answers how each batch's look is drawn this frame: which
+    /// animation frame, how much it glows. Asked every frame, because that is
+    /// what changes while the geometry does not.
+    pub fn draw_commands(
+        &mut self,
+        key: SectionMeshKey,
+        looks: &dyn Fn(u16) -> MeshSurface,
+    ) -> Vec<FrameCommand> {
         let Some(revision) = self.sections.revision(key) else {
             return Vec::new();
         };
@@ -110,6 +126,10 @@ impl VoxelRenderBridge {
                 cache: batch.cache,
                 revision: revision.value(),
                 replacement: self.uploads.remove(&batch.key),
+                surface: MeshSurface {
+                    alpha_cutoff: if batch.key.cutout { CUTOUT_ALPHA } else { 0.0 },
+                    ..looks(batch.key.look)
+                },
             })
             .collect()
     }
@@ -165,6 +185,8 @@ impl VoxelRenderBridge {
             let key = BatchKey {
                 mesh,
                 texture: batch.texture,
+                look: batch.look,
+                cutout: batch.render_class == RenderClass::Cutout,
             };
             let cache = self.identity(key);
             let triangles = batch.triangle_count();

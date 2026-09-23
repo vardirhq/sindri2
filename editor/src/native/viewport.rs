@@ -121,6 +121,7 @@ impl RuntimeViewport {
                     .with_animations(source.animations)
                     .with_effects(source.effects)
                     .with_tile_sets(source.textures.tile_sets())
+                    .with_seconds(super::animated::seconds())
                     .with_canvas(canvas),
             )
             .map_err(|error| error.to_string())?;
@@ -323,6 +324,9 @@ impl EditorApp {
         } else {
             &mut self.game_viewport
         };
+        if super::animated::moves(source_world, self.textures.tile_sets()) {
+            context.request_repaint_after(super::animated::FRAME);
+        }
         let failure = viewport
             .render(
                 &mut self.renderers,

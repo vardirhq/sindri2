@@ -174,6 +174,7 @@ pub fn face(sprite: &str) -> TileFaceVisual {
         sprite: sprite.to_owned(),
         size: [1.0, 1.0],
         offset: [0.0, 0.0],
+        animation: None,
     }
 }
 

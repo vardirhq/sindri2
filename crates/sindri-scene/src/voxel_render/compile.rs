@@ -11,12 +11,27 @@ use thiserror::Error;
 pub struct VoxelTexture {
     pub texture: TextureId,
     pub uv: UvRect,
+    /// Which way of drawing the face beyond its texture: zero is plain, and
+    /// any other number is a look (an animation, a glow) the caller resolves
+    /// at draw time. Faces with different looks never share a batch, because
+    /// a look is applied to a whole batch at once.
+    pub look: u16,
 }
 
 impl VoxelTexture {
     #[must_use]
     pub const fn new(texture: TextureId, uv: UvRect) -> Self {
-        Self { texture, uv }
+        Self {
+            texture,
+            uv,
+            look: 0,
+        }
+    }
+
+    #[must_use]
+    pub const fn with_look(mut self, look: u16) -> Self {
+        self.look = look;
+        self
     }
 }
 
@@ -39,6 +54,7 @@ where
 pub struct CompiledVoxelBatch {
     pub render_class: RenderClass,
     pub texture: TextureId,
+    pub look: u16,
     pub upload: CachedTexturedMeshUpload,
 }
 
@@ -102,11 +118,11 @@ fn compile_part(
             indices: part.indices.len(),
         });
     }
-    let mut uploads: BTreeMap<TextureId, CachedTexturedMeshUpload> = BTreeMap::new();
+    let mut uploads: BTreeMap<(TextureId, u16), CachedTexturedMeshUpload> = BTreeMap::new();
     for face_indices in part.indices.chunks_exact(6) {
         let first = vertex(part, face_indices[0], render_class)?;
         let mapping = textures.texture(first.material, first.face);
-        let upload = uploads.entry(mapping.texture).or_default();
+        let upload = uploads.entry((mapping.texture, mapping.look)).or_default();
         let mut remapped = BTreeMap::new();
         for source_index in face_indices {
             let target_index = if let Some(index) = remapped.get(source_index) {
@@ -142,9 +158,10 @@ fn compile_part(
     }
     Ok(uploads
         .into_iter()
-        .map(|(texture, upload)| CompiledVoxelBatch {
+        .map(|((texture, look), upload)| CompiledVoxelBatch {
             render_class,
             texture,
+            look,
             upload,
         })
         .collect())

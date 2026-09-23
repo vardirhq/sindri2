@@ -120,8 +120,11 @@ impl VoxelLabRuntime {
         let releases = commands.len();
         for section in &self.resident {
             commands.extend(
-                self.render
-                    .draw_commands(SectionMeshKey::new(*section, MeshingProfile::Block)),
+                // The lab's own terrain has no animated or glowing faces.
+                self.render.draw_commands(
+                    SectionMeshKey::new(*section, MeshingProfile::Block),
+                    &|_| sindri_render::MeshSurface::default(),
+                ),
             );
         }
 

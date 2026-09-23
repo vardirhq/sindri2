@@ -4,7 +4,7 @@ use glam::{Mat4, Vec3};
 use wgpu::util::DeviceExt;
 
 use crate::{
-    CachedMeshId, DepthTarget, FogSettings, MeshBuffers, ShadowSettings, TextureId,
+    CachedMeshId, DepthTarget, FogSettings, MeshBuffers, MeshSurface, ShadowSettings, TextureId,
     TextureRegistry, TexturedMeshCacheStats, TexturedVertex, WorldLighting,
     shadow::{ShadowMap, create_shadow_pipeline},
     textured_mesh_cache::TexturedMeshCache,
@@ -230,6 +230,7 @@ impl TexturedCubeRenderer {
                     0.0,
                     FogSettings::default(),
                     Vec3::ZERO,
+                    MeshSurface::default(),
                 )),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
@@ -330,6 +331,7 @@ impl TexturedCubeRenderer {
             self.ambient_occlusion_strength,
             self.fog,
             self.camera_position,
+            MeshSurface::default(),
             (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
@@ -365,6 +367,7 @@ impl TexturedCubeRenderer {
             self.ambient_occlusion_strength,
             self.fog,
             self.camera_position,
+            MeshSurface::default(),
             (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
@@ -409,6 +412,7 @@ impl TexturedCubeRenderer {
             self.ambient_occlusion_strength,
             self.fog,
             self.camera_position,
+            MeshSurface::default(),
             (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
@@ -450,6 +454,7 @@ impl TexturedCubeRenderer {
             self.ambient_occlusion_strength,
             self.fog,
             self.camera_position,
+            MeshSurface::default(),
             (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
@@ -495,6 +500,7 @@ impl TexturedCubeRenderer {
             self.ambient_occlusion_strength,
             self.fog,
             self.camera_position,
+            request.surface,
             (&batch.uniform, &self.pipeline, bind_group),
             mesh,
             "Sindri cached textured mesh pass",
@@ -531,6 +537,7 @@ fn encode_mesh_buffers(
     ambient_occlusion_strength: f32,
     fog: FogSettings,
     camera_position: Vec3,
+    surface: MeshSurface,
     state: (&wgpu::Buffer, &wgpu::RenderPipeline, &wgpu::BindGroup),
     mesh: &MeshBuffers,
     label: &str,
@@ -548,6 +555,7 @@ fn encode_mesh_buffers(
             ambient_occlusion_strength,
             fog,
             camera_position,
+            surface,
         )),
     );
     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {

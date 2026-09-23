@@ -63,7 +63,7 @@ macro_rules! block_art {
     };
 }
 
-const TEXTURES: [BuiltinTexture; 9] = [
+const TEXTURES: [BuiltinTexture; 10] = [
     block_art!("tops.png", "tops.sheet.json"),
     block_art!("sides.png", "sides.sheet.json"),
     block_art!("grass-top.png", "grass-top.sheet.json"),
@@ -72,7 +72,8 @@ const TEXTURES: [BuiltinTexture; 9] = [
     block_art!("log-end.png"),
     block_art!("log-bark.png"),
     block_art!("leaves.png"),
-    block_art!("lava.png"),
+    block_art!("lava.png", "lava.sheet.json"),
+    block_art!("water.png", "water.sheet.json"),
 ];
 
 const TILE_SETS: [(&str, &str); 1] = [(
@@ -155,12 +156,17 @@ mod tests {
             tile_set.validate().expect("the tile set is valid");
             for (name, block) in &tile_set.tiles {
                 for (_, visual) in block.all_faces().flat_map(TileFaces::iter) {
-                    let sprite = SpriteRef::parse(&visual.sprite).expect("a sprite reference");
-                    assert!(
-                        shipped.contains(sprite.texture()),
-                        "{reference} block `{name}` names {}",
-                        visual.sprite
-                    );
+                    let frames = visual
+                        .animation
+                        .iter()
+                        .flat_map(|animation| animation.frames.iter());
+                    for named in std::iter::once(&visual.sprite).chain(frames) {
+                        let sprite = SpriteRef::parse(named).expect("a sprite reference");
+                        assert!(
+                            shipped.contains(sprite.texture()),
+                            "{reference} block `{name}` names {named}"
+                        );
+                    }
                 }
             }
         }

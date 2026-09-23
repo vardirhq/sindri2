@@ -4,24 +4,24 @@ use std::cell::{RefCell, RefMut};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
-use sindri_core::{
-    EntityId, SceneComponent, SpriteRef, TileDefinition, TileFace, TileSetDocument, World,
-};
+use sindri_core::{EntityId, SceneComponent, World};
 use sindri_render::{
     ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage,
 };
 use sindri_voxel::{
     MeshingProfile, ResidencyConfig, SectionCoord, SectionMeshKey, VoxelFace, VoxelId, VoxelWorld,
-    mesh_block_section,
+    mesh_block_section_with_materials,
 };
 
 use crate::{
-    TextureBindings, TileSetBindings, VoxelMaterialDocument, VoxelRenderBridge, VoxelTexture,
-    VoxelWorldComponent, compile_block_mesh,
+    TextureBindings, TileSetBindings, VoxelRenderBridge, VoxelWorldComponent, compile_block_mesh,
 };
 
 use super::camera::{ResolvedCamera, ResolvedCameras};
 use super::frustum::aabb_in_view;
+use super::voxel_appearance::{
+    Appearance, BlockMaterials, Resolved, block_palette, resolve_appearance,
+};
 use super::voxel_source::{Palette, SceneTerrain, terrain_source};
 use super::{SceneExtractError, SceneExtractor, transform_matrix};
 
@@ -35,18 +35,6 @@ struct VoxelWorldDefinition {
     vertical_radius: u32,
 }
 
-/// What each stored voxel ID looks like.
-#[derive(Clone, Debug, PartialEq)]
-enum Appearance {
-    /// The world's own materials, each a top, side and bottom texture.
-    Materials(Vec<VoxelMaterialDocument>),
-    /// Blocks from a block set, each with the ID the engine numbered it as.
-    Blocks(Vec<(u16, String, TileDefinition)>),
-}
-
-/// The texture and atlas region each voxel face draws with.
-type ResolvedMaterials = BTreeMap<(u16, VoxelFace), VoxelTexture>;
-
 struct ResidentVoxelWorld {
     definition: VoxelWorldDefinition,
     /// What the materials resolved to when this world was meshed.
@@ -55,7 +43,9 @@ struct ResidentVoxelWorld {
     /// texture anywhere in the project is bound: a sprite loading or
     /// hot-reloading elsewhere rebuilt the whole voxel world. Only a change to
     /// what these faces actually draw with needs their meshes compiled again.
-    resolved: ResolvedMaterials,
+    resolved: Resolved,
+    /// Which faces each voxel hides, derived from its blocks.
+    materials: BlockMaterials,
     world: VoxelWorld<SceneTerrain>,
     render: VoxelRenderBridge,
     resident: BTreeSet<SectionCoord>,
@@ -88,7 +78,7 @@ impl fmt::Debug for VoxelWorldCache {
 }
 
 impl ResidentVoxelWorld {
-    fn new(definition: VoxelWorldDefinition, resolved: ResolvedMaterials) -> Self {
+    fn new(definition: VoxelWorldDefinition, resolved: Resolved) -> Self {
         let horizontal =
             i32::try_from(definition.render_radius).expect("validated voxel radius fits in i32");
         let vertical =
@@ -98,6 +88,7 @@ impl ResidentVoxelWorld {
                 definition.source.clone(),
                 ResidencyConfig::new(horizontal, vertical, 0, 0),
             ),
+            materials: BlockMaterials::of(&definition.appearance),
             definition,
             resolved,
             render: VoxelRenderBridge::default(),
@@ -109,6 +100,7 @@ impl ResidentVoxelWorld {
         &mut self,
         focus: SectionCoord,
         local_view_projection: glam::Mat4,
+        seconds: f32,
     ) -> Result<Vec<FrameCommand>, SceneExtractError> {
         let resolved = &self.resolved;
         let delta = self.world.move_focus(focus);
@@ -120,9 +112,13 @@ impl ResidentVoxelWorld {
 
         for job in self.world.take_mesh_work() {
             if self.render.schedule(job) {
-                let mesh = mesh_block_section(&self.world, job.key.section);
+                let mesh = mesh_block_section_with_materials(
+                    &self.world,
+                    &self.materials,
+                    job.key.section,
+                );
                 let compiled = compile_block_mesh(&mesh, &|voxel: VoxelId, face: VoxelFace| {
-                    resolved[&(voxel.value(), face)]
+                    resolved.faces[&(voxel.value(), face)]
                 })?;
                 self.render.finish(job, compiled)?;
             }
@@ -136,7 +132,10 @@ impl ResidentVoxelWorld {
                 .bounds(key)
                 .is_some_and(|bounds| section_in_view(bounds, local_view_projection))
             {
-                commands.extend(self.render.draw_commands(key));
+                commands.extend(
+                    self.render
+                        .draw_commands(key, &|look| resolved.surface(look, seconds)),
+                );
             }
         }
         Ok(commands)
@@ -155,6 +154,8 @@ struct VoxelTarget<'a> {
     camera: ResolvedCamera,
     textures: &'a TextureBindings,
     tile_sets: Option<&'a TileSetBindings>,
+    /// How long the scene has run, which is where animated faces have got to.
+    seconds: f32,
     frame: &'a mut ExtractedFrame,
 }
 
@@ -165,6 +166,7 @@ impl SceneExtractor {
         cameras: &ResolvedCameras,
         textures: &TextureBindings,
         tile_sets: Option<&TileSetBindings>,
+        seconds: f32,
         frame: &mut ExtractedFrame,
     ) -> Result<(), SceneExtractError> {
         let components = self.components.query::<VoxelWorldComponent>(world)?;
@@ -190,6 +192,7 @@ impl SceneExtractor {
                 camera,
                 textures,
                 tile_sets,
+                seconds,
                 frame: &mut *frame,
             };
             let pushed = self.push_voxel_world(&mut runtimes, entity, &component, world, target);
@@ -224,6 +227,7 @@ impl SceneExtractor {
             camera,
             textures,
             tile_sets,
+            seconds,
             frame,
         } = target;
         let refused = match definition(component, tile_sets).and_then(|definition| {
@@ -254,7 +258,7 @@ impl SceneExtractor {
         let mut commands = runtimes
             .get_mut(&entity)
             .expect("the voxel runtime was inserted or kept above")
-            .commands(focus, camera.view_projection * root)?;
+            .commands(focus, camera.view_projection * root, seconds)?;
         for command in &mut commands {
             if let FrameCommand::CachedTexturedMesh { model, .. } = command {
                 *model = root * *model;
@@ -337,106 +341,4 @@ fn definition(
         render_radius: component.render_radius,
         vertical_radius: component.vertical_radius,
     })
-}
-
-/// Every block in a set, numbered from one in name order.
-///
-/// The numbers are the engine's: nothing authored names them, and a world is
-/// rebuilt whenever its set changes, so a block added between two others
-/// renumbering them changes nothing anyone can see.
-fn block_palette(
-    set: &str,
-    tile_set: &TileSetDocument,
-) -> Result<(Palette, Appearance), SceneExtractError> {
-    let mut palette = Palette::default();
-    let mut blocks = Vec::with_capacity(tile_set.tiles.len());
-    for (index, (name, block)) in tile_set.tiles.iter().enumerate() {
-        let voxel = u16::try_from(index + 1)
-            .ok()
-            .filter(|voxel| *voxel != VoxelId::AIR.value())
-            .ok_or_else(|| SceneExtractError::TooManyVoxelBlocks(set.to_owned()))?;
-        palette.blocks.insert(name.clone(), voxel);
-        blocks.push((voxel, name.clone(), block.clone()));
-    }
-    Ok((palette, Appearance::Blocks(blocks)))
-}
-
-const VOXEL_FACES: [VoxelFace; 6] = [
-    VoxelFace::Left,
-    VoxelFace::Right,
-    VoxelFace::Back,
-    VoxelFace::Front,
-    VoxelFace::Top,
-    VoxelFace::Bottom,
-];
-
-/// The face of a tile a voxel face shows.
-///
-/// A tile grid's third axis is up and its second runs south; a voxel world's
-/// second axis is up and its third runs toward the front. So a tile's south
-/// face is a voxel's front, and its north is the back.
-const fn tile_face(face: VoxelFace) -> TileFace {
-    match face {
-        VoxelFace::Left => TileFace::West,
-        VoxelFace::Right => TileFace::East,
-        VoxelFace::Back => TileFace::North,
-        VoxelFace::Front => TileFace::South,
-        VoxelFace::Top => TileFace::Top,
-        VoxelFace::Bottom => TileFace::Bottom,
-    }
-}
-
-fn resolve_appearance(
-    appearance: &Appearance,
-    textures: &TextureBindings,
-) -> Result<ResolvedMaterials, SceneExtractError> {
-    let mut resolved = BTreeMap::new();
-    let mut bind = |voxel: u16, face: VoxelFace, sprite: &str| -> Result<(), SceneExtractError> {
-        let reference = SpriteRef::parse(sprite)?;
-        let (texture, uv) = textures.resolve_sprite(&reference);
-        resolved.insert((voxel, face), VoxelTexture::new(texture, uv));
-        Ok(())
-    };
-    match appearance {
-        Appearance::Materials(materials) => {
-            for material in materials {
-                for face in VOXEL_FACES {
-                    let texture = match face {
-                        VoxelFace::Top => &material.top,
-                        VoxelFace::Bottom => &material.bottom,
-                        VoxelFace::Left | VoxelFace::Right | VoxelFace::Back | VoxelFace::Front => {
-                            &material.side
-                        }
-                    };
-                    bind(material.voxel, face, texture)?;
-                }
-            }
-        }
-        Appearance::Blocks(blocks) => {
-            for (voxel, name, block) in blocks {
-                for face in VOXEL_FACES {
-                    let tile = tile_face(face);
-                    let (_, visual) = block.faces.resolved(tile).ok_or_else(|| {
-                        SceneExtractError::VoxelBlockWithoutFace {
-                            block: name.clone(),
-                            face: face_name(tile),
-                        }
-                    })?;
-                    bind(*voxel, face, &visual.sprite)?;
-                }
-            }
-        }
-    }
-    Ok(resolved)
-}
-
-const fn face_name(face: TileFace) -> &'static str {
-    match face {
-        TileFace::Top => "top",
-        TileFace::Bottom => "bottom",
-        TileFace::North => "north",
-        TileFace::South => "south",
-        TileFace::East => "east",
-        TileFace::West => "west",
-    }
 }

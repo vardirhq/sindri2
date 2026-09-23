@@ -20,6 +20,7 @@ mod lighting;
 mod tilemap;
 mod tolerance;
 mod ui;
+mod voxel_appearance;
 mod voxel_source;
 mod voxel_world;
 mod world_meanings;
@@ -177,6 +178,10 @@ pub enum SceneExtractError {
     UnknownVoxelBlock(String),
     #[error("block `{block}` has no art for its {face} face or the face opposite it")]
     VoxelBlockWithoutFace { block: String, face: &'static str },
+    #[error(
+        "block `{block}`'s animation frame `{frame}` is not the same size on the same texture as its first frame"
+    )]
+    VoxelAnimationFrame { block: String, frame: String },
     #[error("block set `{0}` holds more blocks than a voxel world can number")]
     TooManyVoxelBlocks(String),
     #[error("the viewport is too large for text rendering")]
@@ -281,6 +286,7 @@ impl SceneExtractor {
             effects,
             canvas,
             tile_sets,
+            seconds,
         } = runtime;
         let aspect = viewport.aspect_ratio()?;
         let mut cameras = self.resolve_cameras(world, aspect, view)?;
@@ -290,7 +296,7 @@ impl SceneExtractor {
         self.begin_frame();
         let mut frame = ExtractedFrame::new(viewport, environment_clear(self.environment(world)?));
         self.push_meshes(world, &cameras, textures, &mut frame)?;
-        self.push_voxel_worlds(world, &cameras, textures, tile_sets, &mut frame)?;
+        self.push_voxel_worlds(world, &cameras, textures, tile_sets, seconds, &mut frame)?;
         let resting = SpriteAnimations::new();
         let animations = animations.unwrap_or(&resting);
         // Resolved once and shared: what is drawn, what is clickable and what
@@ -333,6 +339,7 @@ impl SceneExtractor {
             effects,
             canvas,
             tile_sets,
+            seconds,
         } = runtime;
         let aspect = viewport.aspect_ratio()?;
         let mut cameras = resolved_screen_overlay(aspect);
@@ -348,7 +355,7 @@ impl SceneExtractor {
         self.begin_frame();
         let mut frame = ExtractedFrame::new(viewport, environment_clear(self.environment(world)?));
         self.push_meshes(world, &cameras, textures, &mut frame)?;
-        self.push_voxel_worlds(world, &cameras, textures, tile_sets, &mut frame)?;
+        self.push_voxel_worlds(world, &cameras, textures, tile_sets, seconds, &mut frame)?;
         let resting = SpriteAnimations::new();
         let animations = animations.unwrap_or(&resting);
         // Resolved once and shared: what is drawn, what is clickable and what
@@ -388,6 +395,10 @@ pub struct SceneRuntime<'a> {
     pub effects: Option<&'a Effects2d>,
     /// Reusable semantic tiles used by stackable volumes.
     pub tile_sets: Option<&'a TileSetBindings>,
+    /// How long the scene has been running, in seconds: where animated block
+    /// faces have got to. Zero, the default, shows every animation's first
+    /// frame.
+    pub seconds: f32,
     /// Where the UI overlay is: on the viewport, or in the scene.
     ///
     /// A game always wants it on the viewport, because there it *is* the
@@ -408,6 +419,14 @@ impl<'a> SceneRuntime<'a> {
     #[must_use]
     pub const fn with_effects(mut self, effects: &'a Effects2d) -> Self {
         self.effects = Some(effects);
+        self
+    }
+
+    /// How long the scene has been running, which is where animated block
+    /// faces have got to.
+    #[must_use]
+    pub const fn with_seconds(mut self, seconds: f32) -> Self {
+        self.seconds = seconds;
         self
     }
 

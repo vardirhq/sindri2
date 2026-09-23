@@ -9,6 +9,8 @@ struct Uniforms {
     fog_color: vec4<f32>,
     fog_params: vec4<f32>,
     camera_position: vec4<f32>,
+    // uv offset (animation frame), glow, alpha cutoff.
+    surface: vec4<f32>,
 }
 
 @group(0) @binding(0)
@@ -44,7 +46,7 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
     output.position = uniforms.model_view_projection * vec4<f32>(input.position, 1.0);
     output.world_position = (uniforms.model * vec4<f32>(input.position, 1.0)).xyz;
-    output.uv = input.uv;
+    output.uv = input.uv + uniforms.surface.xy;
     output.ambient_occlusion = input.ambient_occlusion;
     return output;
 }
@@ -52,6 +54,10 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let sampled = textureSample(cube_texture, cube_sampler, input.uv);
+    // A cutout surface has holes where its art does, rather than a square.
+    if sampled.a < uniforms.surface.w {
+        discard;
+    }
     let dx = dpdx(input.world_position);
     let dy = dpdy(input.world_position);
     let normal = normalize(cross(dx, dy));
@@ -76,7 +82,10 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let directional = uniforms.directional_color.rgb
         * uniforms.directional_direction.a * diffuse * visibility;
     let contact_visibility = mix(1.0, input.ambient_occlusion, uniforms.shadow.z);
-    let lit = sampled.rgb * (ambient + directional) * contact_visibility;
+    // A glowing surface lights itself: shadow and the sun's angle take none of
+    // it away, and what exceeds one is left for the bloom pass to find.
+    let lit = sampled.rgb * (ambient + directional) * contact_visibility
+        + sampled.rgb * uniforms.surface.z;
     let camera_distance = distance(input.world_position, uniforms.camera_position.xyz);
     let fog_distance = max(camera_distance - uniforms.fog_params.x, 0.0);
     let distance_fog = clamp(fog_distance / max(uniforms.fog_params.y, 0.0001), 0.0, 1.0);

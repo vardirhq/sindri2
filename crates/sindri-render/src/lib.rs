@@ -63,7 +63,9 @@ pub use text::{
 };
 pub use texture::{Texture2D, TextureError, TextureFilter, TextureId, TextureRegistry};
 pub use textured_cube::{DrawContext, TexturedCubeRenderer};
-pub use textured_mesh_cache::{CachedMeshId, CachedTexturedMeshUpload, TexturedMeshCacheStats};
+pub use textured_mesh_cache::{
+    CachedMeshId, CachedTexturedMeshUpload, MeshSurface, TexturedMeshCacheStats,
+};
 pub use transparency::{TransparentOrder, TransparentOrderError};
 pub use triangle::TriangleRenderer;
 pub use uv_rect::{UvRect, UvRectError};
