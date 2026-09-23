@@ -269,7 +269,7 @@ mod tests {
         assert!(summary.contains("crates/a/src/lib.rs"));
         assert!(summary.contains("crates/b/src/lib.rs"));
         assert!(summary.contains("2 rustfmt error(s)"));
-        assert!(summary.contains("fix every occurrence") == false);
+        assert!(!summary.contains("fix every occurrence"));
     }
 
     #[test]
