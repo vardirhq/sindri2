@@ -218,6 +218,9 @@ draw with changes, not whenever any texture in the project is bound. A change
 to a material or the generator still recompiles every section, because every
 face may use it. Other components still
 fail the frame when invalid; they adopt the same tolerance as they are reached.
+Item 7 is done: overlays float where their strip drops them, snap to the
+canvas and each other, resize from a corner grip, and anchor again on a
+double-click or a drop back in their corner.
 
 1. **Stop the freeze.** Per-component extraction diagnostics and fallback
    (section 1, layers 2–3). This removes the worst symptom for every

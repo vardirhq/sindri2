@@ -327,3 +327,39 @@ fn revealing_a_panel_shows_it_wherever_it_is() {
         "a closed panel is put back"
     );
 }
+
+/// An overlay floats where it is put and returns to its corner on request; a
+/// dock has no position to float at.
+#[test]
+fn an_overlay_floats_and_anchors_again() {
+    let mut workspace = Workspace::preset(Preset::Canvas);
+    let (place, _) = workspace.location(Panel::Inspector).expect("placed");
+    workspace.float(place, [40.0, 60.0]);
+    assert_eq!(
+        workspace.group(place).and_then(|group| group.position),
+        Some([40.0, 60.0])
+    );
+    workspace.anchor(place);
+    assert_eq!(
+        workspace.group(place).and_then(|group| group.position),
+        None
+    );
+
+    let mut docked = Workspace::preset(Preset::Docked);
+    let (dock, _) = docked.location(Panel::Hierarchy).expect("placed");
+    docked.float(dock, [1.0, 1.0]);
+    assert_eq!(docked.group(dock).and_then(|group| group.position), None);
+}
+
+/// A settings file cannot put an overlay somewhere that is not a number.
+#[test]
+fn a_position_that_is_not_a_number_is_repaired_to_the_corner() {
+    let mut workspace = Workspace::preset(Preset::Canvas);
+    let (place, _) = workspace.location(Panel::Inspector).expect("placed");
+    workspace.group_mut(place).position = Some([f32::NAN, 10.0]);
+    workspace.repair();
+    assert_eq!(
+        workspace.group(place).and_then(|group| group.position),
+        None
+    );
+}

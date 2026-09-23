@@ -123,6 +123,13 @@ pub struct Group {
     /// somewhere else. Docks ignore this — collapsing one is what dragging its
     /// edge already does.
     pub collapsed: bool,
+    /// Where an overlay was dragged to, as its top-left corner measured from
+    /// the top-left of the region overlays float in; `None` while it sits in
+    /// its corner. Docks ignore this.
+    ///
+    /// Relative to that region rather than to the window, so a panel left
+    /// beside the scene's top edge stays there when the bars around it change.
+    pub position: Option<[f32; 2]>,
 }
 
 impl Group {
@@ -133,6 +140,7 @@ impl Group {
             size: place.default_size(),
             height: place.default_height(),
             collapsed: false,
+            position: None,
         }
     }
 
@@ -353,6 +361,18 @@ impl Workspace {
         self.group_mut(place).height = height;
     }
 
+    /// Lets an overlay float where it was put rather than in its corner.
+    pub fn float(&mut self, place: Place, position: [f32; 2]) {
+        if place.is_overlay() && position.iter().all(|value| value.is_finite()) {
+            self.group_mut(place).position = Some(position);
+        }
+    }
+
+    /// Puts a floating overlay back in its corner.
+    pub fn anchor(&mut self, place: Place) {
+        self.group_mut(place).position = None;
+    }
+
     /// Where a panel currently lives, if it is placed at all.
     pub fn location(&self, panel: Panel) -> Option<(Place, usize)> {
         self.places.iter().find_map(|(place, group)| {
@@ -471,8 +491,17 @@ impl Workspace {
             }
             if place.is_overlay() {
                 group.height = repaired(group.height, *place, Place::default_height);
+                // A position a file says is not a number puts the panel back in
+                // its corner rather than nowhere.
+                if group
+                    .position
+                    .is_some_and(|position| !position.iter().all(|value| value.is_finite()))
+                {
+                    group.position = None;
+                }
             } else {
                 group.collapsed = false;
+                group.position = None;
             }
             group.active = group.active.min(group.panels.len().saturating_sub(1));
         }
