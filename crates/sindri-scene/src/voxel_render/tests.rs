@@ -69,11 +69,16 @@ fn unchanged_sections_reuse_ids_and_only_new_revisions_carry_uploads() {
             .unwrap()
     );
 
-    let initial = bridge.draw_commands(first.key);
+    let initial = bridge.draw_commands(first.key, &|_| sindri_render::MeshSurface::default());
     let initial_ids = cached_ids(&initial);
     assert_eq!(initial_ids.len(), 2);
     assert!(initial.iter().all(has_replacement));
-    assert!(bridge.draw_commands(first.key).iter().all(no_replacement));
+    assert!(
+        bridge
+            .draw_commands(first.key, &|_| sindri_render::MeshSurface::default())
+            .iter()
+            .all(no_replacement)
+    );
 
     let replacement = job(2);
     assert!(bridge.schedule(replacement));
@@ -82,7 +87,8 @@ fn unchanged_sections_reuse_ids_and_only_new_revisions_carry_uploads() {
             .finish(replacement, compile_block_mesh(&mesh, &texture).unwrap())
             .unwrap()
     );
-    let replaced = bridge.draw_commands(replacement.key);
+    let replaced =
+        bridge.draw_commands(replacement.key, &|_| sindri_render::MeshSurface::default());
     assert_eq!(cached_ids(&replaced), initial_ids);
     assert!(replaced.iter().all(has_replacement));
 }
@@ -112,7 +118,7 @@ fn leaving_residency_releases_every_gpu_batch() {
     bridge
         .finish(current, compile_block_mesh(&mesh, &texture).unwrap())
         .unwrap();
-    bridge.draw_commands(current.key);
+    bridge.draw_commands(current.key, &|_| sindri_render::MeshSurface::default());
 
     bridge.remove_section(current.key.section);
     let releases = bridge.take_release_commands();

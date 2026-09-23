@@ -6,10 +6,10 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 mod shape;
+mod validate;
 
 pub use shape::TileBox;
-
-use crate::SpriteRef;
+use validate::validate_visual;
 
 pub const TILESET_FORMAT_VERSION: u32 = 1;
 pub const TILESET_SUFFIX: &str = ".tileset.json";
@@ -68,6 +68,21 @@ impl TileFace {
     }
 }
 
+/// A face that moves: water rippling, lava churning.
+///
+/// Frames rather than a scrolling texture, because a ripple drawn by hand
+/// reads as water in a way a texture sliding sideways never does. Every frame
+/// names a sprite of the same size on the same texture as the face's own, so
+/// a renderer can move between them by shifting where it reads rather than
+/// by rebuilding what it draws.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct FaceAnimation {
+    /// The frames after the face's own sprite, in order.
+    pub frames: Vec<String>,
+    /// Frames per second.
+    pub fps: f32,
+}
+
 /// One pre-rendered 2D face.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct TileFaceVisual {
@@ -78,6 +93,9 @@ pub struct TileFaceVisual {
     /// Quad-centre offset from the projected cell centre.
     #[serde(default, skip_serializing_if = "is_zero_vec")]
     pub offset: [f32; 2],
+    /// Further frames the face cycles through, starting from `sprite`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub animation: Option<FaceAnimation>,
 }
 
 /// Optional visuals for every face a view may expose.
@@ -269,6 +287,10 @@ pub struct TileDefinition {
     /// every game's idea of what ground can be.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
+    /// How much the block lights itself: lava glows in the dark and in
+    /// shadow. Zero, the default, is a block lit only by the scene.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub glow: f32,
 }
 
 impl TileDefinition {
@@ -415,6 +437,9 @@ impl TileSetDocument {
                     });
                 }
             }
+            if !(definition.glow.is_finite() && definition.glow >= 0.0) {
+                return Err(TileSetError::InvalidGlow(tile.clone()));
+            }
             if definition.walkable && !definition.supports {
                 return Err(TileSetError::WalkableWithoutSupport(tile.clone()));
             }
@@ -471,39 +496,12 @@ pub enum TileSetError {
     InvalidSize { tile: String, face: TileFace },
     #[error("tile `{tile}` has a non-finite {face:?} visual offset")]
     InvalidOffset { tile: String, face: TileFace },
+    #[error("tile `{tile}`'s {face:?} animation needs at least one frame and a speed above zero")]
+    InvalidAnimation { tile: String, face: TileFace },
+    #[error("tile `{0}` has a glow that is not a finite number of at least zero")]
+    InvalidGlow(String),
     #[error("tile `{tile}` has height {height}, which must be above zero and at most one cell")]
     InvalidHeight { tile: String, height: f32 },
-}
-
-fn validate_visual(
-    tile: &str,
-    face: TileFace,
-    visual: &TileFaceVisual,
-) -> Result<(), TileSetError> {
-    if SpriteRef::parse(&visual.sprite).is_err() {
-        return Err(TileSetError::InvalidSprite {
-            tile: tile.to_owned(),
-            face,
-            sprite: visual.sprite.clone(),
-        });
-    }
-    if !visual
-        .size
-        .iter()
-        .all(|value| value.is_finite() && *value > 0.0)
-    {
-        return Err(TileSetError::InvalidSize {
-            tile: tile.to_owned(),
-            face,
-        });
-    }
-    if !visual.offset.iter().all(|value| value.is_finite()) {
-        return Err(TileSetError::InvalidOffset {
-            tile: tile.to_owned(),
-            face,
-        });
-    }
-    Ok(())
 }
 
 const fn yes() -> bool {
@@ -538,6 +536,11 @@ fn is_full_height(value: &f32) -> bool {
 #[allow(clippy::trivially_copy_pass_by_ref)]
 const fn is_true(value: &bool) -> bool {
     *value
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_zero(value: &f32) -> bool {
+    *value == 0.0
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]

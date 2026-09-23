@@ -606,32 +606,80 @@
     "water": {
       "faces": {
         "top": {
-          "sprite": "builtin:blocks/tops.png#water",
+          "sprite": "builtin:blocks/water.png#water-0",
           "size": [
             1.0,
             1.0
-          ]
+          ],
+          "animation": {
+            "frames": [
+              "builtin:blocks/water.png#water-1",
+              "builtin:blocks/water.png#water-2",
+              "builtin:blocks/water.png#water-3",
+              "builtin:blocks/water.png#water-4",
+              "builtin:blocks/water.png#water-5",
+              "builtin:blocks/water.png#water-6",
+              "builtin:blocks/water.png#water-7"
+            ],
+            "fps": 6.0
+          }
         },
         "bottom": {
-          "sprite": "builtin:blocks/tops.png#water",
+          "sprite": "builtin:blocks/water.png#water-0",
           "size": [
             1.0,
             1.0
-          ]
+          ],
+          "animation": {
+            "frames": [
+              "builtin:blocks/water.png#water-1",
+              "builtin:blocks/water.png#water-2",
+              "builtin:blocks/water.png#water-3",
+              "builtin:blocks/water.png#water-4",
+              "builtin:blocks/water.png#water-5",
+              "builtin:blocks/water.png#water-6",
+              "builtin:blocks/water.png#water-7"
+            ],
+            "fps": 6.0
+          }
         },
         "south": {
-          "sprite": "builtin:blocks/sides.png#water",
+          "sprite": "builtin:blocks/water.png#water-0",
           "size": [
             1.0,
             1.0
-          ]
+          ],
+          "animation": {
+            "frames": [
+              "builtin:blocks/water.png#water-1",
+              "builtin:blocks/water.png#water-2",
+              "builtin:blocks/water.png#water-3",
+              "builtin:blocks/water.png#water-4",
+              "builtin:blocks/water.png#water-5",
+              "builtin:blocks/water.png#water-6",
+              "builtin:blocks/water.png#water-7"
+            ],
+            "fps": 6.0
+          }
         },
         "east": {
-          "sprite": "builtin:blocks/sides.png#water",
+          "sprite": "builtin:blocks/water.png#water-0",
           "size": [
             1.0,
             1.0
-          ]
+          ],
+          "animation": {
+            "frames": [
+              "builtin:blocks/water.png#water-1",
+              "builtin:blocks/water.png#water-2",
+              "builtin:blocks/water.png#water-3",
+              "builtin:blocks/water.png#water-4",
+              "builtin:blocks/water.png#water-5",
+              "builtin:blocks/water.png#water-6",
+              "builtin:blocks/water.png#water-7"
+            ],
+            "fps": 6.0
+          }
         }
       },
       "occludes": false,
@@ -644,32 +692,80 @@
     "lava": {
       "faces": {
         "top": {
-          "sprite": "builtin:blocks/lava.png",
+          "sprite": "builtin:blocks/lava.png#lava-0",
           "size": [
             1.0,
             1.0
-          ]
+          ],
+          "animation": {
+            "frames": [
+              "builtin:blocks/lava.png#lava-1",
+              "builtin:blocks/lava.png#lava-2",
+              "builtin:blocks/lava.png#lava-3",
+              "builtin:blocks/lava.png#lava-4",
+              "builtin:blocks/lava.png#lava-5",
+              "builtin:blocks/lava.png#lava-6",
+              "builtin:blocks/lava.png#lava-7"
+            ],
+            "fps": 4.0
+          }
         },
         "bottom": {
-          "sprite": "builtin:blocks/lava.png",
+          "sprite": "builtin:blocks/lava.png#lava-0",
           "size": [
             1.0,
             1.0
-          ]
+          ],
+          "animation": {
+            "frames": [
+              "builtin:blocks/lava.png#lava-1",
+              "builtin:blocks/lava.png#lava-2",
+              "builtin:blocks/lava.png#lava-3",
+              "builtin:blocks/lava.png#lava-4",
+              "builtin:blocks/lava.png#lava-5",
+              "builtin:blocks/lava.png#lava-6",
+              "builtin:blocks/lava.png#lava-7"
+            ],
+            "fps": 4.0
+          }
         },
         "south": {
-          "sprite": "builtin:blocks/lava.png",
+          "sprite": "builtin:blocks/lava.png#lava-0",
           "size": [
             1.0,
             1.0
-          ]
+          ],
+          "animation": {
+            "frames": [
+              "builtin:blocks/lava.png#lava-1",
+              "builtin:blocks/lava.png#lava-2",
+              "builtin:blocks/lava.png#lava-3",
+              "builtin:blocks/lava.png#lava-4",
+              "builtin:blocks/lava.png#lava-5",
+              "builtin:blocks/lava.png#lava-6",
+              "builtin:blocks/lava.png#lava-7"
+            ],
+            "fps": 4.0
+          }
         },
         "east": {
-          "sprite": "builtin:blocks/lava.png",
+          "sprite": "builtin:blocks/lava.png#lava-0",
           "size": [
             1.0,
             1.0
-          ]
+          ],
+          "animation": {
+            "frames": [
+              "builtin:blocks/lava.png#lava-1",
+              "builtin:blocks/lava.png#lava-2",
+              "builtin:blocks/lava.png#lava-3",
+              "builtin:blocks/lava.png#lava-4",
+              "builtin:blocks/lava.png#lava-5",
+              "builtin:blocks/lava.png#lava-6",
+              "builtin:blocks/lava.png#lava-7"
+            ],
+            "fps": 4.0
+          }
         }
       },
       "occludes": false,
@@ -677,7 +773,8 @@
       "tags": [
         "liquid",
         "hot"
-      ]
+      ],
+      "glow": 0.9
     }
   }
 }

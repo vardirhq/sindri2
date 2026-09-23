@@ -1,4 +1,4 @@
-use crate::{CachedMeshId, CachedTexturedMeshUpload, TextureId, TextureRegistry};
+use crate::{CachedMeshId, CachedTexturedMeshUpload, MeshSurface, TextureId, TextureRegistry};
 
 /// The GPU handles and texture a draw resolves against.
 ///
@@ -17,4 +17,5 @@ pub(crate) struct CachedMeshRequest<'a> {
     pub id: CachedMeshId,
     pub revision: u64,
     pub replacement: Option<&'a CachedTexturedMeshUpload>,
+    pub surface: MeshSurface,
 }

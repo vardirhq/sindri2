@@ -1,6 +1,6 @@
 use glam::{Mat4, Vec3};
 
-use crate::{FogSettings, ShadowSettings, WorldLighting};
+use crate::{FogSettings, MeshSurface, ShadowSettings, WorldLighting};
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -15,6 +15,8 @@ pub(super) struct CubeUniform {
     pub fog_color: [f32; 4],
     pub fog_params: [f32; 4],
     pub camera_position: [f32; 4],
+    /// `uv_offset.xy`, glow, alpha cutoff.
+    pub surface: [f32; 4],
 }
 
 #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
@@ -27,6 +29,7 @@ pub(super) fn cube_uniform(
     ambient_occlusion_strength: f32,
     fog: FogSettings,
     camera_position: Vec3,
+    surface: MeshSurface,
 ) -> CubeUniform {
     CubeUniform {
         model_view_projection: model_view_projection.to_cols_array_2d(),
@@ -72,6 +75,12 @@ pub(super) fn cube_uniform(
             camera_position.y,
             camera_position.z,
             fog.height_falloff,
+        ],
+        surface: [
+            surface.uv_offset[0],
+            surface.uv_offset[1],
+            surface.glow,
+            surface.alpha_cutoff,
         ],
     }
 }

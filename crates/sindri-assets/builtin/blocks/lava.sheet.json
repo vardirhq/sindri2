@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 8,
+    "rows": 1,
+    "names": [
+      "lava-0",
+      "lava-1",
+      "lava-2",
+      "lava-3",
+      "lava-4",
+      "lava-5",
+      "lava-6",
+      "lava-7"
+    ]
+  }
+}

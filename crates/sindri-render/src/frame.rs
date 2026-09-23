@@ -2,8 +2,8 @@ use glam::{Mat4, Vec3};
 use thiserror::Error;
 
 use crate::{
-    CachedMeshId, CachedTexturedMeshUpload, ShapeBlend, ShapeInstance, SpriteDepth, SpriteInstance,
-    TextInstance, TextureId, TexturedVertex,
+    CachedMeshId, CachedTexturedMeshUpload, MeshSurface, ShapeBlend, ShapeInstance, SpriteDepth,
+    SpriteInstance, TextInstance, TextureId, TexturedVertex,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -94,6 +94,9 @@ pub enum FrameCommand {
         cache: CachedMeshId,
         revision: u64,
         replacement: Option<CachedTexturedMeshUpload>,
+        /// Animation frame, glow and cutout, written every frame without
+        /// touching the cached geometry.
+        surface: MeshSurface,
     },
     /// Releases persistent GPU geometry that has left residency.
     ReleaseCachedTexturedMesh {

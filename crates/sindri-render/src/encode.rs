@@ -245,6 +245,7 @@ fn encode_directional_shadows(
                 cache,
                 revision,
                 replacement,
+                surface,
             } => cube.encode_shadow_cached_mesh(
                 DrawContext {
                     device,
@@ -258,6 +259,7 @@ fn encode_directional_shadows(
                     id: *cache,
                     revision: *revision,
                     replacement: replacement.as_ref(),
+                    surface: *surface,
                 },
             ),
             _ => {}
@@ -426,6 +428,7 @@ fn encode_cached_textured_mesh(
         cache,
         revision,
         replacement,
+        surface,
     } = command
     else {
         unreachable!("cache encoder only receives cached mesh commands");
@@ -445,6 +448,7 @@ fn encode_cached_textured_mesh(
             id: *cache,
             revision: *revision,
             replacement: replacement.as_ref(),
+            surface: *surface,
         },
     );
 }

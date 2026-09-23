@@ -41,6 +41,7 @@ use crate::{
     weave_styles::ProjectStyles,
 };
 
+mod animated;
 mod assistant_view;
 mod block_pointer;
 mod block_set_view;

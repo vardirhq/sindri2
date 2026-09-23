@@ -22,4 +22,5 @@ mod ui;
 mod variants;
 mod view;
 mod voxel_blocks;
+mod voxel_surfaces;
 mod voxel_world;
