@@ -12,6 +12,9 @@ use std::collections::BTreeMap;
 use eframe::egui::{self, pos2, vec2};
 use sindri_core::SpriteRef;
 
+use sindri_scene::{PROCEDURAL_TEXTURES, TextureBindings};
+
+use crate::project::ProjectTree;
 use crate::textures::SceneTextures;
 use crate::ui::widgets::cube::Picture;
 
@@ -82,4 +85,24 @@ impl Thumbnails {
     pub(super) const fn pictures(&self) -> &Pictures {
         &self.pictures
     }
+}
+
+/// Every texture reference the engine can actually draw.
+///
+/// The project's own files, plus the handful the engine generates. A procedural
+/// reference is deliberately not parseable as an asset path, so a picker built
+/// from the directory alone both refused to offer `procedural:checkerboard` and
+/// marked the fixture's own cube as naming a texture that does not exist.
+///
+/// The sprites cut from the project's sheets are references too: a voxel face
+/// or a sprite naming `blocks.png#stone-0` names something that draws, and a
+/// list without them marked every such reference as missing.
+pub(crate) fn drawable_textures(project: &ProjectTree, bindings: &TextureBindings) -> Vec<String> {
+    let mut textures: Vec<String> = PROCEDURAL_TEXTURES
+        .iter()
+        .map(|texture| texture.reference.to_owned())
+        .collect();
+    textures.extend(project.textures());
+    textures.extend(bindings.sprite_references());
+    textures
 }

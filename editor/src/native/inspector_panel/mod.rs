@@ -39,9 +39,8 @@ use self::header::{
 use self::scene::{SceneSummary, scene_section};
 use self::section::components_sections;
 use self::section::grid::grid_choices;
-use sindri_scene::{PROCEDURAL_TEXTURES, TextureBindings, TileSetBindings};
+use sindri_scene::TileSetBindings;
 
-use crate::project::ProjectTree;
 use crate::ui::icons;
 use crate::ui::theme::color;
 use crate::ui::widgets::{panel, toolbar};
@@ -52,27 +51,8 @@ use crate::{
 
 use super::editing::reparent_choices;
 use super::hierarchy::row::entity_icon;
+use super::thumbnails::drawable_textures;
 use super::{CAMERA_COMPONENT, EditorApp, SPRITE_COMPONENT, UI_IMAGE_COMPONENT};
-
-/// Every texture reference the engine can actually draw.
-///
-/// The project's own files, plus the handful the engine generates. A procedural
-/// reference is deliberately not parseable as an asset path, so a picker built
-/// from the directory alone both refused to offer `procedural:checkerboard` and
-/// marked the fixture's own cube as naming a texture that does not exist.
-///
-/// The sprites cut from the project's sheets are references too: a voxel face
-/// or a sprite naming `blocks.png#stone-0` names something that draws, and a
-/// list without them marked every such reference as missing.
-pub(super) fn drawable_textures(project: &ProjectTree, bindings: &TextureBindings) -> Vec<String> {
-    let mut textures: Vec<String> = PROCEDURAL_TEXTURES
-        .iter()
-        .map(|texture| texture.reference.to_owned())
-        .collect();
-    textures.extend(project.textures());
-    textures.extend(bindings.sprite_references());
-    textures
-}
 
 /// Stateful authoring surfaces shared across component sections.
 pub(super) struct InspectorTools<'a> {
@@ -518,15 +498,10 @@ impl EditorApp {
         let mut added = None;
         let authoring = self.authoring_enabled();
         let mut references = drawable_textures(&self.project, self.textures.bindings());
-        let named = blocks::named_block_set(&components, self.textures.tile_sets());
-        if let Some(reference) = components
-            .values()
-            .filter_map(|payload| payload.get("blocks"))
-            .find_map(Value::as_str)
-            && let Some(tile_set) = named.get(reference)
-        {
-            references.extend(blocks::block_sprites(tile_set));
-        }
+        references.extend(blocks::named_set_sprites(
+            &components,
+            self.textures.tile_sets(),
+        ));
         self.thumbnails
             .refresh(&self.render_state, &self.textures, &references);
         let context = self.panel_context(&components);

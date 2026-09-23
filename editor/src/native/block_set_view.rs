@@ -12,9 +12,9 @@ use crate::ui::widgets::{button, button::Intent, cube, panel, property};
 
 use super::EditorApp;
 use super::inspector_panel::blocks::block_faces;
-use super::inspector_panel::drawable_textures;
 use super::inspector_panel::field::asset_row;
 use super::thumbnails::Pictures;
+use super::thumbnails::drawable_textures;
 
 /// The six faces, in the order an author thinks of a block: what is on top,
 /// what is underneath, then its sides.

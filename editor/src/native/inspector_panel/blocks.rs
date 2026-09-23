@@ -83,6 +83,22 @@ pub(crate) fn named_block_set(
     named
 }
 
+/// Every sprite the block set named among `components` draws with, so the
+/// panel has a picture of each block the menu offers.
+pub(crate) fn named_set_sprites(
+    components: &std::collections::BTreeMap<String, Value>,
+    bound: &TileSetBindings,
+) -> Vec<String> {
+    let named = named_block_set(components, bound);
+    components
+        .values()
+        .filter_map(|payload| payload.get("blocks"))
+        .find_map(Value::as_str)
+        .and_then(|reference| named.get(reference))
+        .map(|tile_set| block_sprites(tile_set).collect())
+        .unwrap_or_default()
+}
+
 /// A field naming a block, drawn as a menu of the set's blocks.
 ///
 /// Returns false, drawing nothing, while the component names no block set:
