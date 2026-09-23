@@ -173,6 +173,12 @@ pub enum SceneExtractError {
     InvalidVoxelMaterials,
     #[error("voxel generator references material ID {0}, but the component does not define it")]
     MissingVoxelMaterial(u16),
+    #[error("no block called `{0}` in the world's block set")]
+    UnknownVoxelBlock(String),
+    #[error("block `{block}` has no art for its {face} face or the face opposite it")]
+    VoxelBlockWithoutFace { block: String, face: &'static str },
+    #[error("block set `{0}` holds more blocks than a voxel world can number")]
+    TooManyVoxelBlocks(String),
     #[error("the viewport is too large for text rendering")]
     TextViewport(#[from] std::num::TryFromIntError),
 }
@@ -284,7 +290,7 @@ impl SceneExtractor {
         self.begin_frame();
         let mut frame = ExtractedFrame::new(viewport, environment_clear(self.environment(world)?));
         self.push_meshes(world, &cameras, textures, &mut frame)?;
-        self.push_voxel_worlds(world, &cameras, textures, &mut frame)?;
+        self.push_voxel_worlds(world, &cameras, textures, tile_sets, &mut frame)?;
         let resting = SpriteAnimations::new();
         let animations = animations.unwrap_or(&resting);
         // Resolved once and shared: what is drawn, what is clickable and what
@@ -342,7 +348,7 @@ impl SceneExtractor {
         self.begin_frame();
         let mut frame = ExtractedFrame::new(viewport, environment_clear(self.environment(world)?));
         self.push_meshes(world, &cameras, textures, &mut frame)?;
-        self.push_voxel_worlds(world, &cameras, textures, &mut frame)?;
+        self.push_voxel_worlds(world, &cameras, textures, tile_sets, &mut frame)?;
         let resting = SpriteAnimations::new();
         let animations = animations.unwrap_or(&resting);
         // Resolved once and shared: what is drawn, what is clickable and what

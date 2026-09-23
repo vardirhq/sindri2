@@ -102,6 +102,18 @@ pub enum FieldMeaning {
     /// A tool offers the keys the list holds rather than any number, and
     /// refuses to remove an item while something here still names it.
     KeyOf(&'static str),
+    /// Names a block, by name, from the tile set the field at `set` names;
+    /// or, while that field is unset, an item of a list by its key, as
+    /// `KeyOf(or_key_of)` would.
+    ///
+    /// A voxel world's generator is the case: a world built from a block set
+    /// says "grass", and one built from its own materials says 1. A tool
+    /// offers the set's blocks, drawn as what they are, in the first case and
+    /// the list's keys in the second.
+    Block {
+        set: &'static str,
+        or_key_of: &'static str,
+    },
 }
 
 impl FieldMeaning {
@@ -127,6 +139,7 @@ impl FieldMeaning {
             Self::Entity => "entity",
             Self::Key => "key",
             Self::KeyOf(_) => "key_of",
+            Self::Block { .. } => "block",
         }
     }
 }
@@ -146,7 +159,10 @@ impl super::ComponentSchemaRegistry {
     ) -> impl Iterator<Item = &'a str> + 'a {
         self.meanings(type_name)
             .filter_map(move |(path, meaning)| match meaning {
-                FieldMeaning::KeyOf(target) if matches(target, key_path) => Some(path),
+                FieldMeaning::KeyOf(target)
+                | FieldMeaning::Block {
+                    or_key_of: target, ..
+                } if matches(target, key_path) => Some(path),
                 _ => None,
             })
     }

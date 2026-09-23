@@ -95,6 +95,7 @@ fn describe_voxel_world(components: &mut ComponentSchemaRegistry) -> Result<(), 
     let texture = || FieldMeaning::Asset(AssetKind::Texture);
     components.describe::<VoxelWorldComponent>([
         (MATERIAL, FieldMeaning::Key),
+        ("blocks", FieldMeaning::Asset(AssetKind::TileSet)),
         ("materials[].top", texture()),
         ("materials[].side", texture()),
         ("materials[].bottom", texture()),
@@ -111,9 +112,9 @@ fn describe_voxel_world(components: &mut ComponentSchemaRegistry) -> Result<(), 
     ])?;
     describe_generators(components)?;
     components.describe::<VoxelWorldComponent>([
-        ("generator.surface_voxel", FieldMeaning::KeyOf(MATERIAL)),
-        ("generator.subsurface_voxel", FieldMeaning::KeyOf(MATERIAL)),
-        ("generator.deep_voxel", FieldMeaning::KeyOf(MATERIAL)),
+        ("generator.surface_voxel", BLOCK),
+        ("generator.subsurface_voxel", BLOCK),
+        ("generator.deep_voxel", BLOCK),
         (
             "generator.height_variation",
             range(0.0, f64::from(MAX_HEIGHT_VARIATION)),
@@ -124,6 +125,12 @@ fn describe_voxel_world(components: &mut ComponentSchemaRegistry) -> Result<(), 
 }
 
 const MATERIAL: &str = "materials[].voxel";
+
+/// A block from the world's block set, or a material while it has none.
+const BLOCK: FieldMeaning = FieldMeaning::Block {
+    set: "blocks",
+    or_key_of: MATERIAL,
+};
 
 /// What each generator holds, so switching one to the other writes the
 /// fields the arriving one needs and drops the ones it does not.
@@ -158,7 +165,7 @@ fn describe_generators(components: &mut ComponentSchemaRegistry) -> Result<(), S
 fn describe_natural_terrain(
     components: &mut ComponentSchemaRegistry,
 ) -> Result<(), SceneExtractError> {
-    let material = || FieldMeaning::KeyOf(MATERIAL);
+    let material = || BLOCK;
     components.describe::<VoxelWorldComponent>([
         ("generator.relief", range(1.0, f64::from(MAX_RELIEF))),
         (
@@ -278,7 +285,7 @@ mod tests {
                 serde_json::from_value(payload).expect("the edited world decodes");
             super::super::voxel_source::terrain_source(
                 &component.generator,
-                &[1, 2, 3].into_iter().collect(),
+                &super::super::voxel_source::Palette::of_materials([1, 2, 3]),
             )
             .is_ok()
         };
@@ -312,7 +319,7 @@ mod tests {
         for layer in ["surface_voxel", "subsurface_voxel", "deep_voxel"] {
             assert_eq!(
                 components.meaning("sindri.voxel_world", &format!("generator.{layer}")),
-                Some(&FieldMeaning::KeyOf("materials[].voxel")),
+                Some(&super::BLOCK),
                 "{layer} should name a material rather than any number"
             );
         }

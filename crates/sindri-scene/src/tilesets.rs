@@ -7,7 +7,7 @@ use sindri_core::{
     sheet_id_for,
 };
 
-use crate::TileVolumeComponent;
+use crate::{TileVolumeComponent, VoxelWorldComponent};
 
 #[derive(Clone, Debug, Default)]
 pub struct TileSetBindings {
@@ -91,11 +91,20 @@ impl TileSetBindings {
 
 /// Every tile-set asset named by an active world.
 pub fn referenced_tile_sets(world: &World) -> BTreeSet<String> {
+    // A tile volume draws with its set, and a voxel world is built from one:
+    // both name it the same way, under different field names.
+    let naming = [
+        (TileVolumeComponent::TYPE_NAME, "tileset"),
+        (VoxelWorldComponent::TYPE_NAME, "blocks"),
+    ];
     world
         .entities()
         .filter(|(entity, _)| world.is_active(*entity))
-        .filter_map(|(_, data)| data.components.get(TileVolumeComponent::TYPE_NAME))
-        .filter_map(|payload| payload.get("tileset"))
+        .flat_map(|(_, data)| {
+            naming
+                .iter()
+                .filter_map(|(type_name, field)| data.components.get(*type_name)?.get(*field))
+        })
         .filter_map(serde_json::Value::as_str)
         .filter(|reference| !reference.trim().is_empty())
         .map(str::to_owned)

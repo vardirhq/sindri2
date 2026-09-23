@@ -252,11 +252,12 @@ impl ComponentSchemaRegistry {
         for (path, meaning) in meanings {
             // A reference names a second path, and that one drifts exactly as
             // the first does, so it is held to the same check.
-            let referenced = match &meaning {
-                FieldMeaning::KeyOf(target) => Some(*target),
-                _ => None,
+            let referenced: &[&str] = match &meaning {
+                FieldMeaning::KeyOf(target) => &[*target],
+                FieldMeaning::Block { set, or_key_of } => &[*set, *or_key_of],
+                _ => &[],
             };
-            for checked in std::iter::once(path).chain(referenced) {
+            for checked in std::iter::once(path).chain(referenced.iter().copied()) {
                 if registration.exemplar(checked).is_none() {
                     return Err(ComponentRegistryError::UnknownFieldPath {
                         type_name: T::TYPE_NAME,

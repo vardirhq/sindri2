@@ -21,4 +21,5 @@ mod tolerance;
 mod ui;
 mod variants;
 mod view;
+mod voxel_blocks;
 mod voxel_world;

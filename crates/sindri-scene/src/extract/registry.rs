@@ -349,6 +349,7 @@ fn register_tiles(components: &mut ComponentSchemaRegistry) -> Result<(), SceneE
                 NaturalTerrainDocument::default(),
             ))
             .expect("a generator serializes"),
+            "blocks": null,
             "materials": [
                 {
                     "voxel": 1,

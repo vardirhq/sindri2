@@ -23,11 +23,11 @@ pub enum VoxelGeneratorDocument {
         #[serde(default = "default_height_variation")]
         height_variation: u32,
         #[serde(default = "surface_voxel")]
-        surface_voxel: u16,
+        surface_voxel: VoxelBlock,
         #[serde(default = "subsurface_voxel")]
-        subsurface_voxel: u16,
+        subsurface_voxel: VoxelBlock,
         #[serde(default = "deep_voxel")]
-        deep_voxel: u16,
+        deep_voxel: VoxelBlock,
         #[serde(default = "default_subsurface_depth")]
         subsurface_depth: u32,
     },
@@ -53,6 +53,40 @@ impl Default for VoxelGeneratorDocument {
     }
 }
 
+/// A block a generator lays down.
+///
+/// Named, in a world that names a block set: `"grass"` is the block called
+/// grass in that set, and the number the engine stores it as is the engine's
+/// business. A number is a material from the world's own `materials` list,
+/// which is how every world was written before block sets, and still loads.
+#[derive(Clone, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(untagged)]
+pub enum VoxelBlock {
+    Material(u16),
+    Named(String),
+}
+
+impl From<u16> for VoxelBlock {
+    fn from(voxel: u16) -> Self {
+        Self::Material(voxel)
+    }
+}
+
+impl From<&str> for VoxelBlock {
+    fn from(name: &str) -> Self {
+        Self::Named(name.to_owned())
+    }
+}
+
+impl std::fmt::Display for VoxelBlock {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Material(voxel) => write!(formatter, "material {voxel}"),
+            Self::Named(name) => write!(formatter, "block `{name}`"),
+        }
+    }
+}
+
 /// Renderer-facing appearance for one semantic voxel identity.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct VoxelMaterialDocument {
@@ -68,6 +102,14 @@ pub struct VoxelMaterialDocument {
 pub struct VoxelWorldComponent {
     #[serde(default)]
     pub generator: VoxelGeneratorDocument,
+    /// The tile set whose blocks this world is built from, such as
+    /// `builtin:blocks` or a project's `terrain.tileset.json`.
+    ///
+    /// Set, the generator names blocks from it and `materials` is not used.
+    /// Left out, the generator names materials by number, as before block
+    /// sets existed.
+    #[serde(default)]
+    pub blocks: Option<String>,
     #[serde(default = "default_materials")]
     pub materials: Vec<VoxelMaterialDocument>,
     /// Section coordinate around which residency is maintained.
@@ -105,16 +147,16 @@ const fn default_vertical_radius() -> u32 {
     1
 }
 
-const fn surface_voxel() -> u16 {
-    1
+const fn surface_voxel() -> VoxelBlock {
+    VoxelBlock::Material(1)
 }
 
-const fn subsurface_voxel() -> u16 {
-    2
+const fn subsurface_voxel() -> VoxelBlock {
+    VoxelBlock::Material(2)
 }
 
-const fn deep_voxel() -> u16 {
-    3
+const fn deep_voxel() -> VoxelBlock {
+    VoxelBlock::Material(3)
 }
 
 fn default_materials() -> Vec<VoxelMaterialDocument> {

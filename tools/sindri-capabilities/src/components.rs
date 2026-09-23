@@ -107,6 +107,10 @@ fn meanings(registry: &ComponentSchemaRegistry, type_name: &str) -> Value {
                 FieldMeaning::KeyOf(target) => {
                     described["key_of"] = json!(target);
                 }
+                FieldMeaning::Block { set, or_key_of } => {
+                    described["set"] = json!(set);
+                    described["key_of"] = json!(or_key_of);
+                }
                 FieldMeaning::Colour
                 | FieldMeaning::Angle
                 | FieldMeaning::Mask

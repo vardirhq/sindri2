@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::voxel_world::VoxelBlock;
+
 /// A world of continents, ranges, rivers and biomes, decided by one seed.
 ///
 /// Each field has a default, so switching a world to this generator gives a
@@ -31,23 +33,23 @@ pub struct NaturalTerrainDocument {
     #[serde(default = "yes")]
     pub rivers: bool,
     #[serde(default = "default_stone")]
-    pub stone_voxel: u16,
+    pub stone_voxel: VoxelBlock,
     #[serde(default)]
-    pub water_voxel: Option<u16>,
+    pub water_voxel: Option<VoxelBlock>,
     #[serde(default)]
-    pub beach_voxel: Option<u16>,
+    pub beach_voxel: Option<VoxelBlock>,
     #[serde(default)]
-    pub sea_bed_voxel: Option<u16>,
+    pub sea_bed_voxel: Option<VoxelBlock>,
     #[serde(default)]
-    pub cliff_voxel: Option<u16>,
+    pub cliff_voxel: Option<VoxelBlock>,
     #[serde(default)]
-    pub snow_voxel: Option<u16>,
+    pub snow_voxel: Option<VoxelBlock>,
     #[serde(default)]
-    pub ice_voxel: Option<u16>,
+    pub ice_voxel: Option<VoxelBlock>,
     #[serde(default)]
-    pub trunk_voxel: Option<u16>,
+    pub trunk_voxel: Option<VoxelBlock>,
     #[serde(default)]
-    pub leaves_voxel: Option<u16>,
+    pub leaves_voxel: Option<VoxelBlock>,
     #[serde(default = "default_biomes")]
     pub biomes: Vec<BiomeDocument>,
 }
@@ -90,9 +92,9 @@ pub struct BiomeDocument {
     #[serde(default = "half")]
     pub moisture: f32,
     #[serde(default = "default_surface")]
-    pub surface_voxel: u16,
+    pub surface_voxel: VoxelBlock,
     #[serde(default = "default_subsurface")]
-    pub subsurface_voxel: u16,
+    pub subsurface_voxel: VoxelBlock,
     #[serde(default = "default_subsurface_depth")]
     pub subsurface_depth: u32,
     /// How many of the places a tree could stand have one, from zero to one.
@@ -142,16 +144,16 @@ const fn yes() -> bool {
     true
 }
 
-const fn default_stone() -> u16 {
-    3
+const fn default_stone() -> VoxelBlock {
+    VoxelBlock::Material(3)
 }
 
-const fn default_surface() -> u16 {
-    1
+const fn default_surface() -> VoxelBlock {
+    VoxelBlock::Material(1)
 }
 
-const fn default_subsurface() -> u16 {
-    2
+const fn default_subsurface() -> VoxelBlock {
+    VoxelBlock::Material(2)
 }
 
 const fn default_subsurface_depth() -> u32 {
@@ -178,11 +180,15 @@ mod tests {
     fn a_bare_natural_terrain_uses_only_the_three_starting_materials() {
         let document: NaturalTerrainDocument = serde_json::from_str("{}").unwrap();
         assert_eq!(document, NaturalTerrainDocument::default());
-        let mut used = vec![document.stone_voxel];
+        let mut used = vec![document.stone_voxel.clone()];
         for biome in &document.biomes {
-            used.extend([biome.surface_voxel, biome.subsurface_voxel]);
+            used.extend([biome.surface_voxel.clone(), biome.subsurface_voxel.clone()]);
         }
-        assert!(used.iter().all(|voxel| (1..=3).contains(voxel)), "{used:?}");
+        assert!(
+            used.iter()
+                .all(|voxel| matches!(voxel, VoxelBlock::Material(1..=3))),
+            "{used:?}"
+        );
         assert!(document.water_voxel.is_none() && document.trunk_voxel.is_none());
     }
 
