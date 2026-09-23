@@ -635,7 +635,11 @@
         }
       },
       "occludes": false,
-      "walkable": false
+      "walkable": false,
+      "tags": [
+        "liquid",
+        "wet"
+      ]
     },
     "lava": {
       "faces": {
@@ -669,7 +673,11 @@
         }
       },
       "occludes": false,
-      "walkable": false
+      "walkable": false,
+      "tags": [
+        "liquid",
+        "hot"
+      ]
     }
   }
 }

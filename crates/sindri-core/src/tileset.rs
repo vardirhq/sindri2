@@ -261,6 +261,14 @@ pub struct TileDefinition {
     /// field is not the same as changing what a document meant.
     #[serde(default = "yes", alias = "solid", skip_serializing_if = "is_true")]
     pub walkable: bool,
+    /// Words a game gives this block, for its scripts to ask about: `hot`,
+    /// `slippery`, `harvestable`.
+    ///
+    /// The engine reads none of them. They are how a block carries what a
+    /// particular game means by it, without the engine growing a flag for
+    /// every game's idea of what ground can be.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
 }
 
 impl TileDefinition {

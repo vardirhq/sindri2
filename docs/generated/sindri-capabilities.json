@@ -1315,43 +1315,110 @@
     {
       "addable": true,
       "default_payload": {
+        "blocks": "builtin:blocks",
         "focus": [
           0,
           0,
           0
         ],
         "generator": {
-          "beach_voxel": null,
+          "beach_voxel": "sand",
           "biomes": [
             {
-              "moisture": 0.5,
+              "moisture": 0.4000000059604645,
               "name": "Grassland",
+              "relief": 0.800000011920929,
+              "subsurface_depth": 3,
+              "subsurface_voxel": "dirt",
+              "surface_voxel": "grass",
+              "temperature": 0.550000011920929,
+              "terraces": 0,
+              "trees": 0.05999999865889549
+            },
+            {
+              "moisture": 0.7200000286102295,
+              "name": "Forest",
               "relief": 1.0,
               "subsurface_depth": 3,
-              "subsurface_voxel": 2,
-              "surface_voxel": 1,
-              "temperature": 0.5,
+              "subsurface_voxel": "dirt",
+              "surface_voxel": "grass",
+              "temperature": 0.550000011920929,
+              "terraces": 0,
+              "trees": 0.550000011920929
+            },
+            {
+              "moisture": 0.9200000166893005,
+              "name": "Swamp",
+              "relief": 0.30000001192092896,
+              "subsurface_depth": 3,
+              "subsurface_voxel": "mud",
+              "surface_voxel": "mud",
+              "temperature": 0.75,
+              "terraces": 0,
+              "trees": 0.20000000298023224
+            },
+            {
+              "moisture": 0.11999999731779099,
+              "name": "Desert",
+              "relief": 0.6000000238418579,
+              "subsurface_depth": 5,
+              "subsurface_voxel": "sand",
+              "surface_voxel": "sand",
+              "temperature": 0.9200000166893005,
               "terraces": 0,
               "trees": 0.0
+            },
+            {
+              "moisture": 0.3499999940395355,
+              "name": "Badlands",
+              "relief": 1.399999976158142,
+              "subsurface_depth": 6,
+              "subsurface_voxel": "clay",
+              "surface_voxel": "clay",
+              "temperature": 0.8500000238418579,
+              "terraces": 3,
+              "trees": 0.0
+            },
+            {
+              "moisture": 0.6499999761581421,
+              "name": "Taiga",
+              "relief": 1.100000023841858,
+              "subsurface_depth": 3,
+              "subsurface_voxel": "dirt",
+              "surface_voxel": "moss",
+              "temperature": 0.2800000011920929,
+              "terraces": 0,
+              "trees": 0.44999998807907104
+            },
+            {
+              "moisture": 0.30000001192092896,
+              "name": "Tundra",
+              "relief": 0.699999988079071,
+              "subsurface_depth": 2,
+              "subsurface_voxel": "dirt",
+              "surface_voxel": "snow",
+              "temperature": 0.10000000149011612,
+              "terraces": 0,
+              "trees": 0.029999999329447746
             }
           ],
           "caves": true,
-          "cliff_voxel": null,
+          "cliff_voxel": "rock",
           "feature_size": 64,
-          "ice_voxel": null,
+          "ice_voxel": "ice",
           "kind": "natural_terrain",
-          "leaves_voxel": null,
+          "leaves_voxel": "leaves",
           "relief": 40,
           "rivers": true,
-          "sea_bed_voxel": null,
+          "sea_bed_voxel": "gravel",
           "sea_level": 0,
           "seed": 0,
           "snow_line": 30,
-          "snow_voxel": null,
-          "stone_voxel": 3,
+          "snow_voxel": "snow",
+          "stone_voxel": "stone",
           "tree_line": 22,
-          "trunk_voxel": null,
-          "water_voxel": null
+          "trunk_voxel": "log",
+          "water_voxel": "water"
         },
         "layer": 0,
         "materials": [
@@ -1379,43 +1446,110 @@
       },
       "display_name": "Voxel World",
       "fields": {
+        "blocks": "builtin:blocks",
         "focus": [
           0,
           0,
           0
         ],
         "generator": {
-          "beach_voxel": null,
+          "beach_voxel": "sand",
           "biomes": [
             {
-              "moisture": 0.5,
+              "moisture": 0.4000000059604645,
               "name": "Grassland",
+              "relief": 0.800000011920929,
+              "subsurface_depth": 3,
+              "subsurface_voxel": "dirt",
+              "surface_voxel": "grass",
+              "temperature": 0.550000011920929,
+              "terraces": 0,
+              "trees": 0.05999999865889549
+            },
+            {
+              "moisture": 0.7200000286102295,
+              "name": "Forest",
               "relief": 1.0,
               "subsurface_depth": 3,
-              "subsurface_voxel": 2,
-              "surface_voxel": 1,
-              "temperature": 0.5,
+              "subsurface_voxel": "dirt",
+              "surface_voxel": "grass",
+              "temperature": 0.550000011920929,
+              "terraces": 0,
+              "trees": 0.550000011920929
+            },
+            {
+              "moisture": 0.9200000166893005,
+              "name": "Swamp",
+              "relief": 0.30000001192092896,
+              "subsurface_depth": 3,
+              "subsurface_voxel": "mud",
+              "surface_voxel": "mud",
+              "temperature": 0.75,
+              "terraces": 0,
+              "trees": 0.20000000298023224
+            },
+            {
+              "moisture": 0.11999999731779099,
+              "name": "Desert",
+              "relief": 0.6000000238418579,
+              "subsurface_depth": 5,
+              "subsurface_voxel": "sand",
+              "surface_voxel": "sand",
+              "temperature": 0.9200000166893005,
               "terraces": 0,
               "trees": 0.0
+            },
+            {
+              "moisture": 0.3499999940395355,
+              "name": "Badlands",
+              "relief": 1.399999976158142,
+              "subsurface_depth": 6,
+              "subsurface_voxel": "clay",
+              "surface_voxel": "clay",
+              "temperature": 0.8500000238418579,
+              "terraces": 3,
+              "trees": 0.0
+            },
+            {
+              "moisture": 0.6499999761581421,
+              "name": "Taiga",
+              "relief": 1.100000023841858,
+              "subsurface_depth": 3,
+              "subsurface_voxel": "dirt",
+              "surface_voxel": "moss",
+              "temperature": 0.2800000011920929,
+              "terraces": 0,
+              "trees": 0.44999998807907104
+            },
+            {
+              "moisture": 0.30000001192092896,
+              "name": "Tundra",
+              "relief": 0.699999988079071,
+              "subsurface_depth": 2,
+              "subsurface_voxel": "dirt",
+              "surface_voxel": "snow",
+              "temperature": 0.10000000149011612,
+              "terraces": 0,
+              "trees": 0.029999999329447746
             }
           ],
           "caves": true,
-          "cliff_voxel": null,
+          "cliff_voxel": "rock",
           "feature_size": 64,
-          "ice_voxel": null,
+          "ice_voxel": "ice",
           "kind": "natural_terrain",
-          "leaves_voxel": null,
+          "leaves_voxel": "leaves",
           "relief": 40,
           "rivers": true,
-          "sea_bed_voxel": null,
+          "sea_bed_voxel": "gravel",
           "sea_level": 0,
           "seed": 0,
           "snow_line": 30,
-          "snow_voxel": null,
-          "stone_voxel": 3,
+          "snow_voxel": "snow",
+          "stone_voxel": "stone",
           "tree_line": 22,
-          "trunk_voxel": null,
-          "water_voxel": null
+          "trunk_voxel": "log",
+          "water_voxel": "water"
         },
         "layer": 0,
         "materials": [
@@ -1442,9 +1576,14 @@
         "vertical_radius": 1
       },
       "meanings": {
+        "blocks": {
+          "asset": "tile_set",
+          "kind": "asset"
+        },
         "generator.beach_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.biomes[].moisture": {
           "kind": "range",
@@ -1463,11 +1602,13 @@
         },
         "generator.biomes[].subsurface_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.biomes[].surface_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.biomes[].temperature": {
           "kind": "range",
@@ -1486,11 +1627,13 @@
         },
         "generator.cliff_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.deep_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.feature_size": {
           "kind": "range",
@@ -1504,7 +1647,8 @@
         },
         "generator.ice_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.kind": {
           "kind": "choice",
@@ -1558,7 +1702,8 @@
         },
         "generator.leaves_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.relief": {
           "kind": "range",
@@ -1567,7 +1712,8 @@
         },
         "generator.sea_bed_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.seed": {
           "kind": "range",
@@ -1576,11 +1722,13 @@
         },
         "generator.snow_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.stone_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.subsurface_depth": {
           "kind": "range",
@@ -1589,19 +1737,23 @@
         },
         "generator.subsurface_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.surface_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.trunk_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "generator.water_voxel": {
           "key_of": "materials[].voxel",
-          "kind": "key_of"
+          "kind": "block",
+          "set": "blocks"
         },
         "materials[].bottom": {
           "asset": "texture",

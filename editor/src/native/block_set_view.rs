@@ -220,6 +220,17 @@ fn block_fields(
         &mut block.walkable,
         "Whether a walker can stand on it",
     );
+    let mut tags = block.tags.join(", ");
+    let before_tags = tags.clone();
+    crate::native::inspector_panel::rows::text_row(ui, "Tags", &mut tags, 0.0);
+    if tags != before_tags {
+        block.tags = tags
+            .split(',')
+            .map(str::trim)
+            .filter(|tag| !tag.is_empty())
+            .map(str::to_owned)
+            .collect();
+    }
     property::Property::new("Height").show(ui, |ui| {
         ui.add(
             egui::DragValue::new(&mut block.height)

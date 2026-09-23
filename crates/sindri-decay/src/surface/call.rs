@@ -251,6 +251,12 @@ pub(crate) enum GridCall {
     /// and a wisp cannot disagree about where the ground is. Off the grid is
     /// not walkable, which is also what bounds a walker.
     Walkable,
+    /// Whether the block in a stacked volume's cell carries a tag its tile set
+    /// gives it, such as `hot`.
+    ///
+    /// An empty cell carries nothing, so it answers false rather than failing:
+    /// a script asking what is underfoot asks about air as often as ground.
+    Tagged,
 }
 
 impl GridCall {
@@ -268,6 +274,7 @@ impl GridCall {
                 | Self::Block
                 | Self::SetBlock
                 | Self::Walkable
+                | Self::Tagged
         )
     }
 }
@@ -297,6 +304,7 @@ pub(crate) const GRID_CALLS: &[(&str, GridCall)] = &[
     ("block", GridCall::Block),
     ("set_block", GridCall::SetBlock),
     ("walkable", GridCall::Walkable),
+    ("tagged", GridCall::Tagged),
 ];
 
 /// What a script can do to a body, connect bodies with, and ask about what it touched.
