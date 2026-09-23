@@ -132,9 +132,18 @@ struct VoxelWorldDefinition {
     vertical_radius: u32,
 }
 
+/// The texture and atlas region each voxel face draws with.
+type ResolvedMaterials = BTreeMap<(u16, VoxelFace), VoxelTexture>;
+
 struct ResidentVoxelWorld {
     definition: VoxelWorldDefinition,
-    texture_generation: u64,
+    /// What the materials resolved to when this world was meshed.
+    ///
+    /// Compared instead of the bindings' generation, which moves when any
+    /// texture anywhere in the project is bound: a sprite loading or
+    /// hot-reloading elsewhere rebuilt the whole voxel world. Only a change to
+    /// what these faces actually draw with needs their meshes compiled again.
+    resolved: ResolvedMaterials,
     world: VoxelWorld<LayeredTerrain>,
     render: VoxelRenderBridge,
     resident: BTreeSet<SectionCoord>,
@@ -167,7 +176,7 @@ impl fmt::Debug for VoxelWorldCache {
 }
 
 impl ResidentVoxelWorld {
-    fn new(definition: VoxelWorldDefinition, texture_generation: u64) -> Self {
+    fn new(definition: VoxelWorldDefinition, resolved: ResolvedMaterials) -> Self {
         let horizontal =
             i32::try_from(definition.render_radius).expect("validated voxel radius fits in i32");
         let vertical =
@@ -178,7 +187,7 @@ impl ResidentVoxelWorld {
                 ResidencyConfig::new(horizontal, vertical, 0, 0),
             ),
             definition,
-            texture_generation,
+            resolved,
             render: VoxelRenderBridge::default(),
             resident: BTreeSet::new(),
         }
@@ -187,10 +196,9 @@ impl ResidentVoxelWorld {
     fn commands(
         &mut self,
         focus: SectionCoord,
-        textures: &TextureBindings,
         local_view_projection: glam::Mat4,
     ) -> Result<Vec<FrameCommand>, SceneExtractError> {
-        let resolved = resolve_materials(&self.definition.materials, textures)?;
+        let resolved = &self.resolved;
         let delta = self.world.move_focus(focus);
         for section in &delta.left {
             self.resident.remove(section);
@@ -303,22 +311,18 @@ impl SceneExtractor {
             frame,
         } = target;
         let refused = match definition(component).and_then(|definition| {
-            resolve_materials(&definition.materials, textures)?;
-            Ok(definition)
+            let resolved = resolve_materials(&definition.materials, textures)?;
+            Ok((definition, resolved))
         }) {
-            Ok(definition) => {
+            Ok((definition, resolved)) => {
                 let fresh = runtimes.get(&entity).is_some_and(|runtime| {
-                    runtime.definition == definition
-                        && runtime.texture_generation == textures.generation()
+                    runtime.definition == definition && runtime.resolved == resolved
                 });
                 if !fresh {
                     if let Some(mut previous) = runtimes.remove(&entity) {
                         push_commands(previous.release_all(), component.layer, camera, frame);
                     }
-                    runtimes.insert(
-                        entity,
-                        ResidentVoxelWorld::new(definition, textures.generation()),
-                    );
+                    runtimes.insert(entity, ResidentVoxelWorld::new(definition, resolved));
                 }
                 None
             }
@@ -334,7 +338,7 @@ impl SceneExtractor {
         let mut commands = runtimes
             .get_mut(&entity)
             .expect("the voxel runtime was inserted or kept above")
-            .commands(focus, textures, camera.view_projection * root)?;
+            .commands(focus, camera.view_projection * root)?;
         for command in &mut commands {
             if let FrameCommand::CachedTexturedMesh { model, .. } = command {
                 *model = root * *model;
