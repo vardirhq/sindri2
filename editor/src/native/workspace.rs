@@ -26,6 +26,8 @@ use crate::ui::widgets::panel;
 
 use super::{EditorApp, WorkspaceTab};
 
+mod floating;
+
 /// One group's geometry this frame, so a drop can be resolved against it.
 ///
 /// Collected while drawing rather than predicted beforehand: the tab strip
@@ -61,6 +63,8 @@ pub(crate) struct DockLayout {
     /// Whether the group being drawn is the centre, so the viewport inside it
     /// knows whether its rectangle is the one overlays should anchor to.
     pub(super) drawing_main: bool,
+    /// Where each overlay was last drawn, which a dragged one snaps to.
+    pub(super) overlays: Vec<(Place, Rect)>,
 }
 
 impl Default for DockLayout {
@@ -70,6 +74,7 @@ impl Default for DockLayout {
             zones: Vec::new(),
             canvas: Rect::ZERO,
             drawing_main: false,
+            overlays: Vec::new(),
         }
     }
 }
@@ -212,70 +217,6 @@ impl EditorApp {
     /// Stacked rather than placed, so two overlays sharing a corner cannot end
     /// up on top of each other. The stack grows inwards from the corner: down
     /// from the top ones, up from the bottom ones.
-    fn draw_overlays(&mut self, ui: &mut egui::Ui, corner: Corner) {
-        let place = Place::Overlay(corner);
-        let Some(group) = self.preferences.workspace.group(place) else {
-            return;
-        };
-        let canvas = self.overlay_field();
-        let width = group.size.clamp(
-            place.min_size(),
-            (canvas.width() - OVERLAY_GUTTER * 2.0).max(place.min_size()),
-        );
-        // A top-right overlay stops short of the corner below it, where the
-        // view draws its axes; reaching the bottom would cover them.
-        let reserved = if corner == Corner::TopRight {
-            AXES_CLEARANCE
-        } else {
-            0.0
-        };
-        let height = if group.collapsed {
-            metric::HEADER_HEIGHT
-        } else {
-            group.height.clamp(
-                metric::HEADER_HEIGHT,
-                (canvas.height() - OVERLAY_GUTTER * 2.0 - reserved).max(metric::HEADER_HEIGHT),
-            )
-        };
-        let x = if corner.is_left() {
-            canvas.left() + OVERLAY_GUTTER
-        } else {
-            canvas.right() - OVERLAY_GUTTER - width
-        };
-        let y = if corner.is_bottom() {
-            canvas.bottom() - OVERLAY_GUTTER - height
-        } else {
-            canvas.top() + OVERLAY_GUTTER
-        };
-        let rect = Rect::from_min_size(egui::pos2(x, y), egui::vec2(width, height));
-        egui::Area::new(egui::Id::new(place.id()))
-            .fixed_pos(rect.min)
-            // Not kept on screen by egui. A row even slightly wider than the
-            // overlay grew the area past the window edge, egui moved the
-            // whole area left to bring it back, and the clip below stayed
-            // where the overlay is: every row lost the start of its label. An
-            // overflow now costs only the end of the row that overflows.
-            .constrain(false)
-            .order(egui::Order::Middle)
-            // Interactable so a click on an overlay is a click on the overlay
-            // rather than a camera drag through it onto the scene behind.
-            .interactable(true)
-            .show(ui.ctx(), |ui| {
-                ui.set_min_size(rect.size());
-                ui.set_max_size(rect.size());
-                panel::overlay_frame().show(ui, |ui| {
-                    // Clipped just inside the frame, or a list longer than the
-                    // overlay draws straight out of the bottom of it and over
-                    // the world with no edge to say where the panel stopped.
-                    // Inset by a point so the clip does not eat the card's own
-                    // outline along with the overflow.
-                    ui.set_clip_rect(rect.shrink(1.0));
-                    panel::fill_slot(ui, true);
-                    self.draw_group(ui, place);
-                });
-            });
-    }
-
     /// The region overlays arrange themselves in.
     ///
     /// The canvas itself when the window's furniture is docked, because the

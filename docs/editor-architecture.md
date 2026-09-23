@@ -46,10 +46,21 @@ from the scene or covers it:
 - **`Overlay(Corner)`** floats over the scene view, anchored to one of its four
   corners, and the scene keeps the whole window.
 
-Overlays anchor rather than floating freely, and stack when they share a corner.
-Free-floating panels do not overlap in a drawing because someone placed them;
-they overlap constantly in use, and an editor whose panels can be piled on each
-other by accident is one where rearranging furniture becomes the work.
+Overlays start anchored to their corner, and stack when they share one.
+Dragging the empty part of an overlay's tab strip lifts it out, and it floats
+wherever it is dropped; its bottom-right grip resizes it, and double-clicking
+the strip, or dropping it back in its corner, anchors it again. The tabs
+themselves still move panels between places. An overlay's height is how tall
+it may grow: a card shows its contents up to that height, and one put low on
+the canvas is shortened from the bottom rather than pushed back up.
+
+Free panels were once refused because panels placed by hand get piled on each
+other by accident. The rules that answer that live in
+`editor/src/native/workspace/floating.rs`: an edge within a few points of the
+canvas edge or another overlay's snaps to it, a drop cannot leave a panel even
+partly off the canvas, and the corner is always one drop or double-click away.
+A floating overlay remembers its offset from the canvas's top-left in the
+workspace; a position that is not a number is repaired back to the corner.
 
 Any panel may be in any place. The arrangements that used to be the only choices
 are presets to start from — `Canvas`, `Docked`, `Wide`.
