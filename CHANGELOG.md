@@ -1,4 +1,6 @@
 # Changelog
+
+- Added authored world fog/atmosphere with distance, exponential-density, and height contributions, plus Voxel Lab horizon integration and consistent browser materials.
 - Camera gameplay can now trigger engine-owned shake through Decay with `Camera.add_trauma`, and the camera acceptance demo moves its target and triggers impacts from Decay instead of bespoke Rust gameplay.
 
 All notable user-facing changes to Sindri Engine are documented here.

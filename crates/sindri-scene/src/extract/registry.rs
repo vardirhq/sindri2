@@ -142,6 +142,15 @@ fn register_environment(components: &mut ComponentSchemaRegistry) -> Result<(), 
                 "enabled": true,
                 "strength": 0.65
             },
+            "fog": {
+                "enabled": false,
+                "color": [0.55, 0.65, 0.75],
+                "start": 24.0,
+                "distance": 64.0,
+                "density": 0.0,
+                "height": 0.0,
+                "height_falloff": 0.0
+            },
             "post_process": {
                 "exposure": 0.0,
                 "contrast": 1.0,

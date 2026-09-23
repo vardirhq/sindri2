@@ -6,6 +6,9 @@ struct Uniforms {
     directional_color: vec4<f32>,
     light_view_projection: mat4x4<f32>,
     shadow: vec4<f32>,
+    fog_color: vec4<f32>,
+    fog_params: vec4<f32>,
+    camera_position: vec4<f32>,
 }
 
 @group(0) @binding(0)
@@ -73,5 +76,17 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let directional = uniforms.directional_color.rgb
         * uniforms.directional_direction.a * diffuse * visibility;
     let contact_visibility = mix(1.0, input.ambient_occlusion, uniforms.shadow.z);
-    return vec4<f32>(sampled.rgb * (ambient + directional) * contact_visibility, sampled.a);
+    let lit = sampled.rgb * (ambient + directional) * contact_visibility;
+    let camera_distance = distance(input.world_position, uniforms.camera_position.xyz);
+    let fog_distance = max(camera_distance - uniforms.fog_params.x, 0.0);
+    let distance_fog = clamp(fog_distance / max(uniforms.fog_params.y, 0.0001), 0.0, 1.0);
+    let exponential_fog = 1.0 - exp(-uniforms.fog_params.z * fog_distance);
+    let height_fog = clamp(
+        (uniforms.fog_params.w - input.world_position.y) * uniforms.camera_position.w,
+        0.0,
+        1.0,
+    );
+    let fog_amount = clamp(max(distance_fog, exponential_fog) + height_fog, 0.0, 1.0)
+        * uniforms.fog_color.a;
+    return vec4<f32>(mix(lit, uniforms.fog_color.rgb, fog_amount), sampled.a);
 }

@@ -252,7 +252,7 @@ impl SceneExtractor {
             .collect();
         for entity in departed {
             if let Some(mut runtime) = runtimes.remove(&entity) {
-                push_commands(runtime.release_all(), 0, camera.view_projection, frame);
+                push_commands(runtime.release_all(), 0, camera, frame);
             }
         }
 
@@ -264,12 +264,7 @@ impl SceneExtractor {
             });
             if !fresh {
                 if let Some(mut previous) = runtimes.remove(&entity) {
-                    push_commands(
-                        previous.release_all(),
-                        component.layer,
-                        camera.view_projection,
-                        frame,
-                    );
+                    push_commands(previous.release_all(), component.layer, camera, frame);
                 }
                 runtimes.insert(
                     entity,
@@ -292,7 +287,7 @@ impl SceneExtractor {
                     *model = root * *model;
                 }
             }
-            push_commands(commands, component.layer, camera.view_projection, frame);
+            push_commands(commands, component.layer, camera, frame);
         }
         Ok(())
     }
@@ -312,14 +307,17 @@ fn section_in_view(bounds: sindri_voxel::SectionBounds, view_projection: glam::M
 fn push_commands(
     commands: Vec<FrameCommand>,
     layer: i32,
-    view_projection: glam::Mat4,
+    camera: super::camera::ResolvedCamera,
     frame: &mut ExtractedFrame,
 ) {
     for command in commands {
         frame.push(FramePass::new(
             RenderStage::Opaque3d,
             RenderLayer(layer),
-            FrameCamera { view_projection },
+            FrameCamera {
+                view_projection: camera.view_projection,
+                position: camera.view.inverse().transform_point3(glam::Vec3::ZERO),
+            },
             command,
         ));
     }

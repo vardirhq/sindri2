@@ -62,7 +62,7 @@ This intentionally chooses mesh-time voxel AO over SSAO for the first permanent 
 
 The cheap path is still real: a neutral post-process plus disabled bloom draws directly to the frame target. Older environments deserialize to those neutral values. Voxel Lab deliberately enables ACES, a small exposure/contrast/saturation lift, bloom, and a restrained vignette as the visual proof.
 
-### 6. Fog and atmosphere
+### 6. Fog and atmosphere — **Implemented**
 
 Distance fog first, then height/exponential fog. Fog integrates with the environment background and gives large voxel worlds an intentional atmospheric horizon rather than exposing residency distance.
 

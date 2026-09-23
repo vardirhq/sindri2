@@ -289,6 +289,7 @@ struct Renderers<'a, 'r> {
 }
 
 /// Draws some of a frame's passes to one target.
+#[allow(clippy::too_many_lines)]
 fn encode_passes<'p>(
     renderers: &mut Renderers<'_, '_>,
     device: &wgpu::Device,
@@ -306,6 +307,7 @@ fn encode_passes<'p>(
         textures,
     } = renderers;
     for pass in passes {
+        cube_renderer.set_camera_position(pass.camera.position);
         match &pass.command {
             FrameCommand::TexturedCube { model, texture } => cube_renderer.encode_world(
                 DrawContext {

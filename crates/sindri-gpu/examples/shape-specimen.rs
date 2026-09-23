@@ -236,6 +236,7 @@ async fn run(path: &Path) -> Result<(), Box<dyn Error>> {
     #[allow(clippy::cast_possible_truncation)]
     let half_width = HALF_HEIGHT * aspect as f32;
     let camera = FrameCamera {
+        position: glam::Vec3::ZERO,
         view_projection: orthographic_projection(
             -half_width,
             half_width,

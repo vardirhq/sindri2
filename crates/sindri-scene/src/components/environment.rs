@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use sindri_core::{SceneComponent, World};
 use sindri_render::{
-    BloomSettings, PostProcessSettings, ShadowSettings, ToneMapping, WorldLighting,
+    BloomSettings, FogSettings, PostProcessSettings, ShadowSettings, ToneMapping, WorldLighting,
 };
 
 /// Scene-wide visual environment.
@@ -20,6 +20,7 @@ pub struct EnvironmentComponent {
     pub directional: EnvironmentDirectionalLight,
     pub shadows: EnvironmentShadows,
     pub ambient_occlusion: EnvironmentAmbientOcclusion,
+    pub fog: EnvironmentFog,
     pub post_process: EnvironmentPostProcess,
     pub bloom: EnvironmentBloom,
 }
@@ -37,6 +38,7 @@ impl Default for EnvironmentComponent {
             directional: EnvironmentDirectionalLight::default(),
             shadows: EnvironmentShadows::default(),
             ambient_occlusion: EnvironmentAmbientOcclusion::default(),
+            fog: EnvironmentFog::default(),
             post_process: EnvironmentPostProcess::default(),
             bloom: EnvironmentBloom::default(),
         }
@@ -94,6 +96,32 @@ impl Default for EnvironmentAmbientOcclusion {
         Self {
             enabled: false,
             strength: 0.65,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub struct EnvironmentFog {
+    pub enabled: bool,
+    pub color: [f32; 3],
+    pub start: f32,
+    pub distance: f32,
+    pub density: f32,
+    pub height: f32,
+    pub height_falloff: f32,
+}
+
+impl Default for EnvironmentFog {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            color: [0.55, 0.65, 0.75],
+            start: 24.0,
+            distance: 64.0,
+            density: 0.0,
+            height: 0.0,
+            height_falloff: 0.0,
         }
     }
 }
@@ -185,6 +213,19 @@ impl EnvironmentComponent {
     }
 
     #[must_use]
+    pub const fn fog_settings(self) -> FogSettings {
+        FogSettings {
+            enabled: self.fog.enabled,
+            color: self.fog.color,
+            start: self.fog.start,
+            distance: self.fog.distance,
+            density: self.fog.density,
+            height: self.fog.height,
+            height_falloff: self.fog.height_falloff,
+        }
+    }
+
+    #[must_use]
     pub const fn post_process_settings(self) -> PostProcessSettings {
         PostProcessSettings {
             exposure: self.post_process.exposure,
@@ -243,10 +284,28 @@ impl EnvironmentComponent {
         {
             return Err(EnvironmentError::InvalidAmbientOcclusion);
         }
+        self.validate_fog()?;
         self.validate_post_process()?;
         self.validate_bloom()?;
         Ok(self)
     }
+    fn validate_fog(self) -> Result<(), EnvironmentError> {
+        if !self.fog.color.iter().all(|value| value.is_finite())
+            || !self.fog.start.is_finite()
+            || self.fog.start < 0.0
+            || !self.fog.distance.is_finite()
+            || self.fog.distance <= 0.0
+            || !self.fog.density.is_finite()
+            || !(0.0..=1.0).contains(&self.fog.density)
+            || !self.fog.height.is_finite()
+            || !self.fog.height_falloff.is_finite()
+            || !(0.0..=1.0).contains(&self.fog.height_falloff)
+        {
+            return Err(EnvironmentError::InvalidFog);
+        }
+        Ok(())
+    }
+
     fn validate_post_process(self) -> Result<(), EnvironmentError> {
         if !self.post_process.exposure.is_finite()
             || !(-8.0..=8.0).contains(&self.post_process.exposure)
@@ -310,6 +369,8 @@ pub enum EnvironmentError {
     InvalidShadows,
     #[error("environment ambient-occlusion settings are outside their supported ranges")]
     InvalidAmbientOcclusion,
+    #[error("environment fog settings are outside their supported ranges")]
+    InvalidFog,
     #[error("environment post-process settings are outside their supported ranges")]
     InvalidPostProcess,
     #[error("environment bloom settings are outside their supported ranges")]
@@ -353,6 +414,7 @@ mod tests {
         assert!(environment.directional.intensity.abs() < f32::EPSILON);
         assert!(!environment.shadows.enabled);
         assert!(!environment.ambient_occlusion.enabled);
+        assert!(!environment.fog.enabled);
     }
 
     #[test]
@@ -373,6 +435,13 @@ mod tests {
             environment.validate(),
             Err(EnvironmentError::InvalidAmbientOcclusion)
         );
+    }
+
+    #[test]
+    fn invalid_fog_distance_is_rejected() {
+        let mut environment = EnvironmentComponent::default();
+        environment.fog.distance = 0.0;
+        assert_eq!(environment.validate(), Err(EnvironmentError::InvalidFog));
     }
 
     #[test]

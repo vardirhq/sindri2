@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
-use glam::Mat4;
+use glam::{Mat4, Vec3};
 use wgpu::util::DeviceExt;
 
 use crate::{
-    CachedMeshId, DepthTarget, MeshBuffers, ShadowSettings, TextureId, TextureRegistry,
-    TexturedMeshCacheStats, TexturedVertex, WorldLighting,
+    CachedMeshId, DepthTarget, FogSettings, MeshBuffers, ShadowSettings, TextureId,
+    TextureRegistry, TexturedMeshCacheStats, TexturedVertex, WorldLighting,
     shadow::{ShadowMap, create_shadow_pipeline},
     textured_mesh_cache::TexturedMeshCache,
 };
@@ -14,20 +14,11 @@ const SHADER: &str = include_str!("textured_cube.wgsl");
 
 mod geometry;
 mod shadow_pass;
+mod uniform;
+
+use uniform::cube_uniform;
 
 use geometry::{INDICES, VERTICES};
-
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct CubeUniform {
-    model_view_projection: [[f32; 4]; 4],
-    model: [[f32; 4]; 4],
-    ambient: [f32; 4],
-    directional_direction: [f32; 4],
-    directional_color: [f32; 4],
-    light_view_projection: [[f32; 4]; 4],
-    shadow: [f32; 4],
-}
 
 fn create_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -140,6 +131,8 @@ pub struct TexturedCubeRenderer {
     shadow_pipeline: wgpu::RenderPipeline,
     shadow_view_projection: Mat4,
     ambient_occlusion_strength: f32,
+    fog: FogSettings,
+    camera_position: Vec3,
 }
 
 /// GPU state owned by one textured-mesh draw in a submission.
@@ -180,6 +173,8 @@ impl TexturedCubeRenderer {
             shadow_pipeline,
             shadow_view_projection: Mat4::IDENTITY,
             ambient_occlusion_strength: 0.0,
+            fog: FogSettings::default(),
+            camera_position: Vec3::ZERO,
         }
     }
 
@@ -200,6 +195,15 @@ impl TexturedCubeRenderer {
     /// Sets how strongly mesh-authored ambient occlusion darkens world geometry.
     pub fn set_ambient_occlusion(&mut self, strength: f32) {
         self.ambient_occlusion_strength = strength.clamp(0.0, 1.0);
+    }
+
+    /// Sets atmosphere applied to subsequent opaque world draws.
+    pub fn set_fog(&mut self, fog: FogSettings) {
+        self.fog = fog;
+    }
+
+    pub fn set_camera_position(&mut self, position: Vec3) {
+        self.camera_position = position;
     }
 
     pub(crate) const fn shadows_enabled(&self) -> bool {
@@ -224,6 +228,8 @@ impl TexturedCubeRenderer {
                     Mat4::IDENTITY,
                     ShadowSettings::default(),
                     0.0,
+                    FogSettings::default(),
+                    Vec3::ZERO,
                 )),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
@@ -322,6 +328,8 @@ impl TexturedCubeRenderer {
             self.shadow_view_projection,
             self.shadow_settings,
             self.ambient_occlusion_strength,
+            self.fog,
+            self.camera_position,
             (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
@@ -355,6 +363,8 @@ impl TexturedCubeRenderer {
             self.shadow_view_projection,
             self.shadow_settings,
             self.ambient_occlusion_strength,
+            self.fog,
+            self.camera_position,
             (&batch.uniform, &self.pipeline, bind_group),
             &self.mesh,
             "Sindri textured cube pass",
@@ -366,6 +376,7 @@ impl TexturedCubeRenderer {
     ///
     /// This remains the transient path for authored surface meshes. Generated
     /// terrain should use [`Self::encode_cached_mesh`].
+    #[allow(clippy::too_many_lines)]
     pub fn encode_mesh(
         &mut self,
         context: DrawContext<'_>,
@@ -396,6 +407,8 @@ impl TexturedCubeRenderer {
             self.shadow_view_projection,
             self.shadow_settings,
             self.ambient_occlusion_strength,
+            self.fog,
+            self.camera_position,
             (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
@@ -435,6 +448,8 @@ impl TexturedCubeRenderer {
             self.shadow_view_projection,
             self.shadow_settings,
             self.ambient_occlusion_strength,
+            self.fog,
+            self.camera_position,
             (&batch.uniform, &self.pipeline, bind_group),
             &mesh,
             "Sindri textured surface pass",
@@ -443,6 +458,7 @@ impl TexturedCubeRenderer {
 
     /// Draws a persistent textured mesh, replacing its GPU buffers only when a
     /// newer revision supplies geometry.
+    #[allow(clippy::too_many_lines)]
     pub(crate) fn encode_cached_mesh(
         &mut self,
         context: DrawContext<'_>,
@@ -477,6 +493,8 @@ impl TexturedCubeRenderer {
             self.shadow_view_projection,
             self.shadow_settings,
             self.ambient_occlusion_strength,
+            self.fog,
+            self.camera_position,
             (&batch.uniform, &self.pipeline, bind_group),
             mesh,
             "Sindri cached textured mesh pass",
@@ -500,50 +518,7 @@ impl TexturedCubeRenderer {
     }
 }
 
-fn cube_uniform(
-    model: Mat4,
-    model_view_projection: Mat4,
-    lighting: WorldLighting,
-    light_view_projection: Mat4,
-    shadows: ShadowSettings,
-    ambient_occlusion_strength: f32,
-) -> CubeUniform {
-    CubeUniform {
-        model_view_projection: model_view_projection.to_cols_array_2d(),
-        model: model.to_cols_array_2d(),
-        ambient: [
-            lighting.ambient_color[0],
-            lighting.ambient_color[1],
-            lighting.ambient_color[2],
-            lighting.ambient_intensity,
-        ],
-        directional_direction: [
-            lighting.directional_direction[0],
-            lighting.directional_direction[1],
-            lighting.directional_direction[2],
-            lighting.directional_intensity,
-        ],
-        directional_color: [
-            lighting.directional_color[0],
-            lighting.directional_color[1],
-            lighting.directional_color[2],
-            0.0,
-        ],
-        light_view_projection: light_view_projection.to_cols_array_2d(),
-        shadow: [
-            shadows.bias,
-            if shadows.enabled && lighting.directional_intensity > 0.0 {
-                1.0
-            } else {
-                0.0
-            },
-            ambient_occlusion_strength,
-            0.0,
-        ],
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)]
 fn encode_mesh_buffers(
     queue: &wgpu::Queue,
     encoder: &mut wgpu::CommandEncoder,
@@ -554,6 +529,8 @@ fn encode_mesh_buffers(
     light_view_projection: Mat4,
     shadows: ShadowSettings,
     ambient_occlusion_strength: f32,
+    fog: FogSettings,
+    camera_position: Vec3,
     state: (&wgpu::Buffer, &wgpu::RenderPipeline, &wgpu::BindGroup),
     mesh: &MeshBuffers,
     label: &str,
@@ -569,6 +546,8 @@ fn encode_mesh_buffers(
             light_view_projection,
             shadows,
             ambient_occlusion_strength,
+            fog,
+            camera_position,
         )),
     );
     let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
