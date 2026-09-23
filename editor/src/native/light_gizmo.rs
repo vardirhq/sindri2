@@ -16,7 +16,7 @@ use crate::selection::Selection;
 use crate::ui::theme::color;
 
 use super::EditorApp;
-use super::camera::{distance_to_segment, project_point, project_segment};
+use super::projection::{distance_to_segment, project_point, project_segment};
 
 const LIGHT_PICK_STATE: &str = "sindri-light-pick";
 const LIGHT_OVERLAY_LAYER: &str = "sindri-light-overlay";

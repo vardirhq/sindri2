@@ -268,6 +268,7 @@ mod tests {
                         audio: &[],
                         profiles: &[],
                         tile_sets: &[],
+                        pictures: &crate::native::thumbnails::NO_PICTURES,
                     },
                     whole: Some(whole),
                 }),
