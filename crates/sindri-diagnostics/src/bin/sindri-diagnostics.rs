@@ -170,15 +170,17 @@ fn github_summary(report: &DiagnosticReport, command: &str) -> String {
     let start = actionable
         .iter()
         .find_map(|diagnostic| diagnostic.location.as_ref())
-        .map(|location| {
-            format!(
-                "`{}:{}:{}`",
-                location.path.display(),
-                location.line,
-                location.column
-            )
-        })
-        .unwrap_or_else(|| "the first diagnostic below".into());
+        .map_or_else(
+            || "the first diagnostic below".into(),
+            |location| {
+                format!(
+                    "`{}:{}:{}`",
+                    location.path.display(),
+                    location.line,
+                    location.column
+                )
+            },
+        );
 
     let mut output = format!(
         "## Sindri diagnostics\n\n**{errors} {command} error(s), {warnings} warning(s)**\n\n"
