@@ -77,8 +77,16 @@ impl EditorApp {
         let mut closed = None;
         let mut started = None;
         let mut rolled = false;
+        // What is wrong now, carried by the console's own tab wherever it is,
+        // whether or not the console is the tab showing.
+        let problems = self.console.problems().len();
+        let problem_badge = (problems > 0).then(|| problems.to_string());
         let strip = tabs::row(ui, shape, |ui| {
             for (index, panel) in panels.iter().copied().enumerate() {
+                let badge = match panel {
+                    DockPanel::Console => problem_badge.as_deref(),
+                    _ => None,
+                };
                 let response = tabs::tab(
                     ui,
                     weight,
@@ -86,6 +94,7 @@ impl EditorApp {
                     Some(panel_icon(panel)),
                     panel.label(),
                     dragging == Some(panel),
+                    badge,
                 );
                 rects.push(response.rect);
                 if response.clicked() {
@@ -151,17 +160,8 @@ impl EditorApp {
                         .color(color::TEXT_FAINT),
                 );
             }
-            // An error nobody is looking at is the reason the console exists,
-            // so the count is shown on whichever strip the console is in,
-            // whether or not the console is the tab showing.
-            DockPanel::Console => {
-                let counts = self.console.counts();
-                if counts.errors > 0 {
-                    crate::ui::widgets::toolbar::chip(ui, &counts.summary(), color::DANGER_TEXT);
-                }
-            }
             DockPanel::Assistant => self.assistant_actions(ui),
-            DockPanel::Scene | DockPanel::Project | DockPanel::History => {}
+            DockPanel::Scene | DockPanel::Project | DockPanel::Console | DockPanel::History => {}
         }
     }
 

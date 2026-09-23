@@ -11,7 +11,7 @@ use crate::dock::{Panel as DockPanel, Place, Preset, Workspace};
 use crate::preferences::CameraProjection;
 use crate::ui::icons;
 use crate::ui::theme::{color, hairline, metric, text};
-use crate::ui::widgets::{button, panel, tabs, toolbar};
+use crate::ui::widgets::{button, tabs, toolbar};
 
 use super::EditorApp;
 use super::runtime::{PLAYING_TIP, Transport, play_button, transport_icon};
@@ -505,8 +505,9 @@ impl EditorApp {
         });
     }
 
-    pub(super) fn status_bar(&self, ui: &mut egui::Ui) {
+    pub(super) fn status_bar(&mut self, ui: &mut egui::Ui) {
         let floating = self.preferences.workspace.chrome().floats();
+        let mut asked = false;
         bar(
             ui,
             "editor-status",
@@ -517,27 +518,7 @@ impl EditorApp {
                 ui.horizontal_centered(|ui| {
                     ui.spacing_mut().item_spacing.x = 6.0;
                     ui.add_space(10.0);
-                    let healthy = self.problem().is_none();
-                    panel::status_dot(
-                        ui,
-                        if healthy {
-                            color::SUCCESS
-                        } else {
-                            color::DANGER
-                        },
-                    );
-                    ui.label(
-                        // Not "the renderer reported an error": what went wrong
-                        // is as likely to be a file that would not open, and
-                        // the notice beside the viewport says which.
-                        RichText::new(if healthy {
-                            "Renderer ready"
-                        } else {
-                            "Something went wrong"
-                        })
-                        .size(text::LABEL)
-                        .color(color::TEXT_MUTED),
-                    );
+                    asked |= super::console_view::status_problems(ui, &self.console);
                     toolbar::divider(ui);
                     ui.label(
                         icons::SCENE
@@ -559,24 +540,13 @@ impl EditorApp {
                     }
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.add_space(10.0);
-                        // Counted rather than guessed from whether a notice is
-                        // showing, which is what this used to do: it said "1
-                        // Error" for anything at all and never mentioned a
-                        // warning.
-                        let counts = self.console.counts();
-                        ui.label(RichText::new(counts.summary()).size(text::LABEL).color(
-                            if counts.errors > 0 {
-                                color::DANGER_TEXT
-                            } else {
-                                color::TEXT_FAINT
-                            },
-                        ));
-                        if counts.errors > 0 {
-                            panel::status_dot(ui, color::DANGER);
-                        }
+                        asked |= super::console_view::status_count(ui, &self.console);
                     });
                 });
             },
         );
+        if asked {
+            self.show_problems();
+        }
     }
 }

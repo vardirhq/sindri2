@@ -77,6 +77,30 @@ pub struct Entry {
 #[derive(Clone, Debug, Default)]
 pub struct Console {
     entries: VecDeque<Entry>,
+    /// What is wrong now, as opposed to what the log remembers going wrong.
+    now: Now,
+}
+
+/// Something wrong at this moment, and the entity it is about if any.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Problem {
+    pub message: String,
+    pub subject: Option<EntityId>,
+}
+
+/// The problems a frame found, rebuilt every frame.
+///
+/// The log is history: after an invalid value was dragged back into range, it
+/// still said "1 Error" and the status bar kept counting it, which read as the
+/// scene still being broken. A problem here lasts exactly as long as its cause
+/// is reported, so the count goes to zero the frame the cause is fixed.
+///
+/// Two lists, because the panels that show problems draw before the viewports
+/// that find them: what a frame shows is what the frame before it found.
+#[derive(Clone, Debug, Default)]
+struct Now {
+    finding: Vec<Problem>,
+    found: Vec<Problem>,
 }
 
 impl Console {
@@ -130,6 +154,38 @@ impl Console {
 
     pub fn error(&mut self, message: impl Into<String>) {
         self.record(Level::Error, message);
+    }
+
+    /// Starts a frame's search for what is wrong, making the last frame's
+    /// findings the ones shown.
+    pub fn begin_frame(&mut self) {
+        self.now.found = std::mem::take(&mut self.now.finding);
+    }
+
+    /// Records something wrong this frame, once however often it is said.
+    ///
+    /// Not logged: a caller that wants the history too uses [`Self::fail`].
+    pub fn problem(&mut self, message: impl Into<String>, subject: Option<EntityId>) {
+        let problem = Problem {
+            message: message.into(),
+            subject,
+        };
+        if !self.now.finding.contains(&problem) {
+            self.now.finding.push(problem);
+        }
+    }
+
+    /// Something that went wrong this frame: logged as an error, and counted
+    /// as a problem for as long as it keeps being reported.
+    pub fn fail(&mut self, message: impl Into<String>, subject: Option<EntityId>) {
+        let message = message.into();
+        self.record_about(Level::Error, message.clone(), subject);
+        self.problem(message, subject);
+    }
+
+    /// What was wrong in the last complete frame.
+    pub fn problems(&self) -> &[Problem] {
+        &self.now.found
     }
 
     /// Oldest first, which is the order a log is read in.
@@ -376,6 +432,34 @@ mod tests {
 
     /// And the status bar then reports the size of the problem rather than the
     /// size of the log.
+    /// A problem is shown from the frame after it is found, and gone the frame
+    /// after it stops being found; the log keeps it either way.
+    #[test]
+    fn a_problem_lasts_as_long_as_its_cause() {
+        let mut console = Console::default();
+        console.begin_frame();
+        console.fail("bloom.intensity must be at least 0", None);
+        console.fail("bloom.intensity must be at least 0", None);
+        console.begin_frame();
+        assert_eq!(console.problems().len(), 1, "said twice, one problem");
+        console.begin_frame();
+        assert!(
+            console.problems().is_empty(),
+            "fixed, so no longer a problem"
+        );
+        assert_eq!(console.counts().errors, 1, "the log still remembers it");
+    }
+
+    #[test]
+    fn clearing_the_log_does_not_hide_a_current_problem() {
+        let mut console = Console::default();
+        console.fail("the scene will not save", None);
+        console.begin_frame();
+        console.clear();
+        assert!(console.is_empty());
+        assert_eq!(console.problems().len(), 1);
+    }
+
     #[test]
     fn the_error_count_is_of_distinct_failures() {
         let mut console = Console::default();

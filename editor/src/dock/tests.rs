@@ -307,3 +307,23 @@ fn the_docked_arrangements_keep_their_furniture() {
         assert_eq!(Workspace::preset(preset).chrome(), Chrome::Docked);
     }
 }
+
+/// Asking to see a panel shows it: its tab is chosen and an overlay rolled up
+/// is rolled down, and a closed panel is put back.
+#[test]
+fn revealing_a_panel_shows_it_wherever_it_is() {
+    let mut workspace = Workspace::preset(Preset::Canvas);
+    let (place, _) = workspace.location(Panel::Console).expect("placed");
+    workspace.toggle_collapsed(place);
+    workspace.reveal(Panel::Console);
+    let group = workspace.group(place).expect("the group is there");
+    assert_eq!(group.selected(), Some(Panel::Console));
+    assert!(!group.collapsed, "a rolled-up overlay is rolled down");
+
+    workspace.take(Panel::Console);
+    workspace.reveal(Panel::Console);
+    assert!(
+        workspace.is_open(Panel::Console),
+        "a closed panel is put back"
+    );
+}

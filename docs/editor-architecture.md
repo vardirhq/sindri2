@@ -394,7 +394,14 @@ work. The notice beside the viewport is one line and is replaced by the next thi
 console keeps everything, in order. Every failure goes through one call so the two cannot disagree
 about what happened.
 
-The console is bounded, and it collapses a message repeated back to back into a count. That second
+The console keeps two things apart. **Now** is what is wrong at this moment: rebuilt every frame
+from what the frame reported, so it empties the frame the cause is fixed. The status bar names the
+first of them and counts them, the console's tab carries the count on its icon, and clicking either
+opens the console on Now. The **log** is history, and is what the rest of this section describes. The
+split exists because a log is the wrong thing to count: an invalid value dragged back into range
+left "1 Error" on the status bar, which read as a scene still broken.
+
+The log is bounded, and it collapses a message repeated back to back into a count. That second
 rule is not tidiness: a render failure recurs every frame, and without it two hundred copies of the
 same line would push whatever explains it out of the top within four seconds. It is also what lets
 the status bar count errors and warnings honestly — one thing wrong, however many frames said so.

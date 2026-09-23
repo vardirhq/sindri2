@@ -1,5 +1,6 @@
 # Changelog
 
+- The console separates what is wrong now from what the log remembers: the status bar names the current problem and counts current problems rather than past errors, the count clears as soon as the cause is fixed, and clicking it opens the console's new Now view. The console tab carries the count on its icon instead of a chip that covered neighbouring tabs, console lines can be copied from a right-click, and the entity a line is about is linked beneath it rather than cut off beside it.
 - The inspector now edits Environment and Voxel World with the right controls: colour pickers for their colours, values held inside the ranges the engine accepts, a menu for shadow map size and tone mapping, texture pickers for voxel material faces, and whole-number section coordinates.
 - Texture pickers offer the sprites cut from the project's sprite sheets, so references like `blocks.png#stone-0` are no longer marked as missing.
 - The editor no longer freezes the Scene view when a Voxel World or Environment value is invalid: the last valid terrain and lighting keep drawing, and the problem is reported against its entity, naming the exact field and the values it accepts.

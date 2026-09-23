@@ -348,7 +348,7 @@ impl EditorApp {
         if let Some(failure) = failure {
             // The console collapses this: a render failure recurs every frame,
             // and one entry with a count says more than sixty a second.
-            self.console.error(&failure);
+            self.console.fail(&failure, None);
             if self.render_error.is_none() {
                 self.render_error = Some(failure);
             }
@@ -484,7 +484,7 @@ impl EditorApp {
             Ok(world) => Some(world),
             Err(error) => {
                 let failure = format!("Weave: {error}");
-                self.console.error(&failure);
+                self.console.fail(&failure, None);
                 if self.render_error.is_none() {
                     self.render_error = Some(failure);
                 }

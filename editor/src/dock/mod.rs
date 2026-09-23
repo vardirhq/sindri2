@@ -360,6 +360,15 @@ impl Workspace {
         })
     }
 
+    /// Brings a panel into view: its tab chosen where it is, or the panel put
+    /// back if it was closed.
+    pub fn reveal(&mut self, panel: Panel) {
+        match self.location(panel) {
+            Some((place, index)) => self.select(place, index),
+            None => self.place(panel, Place::MAIN, usize::MAX),
+        }
+    }
+
     pub fn is_open(&self, panel: Panel) -> bool {
         self.location(panel).is_some()
     }

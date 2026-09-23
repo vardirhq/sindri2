@@ -118,6 +118,7 @@ pub fn tab(
     icon: Option<MaterialIcon>,
     label: &str,
     travelling: bool,
+    badge: Option<&str>,
 ) -> Response {
     let font = FontId::proportional(weight.font());
     // Measured rather than guessed from character count: the tab is painted, so
@@ -128,7 +129,23 @@ pub fn tab(
         .painter()
         .layout_no_wrap(label.to_owned(), font, egui::Color32::PLACEHOLDER);
     let icon_width = if icon.is_some() { 20.0 } else { 0.0 };
-    let width = galley.size().x + icon_width + 26.0;
+    // A count carried by the tab itself. Drawn beside the strip, it had no
+    // room of its own and was painted over the neighbouring tabs; given room in
+    // the tab, it pushed the last tab of a narrow strip out of sight. So it
+    // sits on the icon's corner and takes no width, and only a tab with no icon
+    // makes room for it.
+    let badge = badge.map(|badge| {
+        ui.painter().layout_no_wrap(
+            badge.to_owned(),
+            FontId::proportional(text::NOTE),
+            color::TEXT,
+        )
+    });
+    let badge_width = match (&badge, icon) {
+        (Some(badge), None) => badge.size().x + BADGE_PADDING * 2.0 + 6.0,
+        _ => 0.0,
+    };
+    let width = galley.size().x + icon_width + 26.0 + badge_width;
     let (rect, response) = ui.allocate_exact_size(
         Vec2::new(width, ui.available_height()),
         Sense::click_and_drag(),
@@ -159,6 +176,7 @@ pub fn tab(
         foreground = foreground.gamma_multiply(0.4);
     }
     let mut cursor = rect.left() + 13.0;
+    let icon_corner = Pos2::new(cursor + 12.0, rect.center().y - 5.0);
     if let Some(icon) = icon {
         painter.text(
             Pos2::new(cursor, rect.center().y),
@@ -169,10 +187,30 @@ pub fn tab(
         );
         cursor += icon_width;
     }
+    let label_width = galley.size().x;
     painter.galley(
         Pos2::new(cursor, rect.center().y - galley.size().y / 2.0),
         galley,
         foreground,
     );
+    if let Some(badge) = badge {
+        let size = Vec2::new(
+            (badge.size().x + BADGE_PADDING * 2.0).max(badge.size().y + 2.0),
+            badge.size().y + 2.0,
+        );
+        let pill = if icon.is_some() {
+            Rect::from_center_size(icon_corner, size)
+        } else {
+            Rect::from_min_size(
+                Pos2::new(cursor + label_width + 6.0, rect.center().y - size.y / 2.0),
+                size,
+            )
+        };
+        painter.rect_filled(pill, pill.height() / 2.0, color::DANGER);
+        painter.galley(pill.center() - badge.size() / 2.0, badge, color::TEXT);
+    }
     response
 }
+
+/// Space either side of a tab badge's text.
+const BADGE_PADDING: f32 = 3.5;

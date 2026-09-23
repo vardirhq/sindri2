@@ -205,7 +205,10 @@ error banner moved clear of the status bar and wrapped. Item 3 is done for
 ranges, three-channel colour, numeric choice, texture and sprite pickers, and
 whole-number vectors, with Environment and Voxel World declaring their
 meanings; Angle, Mask and Entity controls, sprite thumbnails, template field
-order, and Camera Behaviour's meanings remain. Other components still
+order, and Camera Behaviour's meanings remain. Item 4 is done: current problems are kept
+apart from the log, counted and named on the status bar, badged on the
+console's tab, and opened from either; lines copy, and their entity links no
+longer run off the panel. Grouping by cause remains. Other components still
 fail the frame when invalid; they adopt the same tolerance as they are reached.
 
 1. **Stop the freeze.** Per-component extraction diagnostics and fallback
