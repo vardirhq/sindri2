@@ -101,6 +101,9 @@ fn meanings(registry: &ComponentSchemaRegistry, type_name: &str) -> Value {
                         Value::Null
                     };
                 }
+                FieldMeaning::OneOf(values) => {
+                    described["options"] = json!(values);
+                }
                 FieldMeaning::KeyOf(target) => {
                     described["key_of"] = json!(target);
                 }

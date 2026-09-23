@@ -12,8 +12,30 @@ use eframe::egui::{self, Align, Layout, Response, RichText, Sense, Vec2};
 
 use crate::ui::theme::{color, metric, text};
 
-/// Roughly how many characters the label column fits before it truncates.
-const LABEL_CHARS: usize = 15;
+/// A label that fits the column, keeping its last word.
+///
+/// Cutting the end made siblings indistinguishable: a voxel generator's
+/// "Subsurface depth" and "Subsurface voxel" both read "Subsurface…". The
+/// last word is usually the one that tells siblings apart, so the front is
+/// shortened instead, as little as `fits` allows. A one-word label, or one
+/// whose last word alone does not fit, is left for the label to truncate.
+fn shortened(label: &str, fits: impl Fn(&str) -> bool) -> std::borrow::Cow<'_, str> {
+    if fits(label) {
+        return label.into();
+    }
+    let Some((front, last)) = label.rsplit_once(' ') else {
+        return label.into();
+    };
+    let front: Vec<char> = front.chars().collect();
+    for keep in (3..front.len()).rev() {
+        let kept: String = front[..keep].iter().collect();
+        let candidate = format!("{}… {last}", kept.trim_end());
+        if fits(&candidate) {
+            return candidate.into();
+        }
+    }
+    label.into()
+}
 
 /// A labelled row, with whatever control belongs beside the label.
 #[derive(Clone, Copy)]
@@ -93,7 +115,21 @@ impl<'a> Property<'a> {
         // readable on hover. A script's `@export turns_per_second` is exactly
         // the case: the field is worth naming in full and the column is not
         // worth widening for it.
-        let elided = self.label.chars().count() > LABEL_CHARS;
+        // Measured against the column this row actually has, which narrows as
+        // rows nest, rather than counted in characters.
+        let painter = ui.painter().clone();
+        let shown = shortened(self.label, |candidate| {
+            painter
+                .layout_no_wrap(
+                    candidate.to_owned(),
+                    egui::FontId::proportional(text::LABEL),
+                    color::TEXT_MUTED,
+                )
+                .size()
+                .x
+                <= width - 2.0
+        });
+        let elided = shown != self.label;
         let response = ui
             .allocate_ui_with_layout(
                 Vec2::new(width, metric::CONTROL_HEIGHT),
@@ -107,7 +143,7 @@ impl<'a> Property<'a> {
                     ui.set_min_width(width);
                     ui.add(
                         egui::Label::new(
-                            RichText::new(self.label)
+                            RichText::new(shown.as_ref())
                                 .size(text::LABEL)
                                 .color(color::TEXT_MUTED),
                         )
@@ -217,3 +253,33 @@ pub fn picker_width(ui: &egui::Ui) -> f32 {
 /// How much a `ComboBox` adds around whatever width it is given: button padding
 /// at both ends, the gap before the arrow, and the arrow itself.
 pub const PICKER_FURNITURE: f32 = 30.0;
+
+#[cfg(test)]
+mod tests {
+    use super::shortened;
+
+    /// A column fifteen characters wide.
+    fn fifteen(label: &str) -> bool {
+        label.chars().count() <= 15
+    }
+
+    #[test]
+    fn siblings_keep_the_word_that_tells_them_apart() {
+        assert_eq!(shortened("Subsurface depth", fifteen), "Subsurfa… depth");
+        assert_eq!(shortened("Subsurface voxel", fifteen), "Subsurfa… voxel");
+    }
+
+    #[test]
+    fn a_narrower_column_shortens_the_front_further() {
+        let fourteen = |label: &str| label.chars().count() <= 14;
+        let eleven = |label: &str| label.chars().count() <= 11;
+        assert_eq!(shortened("Height variation", fourteen), "Hei… variation");
+        assert_eq!(shortened("Subsurface depth", eleven), "Subs… depth");
+    }
+
+    #[test]
+    fn a_label_that_fits_is_untouched() {
+        assert_eq!(shortened("Surface voxel", fifteen), "Surface voxel");
+        assert_eq!(shortened("Turnspersecondmax", fifteen), "Turnspersecondmax");
+    }
+}

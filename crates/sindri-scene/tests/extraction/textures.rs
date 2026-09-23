@@ -255,3 +255,13 @@ fn a_sprite_naming_nothing_in_its_sheet_is_reported() {
         "the sprite nothing places is reported by name"
     );
 }
+
+/// A picker offers a sheet's sprites by the reference a component writes.
+#[test]
+fn a_bound_sheet_lists_its_sprites_as_references() {
+    let bindings = crate::support::animated_bindings();
+    assert_eq!(
+        bindings.sprite_references().collect::<Vec<_>>(),
+        ["sheet.png#0", "sheet.png#1", "sheet.png#2", "sheet.png#3"]
+    );
+}

@@ -111,7 +111,14 @@ pub(super) fn script_exports_section(
         if export.type_name.as_deref() == Some("Profile") {
             // An export's name is unique within its script, so it is both
             // the label and what identifies the picker.
-            super::super::field::asset_row(ui, &export.name, &export.name, &mut value, profiles);
+            super::super::field::asset_row(
+                ui,
+                &export.name,
+                &export.name,
+                &mut value,
+                profiles,
+                0.0,
+            );
         } else {
             value_row(
                 ui,

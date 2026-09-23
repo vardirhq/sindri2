@@ -55,7 +55,7 @@ pub(super) fn grid_coord_row(ui: &mut egui::Ui, label: &str, value: &mut Value) 
         items[1].as_i64().unwrap_or_default() as f64,
     ];
     let labels = ["X".to_owned(), "Y".to_owned()];
-    if !numbers_row(ui, label, &labels, &mut numbers, 10.0) {
+    if !numbers_row(ui, label, &labels, &mut numbers, 10.0, false) {
         return false;
     }
     *value = serde_json::json!([numbers[0].round() as i64, numbers[1].round() as i64]);

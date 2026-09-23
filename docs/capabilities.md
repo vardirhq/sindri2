@@ -984,8 +984,16 @@ frame.
   staying typeable — spelled the way the open scene resolves it, which is not
   the path from the project root whenever a project keeps its scene under
   `assets/`, and a reference the loader could never reach is offered nowhere
-  rather than under a path that will not load — a tint opens a colour picker,
-  and a row that is only a readout says on hover why it is one
+  rather than under a path that will not load, and the texture list includes
+  every sprite cut from a loaded sheet (`blocks.png#stone-0`), so a sprite, mesh,
+  or voxel face naming one is no longer marked missing — a tint opens a colour
+  picker, with three channels or four, a declared range (`FieldMeaning::Range`)
+  is a control that cannot leave it, a fixed set of whole numbers
+  (`FieldMeaning::OneOf`, such as a shadow map size) is a menu, whole-number
+  vectors drag in whole steps, and a row that is only a readout says on hover
+  why it is one. `sindri.environment` and `sindri.voxel_world` declare every
+  colour, range, choice, and texture they hold, with a test that each declared
+  range is one validation accepts
 - **Switching an entity off without deleting it.** Off means it takes no part
   in the scene — not drawn, not stepped, not scripted, not picked — and neither
   does anything under it, while it stays in the world and in the file. An Active

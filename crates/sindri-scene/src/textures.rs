@@ -118,6 +118,21 @@ impl TextureBindings {
         Ok(())
     }
 
+    /// Every sprite a bound sheet names, as the `texture#sprite` reference a
+    /// component writes to draw it, sorted by texture and then by sprite.
+    ///
+    /// What a picker offers beside the project's whole textures: a sprite,
+    /// mesh, or voxel face naming one cell of a sheet is as valid a reference
+    /// as one naming the whole image, and a picker that listed only files
+    /// marked every one of them as missing.
+    pub fn sprite_references(&self) -> impl Iterator<Item = String> + '_ {
+        self.sheets.iter().flat_map(|(texture, sprites)| {
+            sprites
+                .keys()
+                .map(move |sprite| format!("{texture}#{sprite}"))
+        })
+    }
+
     /// Forgets how `texture` is cut, leaving its sprites unresolved.
     pub fn unbind_sheet(&mut self, texture: &str) {
         self.generation = crate::generation::next();

@@ -201,7 +201,11 @@ section in `editor-architecture.md` changes in the same commit.
 Dependency order, cheapest unlock first.
 
 **Status:** items 1 and 2 are done for Environment and Voxel World, with the
-error banner moved clear of the status bar and wrapped. Other components still
+error banner moved clear of the status bar and wrapped. Item 3 is done for
+ranges, three-channel colour, numeric choice, texture and sprite pickers, and
+whole-number vectors, with Environment and Voxel World declaring their
+meanings; Angle, Mask and Entity controls, sprite thumbnails, template field
+order, and Camera Behaviour's meanings remain. Other components still
 fail the frame when invalid; they adopt the same tolerance as they are reached.
 
 1. **Stop the freeze.** Per-component extraction diagnostics and fallback
