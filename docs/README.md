@@ -57,6 +57,7 @@ valuable explanations of how bugs escaped code review, but
 
 - [Initial editor audit](editor-audit.md)
 - [Editor authoring audit](editor-authoring-audit.md)
+- [Editor usability audit](editor-usability-audit.md)
 - [Taking the editor to Gather](editor-meets-the-game.md)
 
 ## Decay
