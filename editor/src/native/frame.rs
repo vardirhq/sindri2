@@ -76,6 +76,13 @@ impl eframe::App for EditorApp {
             self.handle_shortcuts(ui.ctx());
         }
         self.render_error = None;
+        // What is wrong is found again every frame, so it stops being reported
+        // the frame it is fixed. A failed action stays wrong until the next
+        // action clears its notice.
+        self.console.begin_frame();
+        if let Some(notice) = self.notice.clone() {
+            self.console.problem(notice, None);
+        }
         // Order is the arrangement. Docked furniture claims its rows before the
         // workspace divides what is left, so the bars go first. Floating
         // furniture is drawn over a scene that has already taken the whole

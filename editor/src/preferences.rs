@@ -21,6 +21,8 @@ const KEY: &str = "sindri.editor.preferences";
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ConsoleFilter {
+    /// What is wrong right now, rather than what the log remembers.
+    Now,
     /// Everything the editor said.
     #[default]
     All,
@@ -34,7 +36,7 @@ impl ConsoleFilter {
     /// The lowest level this shows.
     pub const fn floor(self) -> crate::console::Level {
         match self {
-            Self::All => crate::console::Level::Info,
+            Self::Now | Self::All => crate::console::Level::Info,
             Self::Problems => crate::console::Level::Warning,
             Self::Errors => crate::console::Level::Error,
         }
