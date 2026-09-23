@@ -200,6 +200,19 @@
           ],
           "intensity": 0.85
         },
+        "fog": {
+          "color": [
+            0.55,
+            0.65,
+            0.75
+          ],
+          "density": 0.0,
+          "distance": 64.0,
+          "enabled": false,
+          "height": 0.0,
+          "height_falloff": 0.0,
+          "start": 24.0
+        },
         "post_process": {
           "contrast": 1.0,
           "exposure": 0.0,
@@ -251,6 +264,19 @@
             -0.35
           ],
           "intensity": 0.85
+        },
+        "fog": {
+          "color": [
+            0.55,
+            0.65,
+            0.75
+          ],
+          "density": 0.0,
+          "distance": 64.0,
+          "enabled": false,
+          "height": 0.0,
+          "height_falloff": 0.0,
+          "start": 24.0
         },
         "post_process": {
           "contrast": 1.0,
