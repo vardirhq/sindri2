@@ -150,6 +150,23 @@ impl EditorApp {
             {
                 self.focus_selection();
             }
+            // Lit while the view shows the scene's own lighting, as Unity's
+            // Scene view lighting toggle is.
+            let scene_lit = !self.preferences.studio_lighting;
+            if button::icon(
+                ui,
+                icons::SCENE_LIGHTING,
+                scene_lit,
+                if scene_lit {
+                    "Scene lighting is on: the view is lit as the game is. Turn it off to light the view evenly while you work"
+                } else {
+                    "Scene lighting is off: the view is lit evenly by the editor. The Game view still shows the scene's own lighting"
+                },
+            )
+            .clicked()
+            {
+                self.preferences.studio_lighting = scene_lit;
+            }
         });
     }
 

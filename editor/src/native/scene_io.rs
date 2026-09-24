@@ -25,6 +25,9 @@ pub(super) struct SceneSource<'a> {
     pub(super) animations: &'a SpriteAnimations,
     pub(super) effects: &'a sindri_scene::Effects2d,
     pub(super) textures: &'a SceneTextures,
+    /// Whether the view is lit by the editor rather than by the scene: the
+    /// Scene view with its lighting toggled off.
+    pub(super) studio_lighting: bool,
 }
 
 /// Opens the scene a launch named.

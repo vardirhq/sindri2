@@ -97,6 +97,7 @@ pub const SCALE: MaterialIcon = icons::ICON_SCALE;
 pub const SNAP: MaterialIcon = icons::ICON_GRID_4X4;
 pub const RESET_VIEW: MaterialIcon = icons::ICON_CAMERA_ALT;
 pub const FOCUS: MaterialIcon = icons::ICON_CENTER_FOCUS_STRONG;
+pub const SCENE_LIGHTING: MaterialIcon = icons::ICON_LIGHTBULB;
 
 /// The icon a component type is drawn with, wherever it is named.
 ///
