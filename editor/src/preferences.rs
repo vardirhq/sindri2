@@ -120,6 +120,12 @@ pub struct Preferences {
     pub console_filter: ConsoleFilter,
     pub snapping: crate::gizmo::Snapping,
     pub projection: CameraProjection,
+    /// Whether the Scene view is lit by the editor instead of by the scene.
+    ///
+    /// Off by default, so the Scene view shows a scene lit the way it is. On
+    /// is for working in a scene that is dark on purpose; the Game view is lit
+    /// by the scene either way.
+    pub studio_lighting: bool,
     /// The scene file the editor last had open, reopened on the next launch.
     ///
     /// A path rather than anything richer, and one the editor is free to fail
@@ -208,6 +214,7 @@ mod tests {
                 scale: 0.5,
             },
             projection: CameraProjection::Orthographic,
+            studio_lighting: true,
             last_scene: Some("projects/level.scene.json".to_owned()),
             collapsed_hierarchy: BTreeSet::from(["projects/level.scene.json::player".to_owned()]),
             recent_projects: crate::project::RecentProjects::default(),
@@ -279,6 +286,7 @@ mod tests {
                 scale: 0.5,
             },
             projection: CameraProjection::Orthographic,
+            studio_lighting: true,
             last_scene: Some("projects/level.scene.json".to_owned()),
             collapsed_hierarchy: BTreeSet::new(),
             recent_projects: crate::project::RecentProjects::default(),

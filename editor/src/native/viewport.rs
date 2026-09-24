@@ -138,20 +138,14 @@ impl RuntimeViewport {
             .scene
             .environment(source.world)
             .map_err(|error| error.to_string())?;
-        // The sun is a light entity now; the extractor puts it together with
-        // the environment's ambient, tolerantly, as it does the environment.
-        renderers.cube.set_lighting(
-            source
-                .scene
-                .lighting(source.world)
-                .map_err(|error| error.to_string())?,
-        );
-        renderers.cube.set_shadows(
-            &self.render_state.device,
-            environment
-                .map(EnvironmentComponent::shadow_settings)
-                .unwrap_or_default(),
-        );
+        // The scene's sun and ambient, or the editor's own light when the
+        // Scene view has the scene's lighting switched off.
+        let (lighting, shadows) =
+            super::scene_lighting::lighting_for(source, camera, self.aspect(), environment)?;
+        renderers.cube.set_lighting(lighting);
+        renderers
+            .cube
+            .set_shadows(&self.render_state.device, shadows);
         renderers.cube.set_fog(
             environment
                 .map(EnvironmentComponent::fog_settings)
@@ -336,6 +330,7 @@ impl EditorApp {
                     animations: &self.animations,
                     effects: &self.effects,
                     textures: &self.textures,
+                    studio_lighting: editing && self.preferences.studio_lighting,
                 },
                 viewport_size,
                 camera,

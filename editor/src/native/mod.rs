@@ -69,6 +69,7 @@ mod project_panel;
 mod projection;
 mod runtime;
 mod scene_io;
+mod scene_lighting;
 mod scene_new;
 mod shortcuts;
 mod slicer_view;
