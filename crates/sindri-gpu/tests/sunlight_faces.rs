@@ -75,7 +75,12 @@ fn floor_brightness(direction: [f32; 3]) -> Option<u8> {
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Sindri sunlight test encoder"),
         });
-    encode_clear(&mut encoder, target.view(), &depth, ClearOperations::default());
+    encode_clear(
+        &mut encoder,
+        target.view(),
+        &depth,
+        ClearOperations::default(),
+    );
     cube.encode_mesh(
         DrawContext {
             device: &gpu.device,
@@ -93,7 +98,9 @@ fn floor_brightness(direction: [f32; 3]) -> Option<u8> {
         .copy_to_buffer(&gpu.device, &mut encoder)
         .expect("the target copies back");
     gpu.queue.submit([encoder.finish()]);
-    let pixels = readback.read_rgba8(&gpu.device).expect("the frame reads back");
+    let pixels = readback
+        .read_rgba8(&gpu.device)
+        .expect("the frame reads back");
     let middle = ((SIZE / 2) * SIZE + SIZE / 2) as usize * 4;
     Some(pixels[middle])
 }
@@ -103,7 +110,10 @@ fn a_sun_shining_down_lights_the_top_of_the_floor() {
     let Some(brightness) = floor_brightness([0.0, -1.0, 0.0]) else {
         return;
     };
-    assert!(brightness > 200, "a floor under the sun is lit: {brightness}");
+    assert!(
+        brightness > 200,
+        "a floor under the sun is lit: {brightness}"
+    );
 }
 
 #[test]
@@ -111,5 +121,8 @@ fn a_sun_shining_up_leaves_the_top_of_the_floor_dark() {
     let Some(brightness) = floor_brightness([0.0, 1.0, 0.0]) else {
         return;
     };
-    assert!(brightness < 30, "a floor lit from below is dark on top: {brightness}");
+    assert!(
+        brightness < 30,
+        "a floor lit from below is dark on top: {brightness}"
+    );
 }
