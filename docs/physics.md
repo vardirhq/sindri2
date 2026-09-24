@@ -193,13 +193,26 @@ Synchronization rules are explicit:
   backend body/collider before the next step;
 - dynamic body: physics owns position/rotation while simulation runs and writes
   the resulting transform back after each fixed step;
+- any body whose transform was moved by something other than physics since the
+  last write-back (a script respawning the player, clamping it to the screen)
+  is moved to the new transform before the next step: a teleport, keeping its
+  velocity, as setting a Rigidbody2D's position does in Unity. A
+  position-kinematic body takes the move as its next target instead, so a
+  platform moved this way carries what stands on it;
 - kinematic-position body: gameplay/editor supplies the target transform before
   the fixed step; physics resolves contacts from that motion;
 - kinematic-velocity body: gameplay supplies velocity; physics owns the resulting
   transform for the step.
 
 Scale is not simulated. Collider dimensions are authored explicitly. Changing an
-entity's visual scale must not secretly mutate collision geometry.
+entity's visual scale must not secretly mutate collision geometry. The one
+exception is said out loud: a tilemap collider's rectangles are derived from
+where its tiles are drawn, so they follow the map's scale.
+
+Friction combines as the smaller of the two colliders' values, so a collider
+authored frictionless is frictionless against everything: a platformer's hero
+pressed into a wall slides down it rather than clinging with half the wall's
+friction. Two equal frictions combine to that value, as an average would.
 
 Parented dynamic rigid bodies are rejected initially. A physics body has a world
 pose while a child transform is parent-relative, and silently mixing those

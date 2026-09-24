@@ -14,12 +14,27 @@ most round trips, and what CI already fixes for you.
 ## Product direction
 
 Sindri Engine is a pre-alpha Rust game engine targeting native desktop and WebGPU
-browsers, with a native editor, the Decay gameplay language, and two games that
-prove it. The engine is developed vertically: runtime capability,
+browsers, with a native editor, the Decay gameplay language, and the games and
+examples that prove it. The engine is developed vertically: runtime capability,
 authoring, scripting, and a real game should evolve together where the feature
 applies.
 
-Two games serve two different purposes, and confusing them wastes both.
+Projects that prove the engine come in three kinds, and each has a stated role.
+More can be added; a new one says which kind it is and what it is for.
+
+- **Flagship games** are deep, and each has a purpose of its own, described
+  below: Causeway is the showcase, Orbital Last Stand the forcing function.
+- **Genre showcases** (`games/<genre>`) are small, complete games, one per
+  genre: the platformer first, then top-down, shooter, puzzle and others. Each
+  proves Sindri can make that kind of game, finds the gaps the genre hits, and
+  is what a new user copies to start their own. Keep one small: a level and a
+  few scripts, not a campaign.
+- **Feature examples** (`examples/<feature>`) show one bigger feature on its
+  own, such as the camera, audio, Weave, Decay, tilemaps, isometric or voxels,
+  small enough to read in a few minutes.
+
+Every project, of every kind, carries a test that opens it, compiles its
+scripts and plays a short scripted run to its goal, so none can rot unnoticed.
 
 **Causeway is the showcase.** It demonstrates capabilities the engine already
 has, in a real gameplay context. A unit test, component type, editor control,
@@ -56,11 +71,17 @@ as a *general* Sindri capability, never as something shaped around that game.
 A new gameplay capability is proven there first. See
 `docs/orbital-last-stand-plan.md`.
 
-So: a capability the engine already had is not complete until Causeway uses it;
+**The platformer is the first genre showcase.** A side-view game with a
+painted, solid level, a hero who runs and jumps, coins and a flag, in
+`games/platformer`. It is where the plain 2D path is proven: tilemap
+collision, scene gravity, collider authoring, camera follow and the 2D Scene
+view, and it finds gaps by being a platformer rather than a recreation.
+
+So: a capability the engine already had is not complete until a game uses it;
 a capability found by recreating a known game is proven in Orbital Last Stand;
-a capability found by making Causeway good is added for Causeway, generally
-rather than shaped around it. Say which of the three a change is, in its
-documentation.
+a capability found by making Causeway or a genre showcase good is added for
+it, generally rather than shaped around it. Say which of these a change is, in
+its documentation.
 
 ## Read before changing architecture
 
@@ -109,6 +130,7 @@ sindri-scene      -> sindri-core + sindri-grid + sindri-render + sindri-physics 
 sindri-decay      -> core + grid + physics + platform + scene + decay language crates
 editor            -> assets + core + decay + physics + platform + render + scene
 sindri-causeway   -> consumer of the engine; nothing depends on it
+games/*, examples/* -> consumers of the engine; nothing depends on them
 ```
 
 Important constraints:
@@ -151,9 +173,9 @@ When a capability changes, update the relevant documentation in the same commit:
 - `CHANGELOG.md` for user-visible behaviour.
 - `ROADMAP.md` only when an item's real acceptance criteria are complete.
 
-For gameplay capabilities, name the game that exercises them — Causeway for a
-capability that already existed, Orbital Last Stand for one being added — in the
-same feature track. A capability exercised by neither is not complete, and
+For gameplay capabilities, name the game that exercises them (Causeway or a
+genre showcase for a capability that already existed, Orbital Last Stand or
+the showcase that found it for one being added) in the same feature track. A capability exercised by neither is not complete, and
 saying so is better than an unqualified checkmark.
 
 ## Working method

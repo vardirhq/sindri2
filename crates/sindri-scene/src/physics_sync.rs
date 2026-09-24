@@ -28,6 +28,11 @@ use crate::tilemap_collision::{TilemapCollider2dComponent, TilemapCollisionError
 #[cfg(test)]
 mod tests;
 
+/// How far a transform may drift from where physics last put it, in units or
+/// radians, before it counts as moved by something else. Above the rounding a
+/// write-back can introduce, far below any move a script means.
+const MOVED: f32 = 1.0e-4;
+
 #[derive(Debug, Error)]
 pub enum PhysicsSyncError {
     #[error("a fixed step cannot be {0:?} long")]
@@ -53,6 +58,14 @@ pub struct ScenePhysics2d {
     /// every body every step would throw away the velocity the simulation just
     /// computed, which is the whole state physics owns.
     registered: BTreeMap<EntityId, Authored>,
+    /// Where each body's transform said it was when physics last agreed with
+    /// it: at registration, and after each write-back.
+    ///
+    /// A transform that no longer says this was moved by something other than
+    /// physics, a script respawning the player or clamping it to the screen,
+    /// and the body is moved to match rather than the move being overwritten
+    /// by the next write-back.
+    agreed: BTreeMap<EntityId, PhysicsPose2d>,
     events: Vec<PhysicsEvent2d>,
     /// What the host asked for, which a scene naming no gravity of its own
     /// keeps.
@@ -81,6 +94,7 @@ impl ScenePhysics2d {
         Ok(Self {
             world: PhysicsWorld2d::new(gravity)?,
             registered: BTreeMap::new(),
+            agreed: BTreeMap::new(),
             events: Vec::new(),
             host_gravity: gravity,
         })
@@ -178,8 +192,12 @@ impl ScenePhysics2d {
             match self.registered.get(&entity) {
                 // Unchanged: leave the body alone. Rebuilding it would discard
                 // the velocity and contacts the simulation owns, which is every
-                // frame's worth of physics.
-                Some(previous) if *previous == authored => continue,
+                // frame's worth of physics. Unless its transform was moved by
+                // something else, which moves the body with it.
+                Some(previous) if *previous == authored => {
+                    self.follow_transform(world, entity, authored.body)?;
+                    continue;
+                }
                 Some(_) => {
                     self.world.remove(entity);
                 }
@@ -201,6 +219,7 @@ impl ScenePhysics2d {
             match outcome {
                 Ok(()) => {
                     self.registered.insert(entity, authored);
+                    self.agreed.insert(entity, pose);
                 }
                 // A body the backend refuses is reported once and skipped, not
                 // retried every step: an invalid collider would otherwise fill
@@ -224,6 +243,28 @@ impl ScenePhysics2d {
         for entity in gone {
             self.world.remove(entity);
             self.registered.remove(&entity);
+            self.agreed.remove(&entity);
+        }
+        Ok(())
+    }
+
+    /// Moves a registered body to where its transform now is, when something
+    /// other than physics moved the transform since they last agreed.
+    fn follow_transform(
+        &mut self,
+        world: &World,
+        entity: EntityId,
+        body: Option<RigidBody2d>,
+    ) -> Result<(), PhysicsSyncError> {
+        let now = pose_of(world, entity, body);
+        let moved = self.agreed.get(&entity).is_none_or(|agreed| {
+            (agreed.position[0] - now.position[0]).abs() > MOVED
+                || (agreed.position[1] - now.position[1]).abs() > MOVED
+                || (agreed.rotation - now.rotation).abs() > MOVED
+        });
+        if moved {
+            self.world.move_to(entity, now)?;
+            self.agreed.insert(entity, now);
         }
         Ok(())
     }
@@ -259,6 +300,17 @@ impl ScenePhysics2d {
             // and physics is a write path like any other.
             if !transform.z_lock_rejects(data.transform_3d) {
                 data.transform_3d = Some(transform);
+            }
+            // Whatever the transform holds now is what physics agrees with,
+            // including a write the lock refused.
+            if let Some(held) = data.transform_3d {
+                self.agreed.insert(
+                    *entity,
+                    PhysicsPose2d {
+                        position: held.position_2d(),
+                        rotation: held.rotation_z_radians(),
+                    },
+                );
             }
         }
     }

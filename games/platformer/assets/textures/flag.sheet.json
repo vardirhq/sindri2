@@ -1,0 +1,12 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 2,
+    "rows": 1,
+    "names": [
+      "wave-0",
+      "wave-1"
+    ]
+  }
+}

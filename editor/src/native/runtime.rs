@@ -309,6 +309,9 @@ impl EditorApp {
         if let Err(error) = self.animations.advance(&self.world, components, delta) {
             self.console.error(format!("Sprite animation: {error}"));
         }
+        // After the scripts, so a camera following the player follows where
+        // this step left it.
+        sindri_scene::update_camera_behaviors(&mut self.world, delta);
 
         for message in report.printed {
             // Named by entity, because "moving" is not something an author can

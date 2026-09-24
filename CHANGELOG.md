@@ -1,5 +1,9 @@
 # Changelog
 
+- A platformer showcase: `games/platformer`, a small side-view game with a painted, solid level, a hero who runs and jumps, coins, a flag and a camera that follows. It is the first of a set of genre showcases, and is playable in the editor and on the site.
+- Moving a physics body's transform from a script now moves the body, as it does in Unity, instead of the next physics step putting it back. A respawn or an edge clamp written as a position now works; a position-kinematic body treats the move as its next target, so a platform moved this way carries what stands on it.
+- A frictionless collider is now frictionless against everything: friction combines as the smaller of the two rather than their average, so a platformer's hero pressed into a wall slides down it instead of clinging. Two equal frictions combine as before.
+- Camera follow, confinement and shake now run in the editor's Play and in exported browser games, not only in the camera example.
 - Tilemaps can be solid. Add a Tilemap Collider 2D beside a Tilemap and every painted tile collides, merged into as few boxes as cover them so characters don't catch on tile seams; list sprites as passable for decoration. A scene can set its own gravity with a Physics 2D World component, so a platformer falls in the editor's Play as it will in its build.
 - The Scene view shows collision. Every collider is outlined in green, a tilemap's generated boxes included, and the selected collider has handles: drag a box's edge, a circle's radius or a capsule's height to size it, as one undoable step.
 - The Scene view has a 2D mode beside Perspective and Ortho: straight onto the level, with no perspective, and dragging pans instead of orbiting. A scene whose camera is a flat 2D camera opens in it, framed on what that camera sees.

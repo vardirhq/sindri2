@@ -38,6 +38,10 @@ effect. A host advances it once per gameplay frame with
 `update_camera_behaviors`; extracting the same world twice never advances or
 changes camera state.
 
+Every host that runs gameplay advances it after the scripts, so the camera
+follows where that step left its target: the editor's Play, the browser host
+that runs exported games, the camera example and the platformer's test harness.
+
 ### Camera demo acceptance surface
 
 The first dedicated camera demo now lives in `examples/camera`. It is a shared

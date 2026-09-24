@@ -1,0 +1,132 @@
+// The hero: runs, jumps, picks up coins and reaches the flag.
+//
+// Standing is decided by the foot sensor, the small sensor box under the
+// capsule: it touches the ground and nothing else, so walls and ceilings never
+// count as floor. A jump is forgiving in the two ways players expect: pressed
+// a moment before landing it still happens (the buffer), and pressed a moment
+// after running off a ledge it still counts (coyote time).
+script Hero {
+    @export let speed: f32 = 6.5;
+    @export let jump_speed: f32 = 14.0;
+    @export let coyote: f32 = 0.1;
+    @export let buffer: f32 = 0.12;
+    @export let fall_limit: f32 = -3.0;
+    @export let spawn_x: f32 = 2.5;
+    @export let spawn_y: f32 = 4.0;
+
+    // Ground contacts the foot sensor is in, over every box it overlaps.
+    var ground: f32 = 0.0;
+    var since_ground: f32 = 1.0;
+    var since_press: f32 = 1.0;
+    var facing: f32 = 1.0;
+    // 0 idle, 1 run, 2 jump, 3 fall: which clip is showing.
+    var shown: f32 = 0.0;
+
+    fn start() {
+        Game.set("coins", 0.0);
+        Game.set("coins_total", World.with_tag("coin").len);
+        Game.set("won", 0.0);
+        Game.set("falls", 0.0);
+    }
+
+    fn update(dt: f32) {
+        touch();
+        if Game.get("won", 0.0) > 0.0 {
+            Physics.set_velocity(this.entity, 0.0, Physics.velocity_y(this.entity));
+            show(0.0);
+            return;
+        }
+        if this.transform.position.y < this.fall_limit {
+            respawn();
+            return;
+        }
+
+        let run = max(-1.0, min(1.0, Input.axis("A", "D") + Input.axis("ArrowLeft", "ArrowRight")));
+        if Input.just_pressed("Space") || Input.just_pressed("W") || Input.just_pressed("ArrowUp") {
+            this.since_press = 0.0;
+        } else {
+            this.since_press += dt;
+        }
+        if this.ground > 0.0 {
+            this.since_ground = 0.0;
+        } else {
+            this.since_ground += dt;
+        }
+
+        var rise: f32 = Physics.velocity_y(this.entity);
+        if this.since_press <= this.buffer && this.since_ground <= this.coyote {
+            rise = this.jump_speed;
+            this.since_press = 1.0;
+            this.since_ground = 1.0;
+        }
+        // Letting go early cuts the rise short, so a tap is a hop.
+        let released = Input.just_released("Space") || Input.just_released("W") || Input.just_released("ArrowUp");
+        if released && rise > 0.0 {
+            rise = rise * 0.45;
+        }
+        Physics.set_velocity(this.entity, run * this.speed, rise);
+
+        if run != 0.0 {
+            this.facing = run;
+            if run > 0.0 {
+                this.transform.scale.x = 1.0;
+            } else {
+                this.transform.scale.x = -1.0;
+            }
+        }
+        if this.ground > 0.0 {
+            if run != 0.0 {
+                show(1.0);
+            } else {
+                show(0.0);
+            }
+        } else if rise > 0.0 {
+            show(2.0);
+        } else {
+            show(3.0);
+        }
+    }
+
+    // What the capsule and the foot sensor touched this step.
+    fn touch() {
+        for other in Physics.sensor_entered() {
+            if World.has_tag(other, "solid") {
+                this.ground += 1.0;
+            } else if World.has_tag(other, "coin") && World.exists(other) {
+                World.despawn(other);
+                Game.set("coins", Game.get("coins", 0.0) + 1.0);
+            } else if World.has_tag(other, "goal") {
+                Game.set("won", 1.0);
+            }
+        }
+        for other in Physics.sensor_exited() {
+            if World.has_tag(other, "solid") {
+                this.ground = max(0.0, this.ground - 1.0);
+            }
+        }
+    }
+
+    fn respawn() {
+        this.transform.position.x = this.spawn_x;
+        this.transform.position.y = this.spawn_y;
+        Physics.set_velocity(this.entity, 0.0, 0.0);
+        this.ground = 0.0;
+        Game.set("falls", Game.get("falls", 0.0) + 1.0);
+    }
+
+    fn show(state: f32) {
+        if state == this.shown {
+            return;
+        }
+        this.shown = state;
+        if state == 0.0 {
+            Animation.play(this.entity, "idle");
+        } else if state == 1.0 {
+            Animation.play(this.entity, "run");
+        } else if state == 2.0 {
+            Animation.play(this.entity, "jump");
+        } else {
+            Animation.play(this.entity, "fall");
+        }
+    }
+}

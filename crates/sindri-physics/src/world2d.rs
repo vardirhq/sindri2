@@ -370,6 +370,27 @@ impl PhysicsWorld2d {
         Ok(())
     }
 
+    /// Puts a body somewhere else, as a teleport rather than a movement: it
+    /// does not sweep through what lies between, and its velocity is kept.
+    ///
+    /// For a position-kinematic body the move is its next target instead, so
+    /// a platform moved this way carries what stands on it.
+    pub fn move_to(&mut self, entity: EntityId, pose: PhysicsPose2d) -> Result<(), PhysicsError> {
+        validate_pose2d(pose)?;
+        let record = self.record(entity)?.clone();
+        let target = r2::Pose::new(
+            r2::Vector::new(pose.position[0], pose.position[1]),
+            pose.rotation,
+        );
+        let body = &mut self.backend.bodies[record.body];
+        if record.kind == RigidBodyKind::KinematicPosition {
+            body.set_next_kinematic_position(target);
+        } else {
+            body.set_position(target, true);
+        }
+        Ok(())
+    }
+
     /// Advances exactly one engine fixed step and returns normalized Sindri
     /// collision/sensor events generated during that step.
     pub fn step(&mut self, delta: Duration) -> Result<Vec<PhysicsEvent2d>, PhysicsError> {
@@ -480,6 +501,12 @@ fn collider_builder(entity: EntityId, collider: Collider2d) -> r2::ColliderBuild
         .active_collision_types(r2::ActiveCollisionTypes::all())
         .active_events(r2::ActiveEvents::COLLISION_EVENTS)
         .friction(collider.friction)
+        // The smaller of the two frictions, so a frictionless collider is
+        // frictionless against everything: a platformer's hero pressed into a
+        // wall slides down it rather than clinging. Averaging, the backend's
+        // default, would give it half the wall's friction. Two equal
+        // frictions combine to the same value either way.
+        .friction_combine_rule(r2::CoefficientCombineRule::Min)
         .restitution(collider.restitution)
         .user_data(u128::from(entity.to_bits()))
 }

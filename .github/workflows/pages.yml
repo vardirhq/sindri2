@@ -63,7 +63,8 @@ jobs:
             "games/orbital-last-stand:orbital-last-stand" \
             "games/orbital-baked:orbital-baked" \
             "games/graphics-lab:graphics-lab" \
-            "games/weave-poc:weave-poc"; do
+            "games/weave-poc:weave-poc" \
+            "games/platformer:platformer"; do
             src="${project%%:*}"
             route="${project##*:}"
             # The commit is the build id: it versions the host's URL, so a
@@ -106,7 +107,7 @@ jobs:
           CHECK
           test -f target/pages/docs/scripting/index.html
           test -f target/pages/docs/language/index.html
-          for route in causeway orbital-last-stand orbital-baked graphics-lab weave-poc; do
+          for route in causeway orbital-last-stand orbital-baked graphics-lab weave-poc platformer; do
             test -f "target/pages/examples/$route/index.html"
             test -f "target/pages/examples/$route/assets/sindri.manifest.json"
             test -f "target/pages/examples/$route/pkg/sindri_causeway.js"
@@ -124,6 +125,7 @@ jobs:
           grep -q 'player.sheet.json' target/pages/examples/orbital-baked/assets/sindri.manifest.json
           grep -q '"kind": "script"' target/pages/examples/graphics-lab/assets/sindri.manifest.json
           grep -q '"demo.weave"' target/pages/examples/weave-poc/assets/sindri.manifest.json
+          grep -q 'hero.sheet.json' target/pages/examples/platformer/assets/sindri.manifest.json
       - uses: actions/configure-pages@v6
         if: github.event_name != 'pull_request'
         with:

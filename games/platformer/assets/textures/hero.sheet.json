@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 8,
+    "rows": 1,
+    "names": [
+      "idle-0",
+      "idle-1",
+      "run-0",
+      "run-1",
+      "run-2",
+      "run-3",
+      "jump",
+      "fall"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 4,
+    "rows": 1,
+    "names": [
+      "coin-0",
+      "coin-1",
+      "coin-2",
+      "coin-3"
+    ]
+  }
+}
