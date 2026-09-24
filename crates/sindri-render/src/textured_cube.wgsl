@@ -60,7 +60,10 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     }
     let dx = dpdx(input.world_position);
     let dy = dpdy(input.world_position);
-    let normal = normalize(cross(dx, dy));
+    // A framebuffer's rows run downward, so screen-right crossed with
+    // screen-down points into the surface. Crossed the other way it points
+    // out of it, toward the viewer, which is the side the light has to reach.
+    let normal = normalize(cross(dy, dx));
     let light_direction = normalize(uniforms.directional_direction.xyz);
     let diffuse = max(dot(normal, -light_direction), 0.0);
     let ambient = uniforms.ambient.rgb * uniforms.ambient.a;
