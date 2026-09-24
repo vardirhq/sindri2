@@ -22,8 +22,8 @@ use super::{EditorApp, WorkspaceTab};
 #[cfg(test)]
 mod tests;
 
-const CAMERA_PICK_STATE: &str = "sindri-authored-camera-pick";
 const CAMERA_OVERLAY_LAYER: &str = "sindri-authored-camera-overlay";
+const CAMERA_PICK_STATE: &str = "sindri-authored-camera-pick";
 
 #[derive(Clone, Copy)]
 pub(super) struct EditorCamera {
@@ -83,6 +83,7 @@ pub(super) fn camera_for(tab: WorkspaceTab, editor: EditorCamera) -> CameraView 
             projection: match editor.projection {
                 CameraProjection::Perspective => WorldProjection::Perspective,
                 CameraProjection::Orthographic => WorldProjection::Orthographic,
+                CameraProjection::Flat => WorldProjection::Flat,
             },
         },
         WorkspaceTab::Game => CameraView::default(),
@@ -396,8 +397,10 @@ impl EditorApp {
         }
 
         let painter = context
+            // Background, so the floating panels stay over it; a layer of
+            // its own, which egui paints after the Scene view's.
             .layer_painter(LayerId::new(
-                Order::Foreground,
+                Order::Background,
                 egui::Id::new(CAMERA_OVERLAY_LAYER),
             ))
             .with_clip_rect(response.rect);
@@ -413,8 +416,14 @@ impl EditorApp {
     ) {
         if response.dragged() {
             let delta = response.drag_motion();
+            // A flat view has nothing to orbit: every drag that would turn
+            // the view moves it instead, as a 2D editor's does.
+            let flat = self.preferences.projection == CameraProjection::Flat;
             if response.dragged_by(egui::PointerButton::Middle)
                 || context.input(|input| input.modifiers.shift)
+                || (flat
+                    && (response.dragged_by(egui::PointerButton::Secondary)
+                        || (!painting && response.dragged_by(egui::PointerButton::Primary))))
             {
                 let height = height.max(1.0);
                 self.viewport_pan.x += delta.x * 2.0 / height;
@@ -475,12 +484,67 @@ impl EditorApp {
             || (self.viewport_zoom - 1.0).abs() > f32::EPSILON
     }
 
+    /// Opens a 2D scene the way it is played: flat, and framed on what its
+    /// camera frames.
+    ///
+    /// A scene is 2D when its camera is orthographic and looks straight down
+    /// -Z, as every sprite game's does. A scene that is not leaves a flat view
+    /// for the perspective one, because a flat view of a 3D world is a view of
+    /// nothing in particular.
+    pub(super) fn frame_scene_camera(&mut self) {
+        let flat_camera = flat_camera(&self.world, self.scene.components());
+        let Some((position, vertical_size)) = flat_camera else {
+            if self.preferences.projection == CameraProjection::Flat {
+                self.preferences.projection = CameraProjection::Perspective;
+            }
+            return;
+        };
+        self.preferences.projection = CameraProjection::Flat;
+        self.reset_view();
+        self.viewport_zoom = zoom_to_frame(vertical_size);
+        let Ok(Some(camera)) = self.scene.world_camera(&self.world, self.scene_camera()) else {
+            return;
+        };
+        self.viewport_pan = pan_to_centre(camera, self.viewport_pan, position);
+    }
+
     pub(super) fn reset_view(&mut self) {
         self.viewport_yaw = 0.0;
         self.viewport_pitch = 0.0;
         self.viewport_pan = GlamVec2::ZERO;
         self.viewport_zoom = 1.0;
     }
+}
+
+/// Where a 2D scene's camera is and how tall a slice of the world it frames:
+/// the first orthographic camera looking straight down -Z, if there is one.
+pub(super) fn flat_camera(
+    world: &sindri_core::World,
+    components: &sindri_core::ComponentSchemaRegistry,
+) -> Option<(Vec3, f32)> {
+    components
+        .query::<CameraComponent>(world)
+        .unwrap_or_default()
+        .into_iter()
+        .find_map(|(entity, camera)| {
+            let CameraComponent::Orthographic { vertical_size, .. } = camera else {
+                return None;
+            };
+            let transform = world.get(entity)?.transform_3d?;
+            let facing = safe_rotation(transform) * Vec3::NEG_Z;
+            (facing.dot(Vec3::NEG_Z) > 0.999)
+                .then(|| (Vec3::from_array(transform.position), vertical_size))
+        })
+}
+
+/// The Scene view's zoom at which it frames `vertical_size` world units top
+/// to bottom, as an orthographic camera of that size does.
+///
+/// The viewer frames a half height that shrinks as it zooms in, from what the
+/// unzoomed viewer camera frames.
+pub(super) fn zoom_to_frame(vertical_size: f32) -> f32 {
+    let unzoomed = Vec3::new(3.0, 2.0, 4.0).length() * 22.5_f32.to_radians().tan();
+    (unzoomed / (vertical_size / 2.0).max(f32::EPSILON)).clamp(MIN_ZOOM, MAX_ZOOM)
 }
 
 /// The middle of a set of points, or `None` for no points at all.

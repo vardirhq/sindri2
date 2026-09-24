@@ -141,6 +141,43 @@ An entity may not participate in both the 2D and 3D physics worlds at once.
 Validation reports that as an authored configuration error instead of choosing a
 world silently.
 
+### Tilemap collision
+
+`sindri.physics2d.tilemap_collider` makes the tilemap on the same entity solid,
+so a painted level collides where it was painted and a wall is repainted rather
+than re-placed:
+
+```jsonc
+"sindri.physics2d.tilemap_collider": {
+  "passable": ["grass-tuft", "vine"],   // palette sprites that do not collide
+  "layers": { "memberships": 1, "filter": 4294967295 },
+  "friction": 0.5,
+  "restitution": 0.0
+}
+```
+
+Every painted tile is solid unless its sprite is passable. The solid cells are
+merged, greedily in reading order, into rectangles that cover each once: a floor
+becomes one box, not one per tile, because a character sliding along separate
+boxes catches on the seams between them. The rectangles are ordinary collider
+pieces, scaled with the entity, and join any pieces an authored collider on the
+same entity has, so a tilemap on a kinematic body is a moving platform. Only an
+orthogonal map can be solid; an isometric map is a floor seen at an angle and is
+refused by name.
+
+### Gravity
+
+`sindri.physics2d.world` is the scene's say over the world as a whole:
+
+```jsonc
+"sindri.physics2d.world": { "gravity": [0.0, -9.81] }
+```
+
+A scene carries it rather than the host deciding, because a platformer falls and
+a game seen from above does not, and the editor's Play must run each the way its
+build will. One per scene, like the Environment. A scene without one keeps the
+gravity its host constructed `ScenePhysics2d` with.
+
 ## Transform ownership
 
 `Transform3D` remains the authored and visible transform for both dimensions.
@@ -227,8 +264,10 @@ checked command and undo/redo path. It must provide:
 - friction and restitution;
 - validation errors in the inspector rather than backend panics.
 
-The Scene view should draw simple collider gizmos before the Editor column earns
-✅. Merely serializing a collider or showing a dropdown remains partial.
+The Scene view draws every 2D collider's outline from the pieces the physics
+world is given, tilemap rectangles included, and the selected collider's pieces
+carry drag handles (a box's edges, a circle's radius, a capsule's radius and
+height), each drag one undo step. The 3D shapes have no gizmos yet.
 
 The editor never links against or imports Rapier types directly; it consumes the
 public `sindri-physics` model/schema.

@@ -272,3 +272,93 @@ fn a_segment_crossing_the_eye_is_cut_rather_than_mirrored() {
         "a segment entirely behind the eye is not drawn at all"
     );
 }
+
+/// A camera entity at `position`, turned by `rotation`, of this projection.
+fn world_with_camera(camera: serde_json::Value, rotation: Quat) -> sindri_core::World {
+    let mut world = sindri_core::World::default();
+    let mut entity = sindri_core::EntityData {
+        transform_3d: Some(Transform3D {
+            position: [10.0, -4.0, 10.0],
+            rotation: rotation.to_array(),
+            ..Transform3D::default()
+        }),
+        ..sindri_core::EntityData::default()
+    };
+    entity
+        .components
+        .insert(CameraComponent::TYPE_NAME.to_owned(), camera);
+    world.spawn(entity);
+    world
+}
+
+fn components() -> sindri_core::ComponentSchemaRegistry {
+    sindri_scene::SceneExtractor::new()
+        .expect("the builtin schemas register")
+        .components()
+        .clone()
+}
+
+/// A 2D scene is one whose camera is orthographic and looks straight at the
+/// level; it opens flat, framed where that camera is.
+#[test]
+fn an_orthographic_camera_facing_the_level_makes_a_scene_2d() {
+    let orthographic = serde_json::json!({
+        "projection": "orthographic", "vertical_size": 10.0, "near": 0.1, "far": 100.0
+    });
+    let world = world_with_camera(orthographic.clone(), Quat::IDENTITY);
+    let (position, size) = flat_camera(&world, &components()).expect("a 2D scene");
+    assert_eq!(position, Vec3::new(10.0, -4.0, 10.0));
+    assert!((size - 10.0).abs() < f32::EPSILON);
+
+    // Isometric: orthographic, but looking down at an angle.
+    let turned = Quat::from_rotation_x(-0.6) * Quat::from_rotation_y(0.7);
+    assert!(flat_camera(&world_with_camera(orthographic, turned), &components()).is_none());
+
+    let perspective = serde_json::json!({
+        "projection": "perspective", "vertical_fov_degrees": 60.0, "near": 0.1, "far": 100.0
+    });
+    assert!(
+        flat_camera(
+            &world_with_camera(perspective, Quat::IDENTITY),
+            &components()
+        )
+        .is_none()
+    );
+}
+
+/// Zooming to frame a camera's size is zooming until the flat view frames
+/// that many units top to bottom.
+#[test]
+fn the_flat_view_frames_what_the_camera_frames() {
+    let zoom = zoom_to_frame(10.0);
+    let view = camera_for(
+        WorkspaceTab::Scene,
+        EditorCamera {
+            orbit: GlamVec2::ZERO,
+            zoom,
+            pan: GlamVec2::ZERO,
+            projection: CameraProjection::Flat,
+        },
+    );
+    let camera = sindri_scene::SceneExtractor::new()
+        .unwrap()
+        .world_camera(&sindri_core::World::default(), view)
+        .unwrap()
+        .expect("the viewer camera");
+    assert!(
+        (camera.framed_half_height - 5.0).abs() < 1.0e-3,
+        "{}",
+        camera.framed_half_height
+    );
+    // Straight on: a point on the level stays where it is across the screen.
+    let left = camera
+        .view_projection
+        .project_point3(Vec3::new(-1.0, 0.0, 0.0));
+    let far_left = camera
+        .view_projection
+        .project_point3(Vec3::new(-1.0, 0.0, -50.0));
+    assert!(
+        (left.x - far_left.x).abs() < 1.0e-5,
+        "no perspective, no tilt"
+    );
+}

@@ -33,6 +33,7 @@ use crate::physics::{Collider2dComponent, RigidBody2dComponent};
 use crate::screen_ui::{
     UiAlign, UiDirection, UiJustify, UiLayoutComponent, UiSliderComponent, UiSliderOrientation,
 };
+use crate::tilemap_collision::TilemapCollider2dComponent;
 
 use super::SceneExtractError;
 
@@ -206,6 +207,11 @@ fn describe_gameplay(components: &mut ComponentSchemaRegistry) -> Result<(), Sce
         ),
         ("pieces[].layers.memberships", FieldMeaning::Mask),
         ("pieces[].layers.filter", FieldMeaning::Mask),
+    ])?;
+    components.describe::<TilemapCollider2dComponent>([
+        ("restitution", FieldMeaning::Range { min: 0.0, max: 1.0 }),
+        ("layers.memberships", FieldMeaning::Mask),
+        ("layers.filter", FieldMeaning::Mask),
     ])?;
     describe_shapes(components)?;
     describe_audio(components)?;

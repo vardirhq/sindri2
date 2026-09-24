@@ -17,6 +17,10 @@ pub enum WorldProjection {
     /// Use the independent viewer camera with an orthographic projection framed
     /// to match perspective, so toggling keeps the subject the same size.
     Orthographic,
+    /// The viewer camera looking straight at the XY plane, down -Z, without
+    /// perspective: how a 2D game is laid out. The orbit is ignored, because
+    /// a flat level seen at an angle is a level that cannot be placed on.
+    Flat,
 }
 
 /// A viewer's camera adjustment.

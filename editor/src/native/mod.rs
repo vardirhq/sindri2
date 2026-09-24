@@ -47,6 +47,7 @@ mod block_pointer;
 mod block_set_view;
 mod camera;
 mod chrome;
+mod collider_gizmo;
 mod console_view;
 mod device;
 mod dock_strip;

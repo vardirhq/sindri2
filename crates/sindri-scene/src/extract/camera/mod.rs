@@ -246,9 +246,9 @@ impl SceneExtractor {
 
         match view.projection {
             WorldProjection::Authored => self.resolve_authored_cameras(world, aspect),
-            WorldProjection::Perspective | WorldProjection::Orthographic => {
-                Ok(Self::resolve_viewer_cameras(aspect, view))
-            }
+            WorldProjection::Perspective
+            | WorldProjection::Orthographic
+            | WorldProjection::Flat => Ok(Self::resolve_viewer_cameras(aspect, view)),
         }
     }
 
@@ -258,7 +258,12 @@ impl SceneExtractor {
         // resolves a camera entity at all.
         let mut resolved = resolved_screen_overlay(aspect);
         let up = Vec3::Y;
-        let offset = orbited_offset(Vec3::new(3.0, 2.0, 4.0), up, view);
+        let base = Vec3::new(3.0, 2.0, 4.0);
+        let offset = if view.projection == WorldProjection::Flat {
+            Vec3::Z * base.length() * view.distance_scale
+        } else {
+            orbited_offset(base, up, view)
+        };
         let vertical_fov_radians = 45.0_f32.to_radians();
         let near = 0.1;
         let far = 1_000.0;
@@ -278,7 +283,7 @@ impl SceneExtractor {
             WorldProjection::Perspective => {
                 perspective_projection(vertical_fov_radians, aspect, near, far)
             }
-            WorldProjection::Orthographic => {
+            WorldProjection::Orthographic | WorldProjection::Flat => {
                 let half_width = half_height * aspect;
                 orthographic_projection(
                     -half_width,

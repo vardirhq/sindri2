@@ -21,7 +21,9 @@ use sindri_physics::{
 };
 use thiserror::Error;
 
-use crate::physics::{Collider2dComponent, RigidBody2dComponent};
+use crate::components::TilemapComponent;
+use crate::physics::{Collider2dComponent, PhysicsWorld2dComponent, RigidBody2dComponent};
+use crate::tilemap_collision::{TilemapCollider2dComponent, TilemapCollisionError};
 
 #[cfg(test)]
 mod tests;
@@ -34,6 +36,8 @@ pub enum PhysicsSyncError {
     Registry(#[from] ComponentRegistryError),
     #[error(transparent)]
     Physics(#[from] PhysicsError),
+    #[error(transparent)]
+    Tilemap(#[from] TilemapCollisionError),
 }
 
 /// The physics world a scene's authored bodies and colliders drive.
@@ -50,6 +54,9 @@ pub struct ScenePhysics2d {
     /// computed, which is the whole state physics owns.
     registered: BTreeMap<EntityId, Authored>,
     events: Vec<PhysicsEvent2d>,
+    /// What the host asked for, which a scene naming no gravity of its own
+    /// keeps.
+    host_gravity: [f32; 2],
 }
 
 /// What a scene said about one entity, as far as physics is concerned.
@@ -75,6 +82,7 @@ impl ScenePhysics2d {
             world: PhysicsWorld2d::new(gravity)?,
             registered: BTreeMap::new(),
             events: Vec::new(),
+            host_gravity: gravity,
         })
     }
 
@@ -122,6 +130,17 @@ impl ScenePhysics2d {
         if delta.is_zero() || !delta.as_secs_f32().is_finite() {
             return Err(PhysicsSyncError::BadStep(delta));
         }
+        let gravity = components
+            .query::<PhysicsWorld2dComponent>(world)?
+            .first()
+            .map_or(self.host_gravity, |(_, settings)| settings.gravity);
+        // Exact on purpose: this asks whether the authored value changed, and
+        // setting the same value again would be harmless anyway.
+        #[allow(clippy::float_cmp)]
+        let changed = gravity != self.world.gravity();
+        if changed {
+            self.world.set_gravity(gravity)?;
+        }
         self.synchronize(world, components)?;
         // Scripts may set velocity or connect two freshly spawned bodies before
         // either backend body exists. Synchronization above gave every authored
@@ -146,14 +165,14 @@ impl ScenePhysics2d {
         components: &ComponentSchemaRegistry,
     ) -> Result<(), PhysicsSyncError> {
         let mut live = BTreeSet::new();
-        for (entity, collider) in components.query::<Collider2dComponent>(world)? {
+        for (entity, collider) in collider_pieces(world, components)? {
             live.insert(entity);
             let body = components
                 .get::<RigidBody2dComponent>(world, entity)?
                 .map(|authored| authored.0);
             let authored = Authored {
                 body,
-                collider: collider.0.clone(),
+                collider,
                 kind: body.map_or(RigidBodyKind::Static, |body| body.kind),
             };
             match self.registered.get(&entity) {
@@ -245,12 +264,44 @@ impl ScenePhysics2d {
     }
 }
 
+/// Every entity's collider pieces: the ones authored as a collider, and the
+/// ones its tilemap's solid tiles make.
+///
+/// One list per entity because they are one object: a tilemap on a moving
+/// platform carries its tiles' collision with it. A tilemap with nothing
+/// solid painted yet has no pieces and is left out, rather than refused for
+/// being a collider with no shape.
+pub(crate) fn collider_pieces(
+    world: &World,
+    components: &ComponentSchemaRegistry,
+) -> Result<BTreeMap<EntityId, Vec<sindri_physics::Collider2d>>, PhysicsSyncError> {
+    let mut pieces: BTreeMap<EntityId, Vec<_>> = components
+        .query::<Collider2dComponent>(world)?
+        .into_iter()
+        .map(|(entity, collider)| (entity, collider.0))
+        .collect();
+    for (entity, collider) in components.query::<TilemapCollider2dComponent>(world)? {
+        let tilemap = components
+            .get::<TilemapComponent>(world, entity)?
+            .ok_or(TilemapCollisionError::NoTilemap)?;
+        let scale = world
+            .get(entity)
+            .and_then(|data| data.transform_3d)
+            .map_or([1.0, 1.0], Transform3D::scale_2d);
+        let tiles = collider.pieces(&tilemap, scale)?;
+        if !tiles.is_empty() {
+            pieces.entry(entity).or_default().extend(tiles);
+        }
+    }
+    Ok(pieces)
+}
+
 /// Where an entity is, for physics to start from.
 ///
 /// The transform, because that is where a position is written down. A body
 /// component's pose is where physics writes its answer, and treating it as a
 /// second authored truth is how the two drift.
-fn pose_of(world: &World, entity: EntityId, body: Option<RigidBody2d>) -> PhysicsPose2d {
+pub(crate) fn pose_of(world: &World, entity: EntityId, body: Option<RigidBody2d>) -> PhysicsPose2d {
     world
         .get(entity)
         .and_then(|data| data.transform_3d)

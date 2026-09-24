@@ -180,6 +180,16 @@ const KNOWN: &[Known] = &[
         icon: icons::COLLIDER,
     },
     Known {
+        type_name: "sindri.physics2d.tilemap_collider",
+        family: Family::Physics,
+        icon: icons::COLLIDER,
+    },
+    Known {
+        type_name: "sindri.physics2d.world",
+        family: Family::Physics,
+        icon: icons::PHYSICS,
+    },
+    Known {
         type_name: "sindri.grid.navigation",
         family: Family::Grid,
         icon: icons::GRID,

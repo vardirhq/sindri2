@@ -64,6 +64,29 @@ impl SceneComponent for Collider2dComponent {
     const TYPE_NAME: &'static str = "sindri.physics2d.collider";
 }
 
+/// How the scene's 2D physics world behaves as a whole: for now, which way
+/// is down and how hard things fall.
+///
+/// A scene carries it rather than the host deciding, because it is a fact
+/// about the game: a platformer falls and a game seen from above does not,
+/// and the editor's Play has to run each the way its build will. One per
+/// scene, like the Environment; a scene without one keeps its host's gravity.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+pub struct PhysicsWorld2dComponent {
+    /// Units per second squared. Straight down at Earth's pull by default,
+    /// taking one unit as a metre.
+    #[serde(default = "earth_gravity")]
+    pub gravity: [f32; 2],
+}
+
+const fn earth_gravity() -> [f32; 2] {
+    [0.0, -9.81]
+}
+
+impl SceneComponent for PhysicsWorld2dComponent {
+    const TYPE_NAME: &'static str = "sindri.physics2d.world";
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;

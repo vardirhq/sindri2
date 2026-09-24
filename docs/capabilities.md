@@ -169,6 +169,15 @@ shape of the later 3D slice, but no 3D runtime behavior is claimed yet.
 scene components with defaults the engine accepts, so a scene authors bodies and
 colliders and the editor's generic component inspector adds and edits them.
 
+`sindri.physics2d.tilemap_collider` makes the orthogonal tilemap on the same
+entity solid: every painted tile collides unless its palette sprite is listed as
+`passable`. Solid cells are merged into as few rectangles as cover them, so a
+floor is one box and a character cannot catch on the seams between tiles; the
+rectangles follow the entity's scale, and join any collider pieces the entity
+also carries. An isometric map is refused by name. `sindri.physics2d.world`
+carries the scene's gravity (straight down at 9.81 by default); a scene without
+one keeps its host's, which for the editor and both Orbital games is none.
+
 `ScenePhysics2d` is what joins the two halves. It builds the simulation from
 those components, keeps it in step as entities are spawned, switched off, and
 despawned — a body outliving its entity would collide on behalf of nothing — and
@@ -179,9 +188,13 @@ velocity and contacts the simulation owns. Editor Play and the game session both
 step it once per fixed update, before scripts run, so a script observes the
 events of the step that just happened.
 
-What the editor does not have is physics-specific viewport authoring: no
-collider outline and no handles for a shape. The generic inspector does expose
-the body and collider payloads — a compound's pieces are added, removed,
+The Scene view draws every collider's outline, from the very pieces the physics
+world is given (a tilemap's merged rectangles included), brighter for the
+selected entity and fainter for static geometry. The selected collider's pieces
+carry handles: a box's four edges, a circle's radius, a capsule's radius and
+height. Dragging an edge keeps the opposite edge where it was, along the piece's
+own rotated axis, and a whole drag is one undo step. The generic inspector
+also exposes the body and collider payloads — a compound's pieces are added, removed,
 reordered, and edited down to each piece's shape, though no game in this
 repository authors a compound yet — and editor Play steps them through the same
 fixed-update path as a build. `games/orbital-last-stand` is the end-to-end proof:
@@ -1127,7 +1140,11 @@ frame.
 - An axis indicator in the scene view's corner drawn from the same camera view
   the frame under it was drawn through, foreshortening and reordering its arms
   as the camera turns
-- Perspective and orthographic toggle
+- Perspective, orthographic and **2D** toggle. 2D looks straight at the XY
+  plane without perspective, and any drag that would orbit pans instead. A
+  scene whose camera is orthographic and faces straight down -Z opens in 2D,
+  framed on what that camera frames; a scene that is not leaves 2D for
+  perspective
 - Scene-view click selection for world sprites, filled tilemap cells, and
   meshes. It inverts the exact camera used to draw the frame, uses the
   renderer's unit quad and cube dimensions, resolves transparent overlaps by

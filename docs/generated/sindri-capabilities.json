@@ -658,6 +658,62 @@
     {
       "addable": true,
       "default_payload": {
+        "friction": 0.5,
+        "layers": {
+          "filter": 4294967295,
+          "memberships": 4294967295
+        },
+        "passable": [],
+        "restitution": 0.0
+      },
+      "display_name": "Tilemap Collider 2D",
+      "fields": {
+        "friction": 0.5,
+        "layers": {
+          "filter": 4294967295,
+          "memberships": 4294967295
+        },
+        "passable": [],
+        "restitution": 0.0
+      },
+      "meanings": {
+        "layers.filter": {
+          "kind": "mask"
+        },
+        "layers.memberships": {
+          "kind": "mask"
+        },
+        "restitution": {
+          "kind": "range",
+          "max": 1.0,
+          "min": 0.0
+        }
+      },
+      "schema_version": 1,
+      "type_name": "sindri.physics2d.tilemap_collider"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "gravity": [
+          0.0,
+          -9.81
+        ]
+      },
+      "display_name": "Physics 2D World",
+      "fields": {
+        "gravity": [
+          0.0,
+          -9.81
+        ]
+      },
+      "meanings": {},
+      "schema_version": 1,
+      "type_name": "sindri.physics2d.world"
+    },
+    {
+      "addable": true,
+      "default_payload": {
         "blend": "over",
         "corner_radius": 0.0,
         "count": 6.0,

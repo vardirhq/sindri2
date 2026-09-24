@@ -18,8 +18,8 @@ use crate::ui::theme::color;
 use super::EditorApp;
 use super::projection::{distance_to_segment, project_point, project_segment};
 
-const LIGHT_PICK_STATE: &str = "sindri-light-pick";
 const LIGHT_OVERLAY_LAYER: &str = "sindri-light-overlay";
+const LIGHT_PICK_STATE: &str = "sindri-light-pick";
 
 /// The disc's radius, in points, and how far its rays reach past it.
 const SUN_RADIUS: f32 = 6.0;
@@ -189,8 +189,10 @@ impl EditorApp {
             context.data_mut(|data| data.insert_temp(pick_state, Some(entity)));
         }
         let painter = context
+            // Background, so the floating panels stay over it; a layer of
+            // its own, which egui paints after the Scene view's.
             .layer_painter(LayerId::new(
-                Order::Foreground,
+                Order::Background,
                 egui::Id::new(LIGHT_OVERLAY_LAYER),
             ))
             .with_clip_rect(response.rect);

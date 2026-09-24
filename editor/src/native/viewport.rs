@@ -408,16 +408,19 @@ impl EditorApp {
         let volume_painting = editing && self.tile_volume_tool.brush().is_some();
         let painting = volume_painting || (editing && self.tilemap_tool.brush().is_some());
         let camera_before_input = self.scene_camera();
+        let collider_owned = editing && self.collider_overlay(context, response, painting);
         let gizmo_owned = editing
             && !painting
+            && !collider_owned
             && self.gizmo_visual(rect, camera_before_input).is_some_and(
                 |(camera, anchoring, visual)| {
                     self.interact_gizmo(rect, response, camera, anchoring, &visual)
                 },
             );
         if editing {
-            self.move_camera(context, response, rect.height(), painting || gizmo_owned);
-            self.light_overlay(context, response, painting || gizmo_owned);
+            let owned = painting || gizmo_owned || collider_owned;
+            self.move_camera(context, response, rect.height(), owned);
+            self.light_overlay(context, response, owned);
         }
         let camera = if editing {
             self.scene_camera()

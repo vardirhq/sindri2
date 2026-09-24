@@ -10,6 +10,7 @@ mod effects;
 mod frustum;
 mod meanings;
 mod mesh;
+mod physics_registry;
 pub(crate) mod registry;
 mod shape;
 mod sprite;
