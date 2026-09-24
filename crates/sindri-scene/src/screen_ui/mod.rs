@@ -95,6 +95,30 @@ impl ScreenUi {
         Ok(())
     }
 
+    /// Lays the screen out from `drawn`, the world as it was drawn, for
+    /// [`Self::read`] to hit-test against until the next draw.
+    ///
+    /// For a host that styles its world only while drawing it: the steps in
+    /// between hit-test the geometry that was on screen, without styling the
+    /// world again for every one of them.
+    pub fn lay_out(
+        &mut self,
+        drawn: &World,
+        components: &ComponentSchemaRegistry,
+        extent: ScreenExtent,
+    ) -> Result<(), ComponentRegistryError> {
+        self.viewport_half = extent.half();
+        self.rects = Self::place(drawn, components, extent)?;
+        Ok(())
+    }
+
+    /// Reads the presses against the layout [`Self::lay_out`] last made,
+    /// writing what they did to `world`.
+    pub fn read(&mut self, world: &mut World, extent: ScreenExtent, presses: &Presses) {
+        self.viewport_half = extent.half();
+        self.read_presses(world, extent, presses);
+    }
+
     /// The element held down under the pointer, or being dragged: what a
     /// stylesheet's `:active` means.
     #[must_use]

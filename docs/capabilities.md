@@ -325,10 +325,13 @@ substitute through `var()` with fallbacks, so a theme's tokens live in one
 place. Media queries test orientation and minimum or maximum width and height,
 combined with `and`, commas and nesting. `:disabled` and `:checked` follow the
 entity's own component data everywhere. Every running host (the editor's
-Play, native games, browser exports) presents the world through a
-`sindri_weave::Presenter` each frame with the pointer's state, so `:hover`
-(which, as in CSS, also matches the hovered element's containers) and
-`:active` follow the pointer, and hit-testing uses the presented geometry.
+Play, native games, browser exports) styles through a
+`sindri_weave::Presenter`: a game's world is settled with the stylesheet's
+rules at start and on resize, and each frame only what the pointer's states
+and running transitions change is laid over it, in place, for the draw, and
+taken off again. So `:hover` (which, as in CSS, also matches the hovered
+element's containers) and `:active` follow the pointer, a script's own
+writes are not styled back, and hit-testing uses what was drawn.
 CSS `transition` eases colours, lengths and numbers between states with named
 or `cubic-bezier` easings, delays and `all`. The language workspace now has its own CI
 workflow. `docs/ui-direction.md` is the plan beyond this. Percentage sizing,

@@ -337,14 +337,21 @@ interrupted transition starts again from the value it had reached.
 
 ## Pointer states in the running game
 
-Every host presents the scene through Weave each frame with the pointer's
-state: the editor's Play, native games and browser exports. `:hover` matches
-the element under the pointer and every container it is inside, and `:active`
-matches the pressed element while the pointer stays on it (and a slider for
-as long as it is dragged), as in CSS. Hit-testing uses the presented geometry,
-so a button a media query moved or resized is clicked where it is drawn.
-`:disabled` and `:checked` come from the entity's own data. The authored scene
-is never changed by any of this.
+`:hover` and `:active` follow the pointer in the editor's Play, native games
+and browser exports. `:hover` matches the element under the pointer and every
+container it is inside, and `:active` matches the pressed element while the
+pointer stays on it (and a slider for as long as it is dragged), as in CSS.
+Hit-testing uses what was drawn, so a button a media query moved or resized
+is clicked where it is drawn. `:disabled` and `:checked` come from the
+entity's own data.
+
+A running game has two layers, as a page in a browser does. The stylesheet's
+rules are settled into the game's world when it starts and whenever the
+screen changes shape, so scripts read styled values, and a value a script
+then writes stays written, as an inline style beats a stylesheet. Each frame
+only what pointer states and running transitions change is laid over that for
+the draw, and taken off again before the scripts run; with nothing hovered
+and nothing easing, a frame does no styling work at all.
 
 ## Authoring guidance
 

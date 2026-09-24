@@ -18,12 +18,14 @@ mod presenter;
 mod shadow;
 mod transition;
 mod tree;
+mod undo;
 
 use computed::{ComputedStyle, Length};
 use tree::elements;
 
 pub use presenter::{Presenter, pointer_states};
 pub use transition::Transitions;
+pub use undo::Undo;
 
 /// What each element is doing right now: hovered, pressed, focused.
 ///
@@ -66,7 +68,7 @@ impl PresentationWorld {
         states: &UiStates,
     ) -> Result<Self, ApplyError> {
         let mut world = source.clone();
-        apply(&mut world, stylesheet, viewport, states, None)?;
+        apply(&mut world, stylesheet, viewport, states, Pass::default())?;
         Ok(Self { world })
     }
 
@@ -76,12 +78,30 @@ impl PresentationWorld {
     }
 }
 
+/// Each element's declarations as one stylesheet resolved them, keyed by
+/// entity: what a settled world was styled with.
+pub(crate) type Declared = BTreeMap<EntityId, BTreeMap<String, String>>;
+
+/// What a styling pass does besides writing the declarations.
+#[derive(Default)]
+pub(crate) struct Pass<'a> {
+    /// Eases values between passes, for one stylesheet by its index.
+    pub transitions: Option<(&'a mut Transitions, usize)>,
+    /// Saves what is about to change, so it can be put back.
+    pub undo: Option<&'a mut Undo>,
+    /// Records every element's declarations as what it was settled with.
+    pub record: Option<&'a mut Declared>,
+    /// Writes only what differs from what the world was settled with: the
+    /// overlay of pointer states and transitions on a settled world.
+    pub over: Option<&'a Declared>,
+}
+
 pub(crate) fn apply(
     world: &mut World,
     stylesheet: &Stylesheet,
     viewport: Viewport,
     states: &UiStates,
-    mut transitions: Option<(&mut Transitions, usize)>,
+    mut pass: Pass<'_>,
 ) -> Result<(), ApplyError> {
     let tree = elements(world, states);
     let mut computed: Vec<Computed> = Vec::with_capacity(tree.nodes.len());
@@ -94,8 +114,22 @@ pub(crate) fn apply(
             .collect();
         computed.push(style);
         let (entity, id) = (node.entity, node.id.as_str());
-        if let Some((transitions, sheet)) = transitions.as_mut() {
+        if let Some((transitions, sheet)) = pass.transitions.as_mut() {
             transitions.ease(*sheet, entity, &mut declarations);
+        }
+        if let Some(record) = pass.record.as_mut() {
+            record.insert(entity, declarations.clone());
+        }
+        if let Some(settled) = pass.over {
+            let base = settled.get(&entity);
+            declarations
+                .retain(|property, value| base.and_then(|base| base.get(property)) != Some(value));
+            if declarations.is_empty() {
+                continue;
+            }
+        }
+        if let Some(undo) = pass.undo.as_mut() {
+            undo.save(world, entity, !declarations.is_empty());
         }
         let applied = ComputedStyle::from_declarations(declarations);
 

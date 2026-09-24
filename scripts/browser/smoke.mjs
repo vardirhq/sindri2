@@ -212,6 +212,22 @@ await page.waitForTimeout(1500);
 await page.mouse.click(480, 270);
 await page.keyboard.press('KeyD');
 await page.waitForTimeout(2000);
+// A sound requested in that time may still be starting: `play()` settles once
+// the element has loaded and begun, and on a software renderer at two or three
+// frames a second that can land either side of any fixed moment. So wait for
+// every requested sound to settle and, if it played, to have moved -- bounded,
+// so one that never starts still fails, as it should.
+await page
+  .waitForFunction(
+    () =>
+      window.__plays.every(
+        (record) =>
+          record.settled !== 'pending' &&
+          (record.settled !== 'played' || (record.element && record.element.currentTime > 0)),
+      ),
+    { timeout: 15000 },
+  )
+  .catch(() => {});
 const audio = await page.evaluate(() =>
   window.__plays.map((record) => ({
     settled: record.settled,
