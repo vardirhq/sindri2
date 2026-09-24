@@ -30,6 +30,13 @@ pub(super) const TREE_REACH: i32 = 14;
 /// A ridge only undercuts where it is this much of a range.
 const OVERHANG_FROM: f32 = 0.2;
 
+/// How far into a wall an undercut reaches, in voxels.
+const UNDERCUT: i32 = 3;
+
+/// How thick a wall must be, across, before it is undercut: thick enough that
+/// undercuts from both faces leave rock between them.
+const UNDERCUT_WALL: i32 = 3 * UNDERCUT;
+
 /// Below this warmth a biome's trees are conifers.
 const CONIFER_BELOW: f32 = 0.35;
 
@@ -72,6 +79,11 @@ impl NaturalTerrain {
     /// Away from the ranges this is the heightmap. In them, a band around the
     /// surface is decided by a three-dimensional field instead, squashed
     /// vertically so it makes ledges and undercuts rather than blobs.
+    ///
+    /// The field only takes rock away from the side of a wall thick enough to
+    /// keep a core. Let it carve anywhere and a thin ridge, a few voxels
+    /// across, is undercut from both faces at once: it shows as a window
+    /// straight through the mountain with rock hanging over it.
     #[allow(clippy::cast_precision_loss)]
     fn solid(&self, column: &Column, coord: VoxelCoord) -> bool {
         let ground = column.shape.ground;
@@ -90,7 +102,38 @@ impl NaturalTerrain {
             coord.y as f32 / 7.0,
             coord.z as f32 / 14.0,
         );
-        -height / reach + (noise - 0.5) * 1.6 > 0.0
+        let filled = -height / reach + (noise - 0.5) * 1.6 > 0.0;
+        if filled || height > 0.0 {
+            return filled;
+        }
+        !self.undercuts(coord)
+    }
+
+    /// Whether a voxel of rock is in the side of a wall that may be undercut:
+    /// a few voxels in from one of its faces, in rock with some to spare
+    /// behind it whichever way across it is measured. The tip of a thin spur
+    /// is thick along the spur and thin across it, and cutting into it from
+    /// its end would cut it through.
+    fn undercuts(&self, coord: VoxelCoord) -> bool {
+        let across = self.across(coord);
+        across.iter().all(|(wall, _)| *wall >= UNDERCUT_WALL)
+            && across.iter().any(|(_, face)| *face < UNDERCUT)
+    }
+
+    /// The rock around a voxel along each horizontal axis: how thick the wall
+    /// it is in is, and how far in from the nearer face it is, as far as
+    /// either decides anything.
+    fn across(&self, coord: VoxelCoord) -> [(i32, i32); 2] {
+        let rock = |x, z| self.shape(x, z).ground >= coord.y;
+        let beyond = |dx: i32, dz: i32| {
+            (1..UNDERCUT_WALL)
+                .take_while(|step| rock(coord.x + dx * step, coord.z + dz * step))
+                .fold(0, |count, _| count + 1)
+        };
+        [(1, 0), (0, 1)].map(|(dx, dz)| {
+            let (ahead, behind) = (beyond(dx, dz), beyond(-dx, -dz));
+            (ahead + behind + 1, ahead.min(behind))
+        })
     }
 
     /// Air, water or a tree: whatever is in a voxel the ground does not fill.
@@ -118,7 +161,9 @@ impl NaturalTerrain {
     /// the rock rather than a bubble — and caverns deep down where a third is
     /// high. Never within a few voxels of the surface except in the ranges,
     /// where a tunnel breaking out is a cave mouth; never under shallow water,
-    /// where it would drain nothing and show as a hole in the sea bed.
+    /// where it would drain nothing and show as a hole in the sea bed; and
+    /// never through a wall too thin to hold one, where it would be a window
+    /// through a ridge rather than a way into the mountain.
     #[allow(clippy::cast_precision_loss)]
     fn cave(&self, column: &Column, coord: VoxelCoord) -> bool {
         let settings = &self.settings;
@@ -150,7 +195,10 @@ impl NaturalTerrain {
         if (field(TUNNEL_A, 22.0, 14.0) - 0.5).abs() < 0.045
             && (field(TUNNEL_B, 22.0, 14.0) - 0.5).abs() < 0.07
         {
-            return true;
+            return self
+                .across(coord)
+                .into_iter()
+                .all(|(wall, _)| wall >= UNDERCUT_WALL);
         }
         coord.y < settings.sea_level - 12 && field(CAVERN, 40.0, 22.0) > 0.74
     }

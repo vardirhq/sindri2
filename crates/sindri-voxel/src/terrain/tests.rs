@@ -270,3 +270,53 @@ fn a_world_without_biomes_is_stone() {
         STONE
     );
 }
+
+/// Whether a voxel is ground: not air, and not the sea.
+fn is_ground(terrain: &NaturalTerrain, x: i32, y: i32, z: i32) -> bool {
+    let voxel = terrain.voxel(VoxelCoord::new(x, y, z));
+    !voxel.is_air() && voxel != WATER
+}
+
+/// A mountain undercut from both sides at once, or a tunnel through a ridge,
+/// is a window you can see the sky through: a row of voxels straight across
+/// the rock with every one of them empty.
+#[test]
+fn mountains_are_undercut_but_not_cut_through() {
+    let terrain = terrain();
+    let (mut rows, mut through) = (0, 0);
+    for z in (-SPAN / 2..SPAN / 2).step_by(4) {
+        for y in (10..60).step_by(2) {
+            let mut x = -SPAN / 2;
+            while x < SPAN / 2 {
+                let start = x;
+                let mut open = true;
+                while x < SPAN / 2 && terrain.ground(x, z) >= y {
+                    open &= !is_ground(&terrain, x, y, z);
+                    x += 1;
+                }
+                if x > start && start > -SPAN / 2 && x < SPAN / 2 {
+                    rows += 1;
+                    through += i32::from(open);
+                }
+                x += 1;
+            }
+        }
+    }
+    let share = f64::from(through) / f64::from(rows);
+    assert!(rows > 1_000, "the rows cross mountains: {rows}");
+    assert!(share < 0.005, "{through} of {rows} rows see through");
+
+    // Caves hollow the rock too; without them, what is left is the overhangs.
+    let terrain = NaturalTerrain::new(NaturalTerrainSettings {
+        caves: false,
+        ..settings()
+    });
+    let undercut = columns()
+        .filter(|&(x, z)| {
+            let ground = terrain.ground(x, z);
+            (ground - 8..ground)
+                .any(|y| !is_ground(&terrain, x, y, z) && is_ground(&terrain, x, y + 1, z))
+        })
+        .count();
+    assert!(undercut > 10, "ranges still overhang: {undercut}");
+}
