@@ -58,6 +58,9 @@ pub struct Session {
     physics: ScenePhysics2d,
     /// Where the screen elements are and what the pointer is doing to them.
     screen_ui: ScreenUi,
+    /// What was last drawn, styled: where the pointer's clicks land. `None`
+    /// until a host presents a frame, and for a host that styles nothing.
+    presented: Option<World>,
     /// The run's random stream.
     ///
     /// A fixed seed, because the engine has no entropy to offer and will not
@@ -133,6 +136,7 @@ impl Session {
             animations: SpriteAnimations::new(),
             physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
             screen_ui: ScreenUi::default(),
+            presented: None,
             random: sindri_core::Rng::default(),
             saves: sindri_core::SaveStore::default(),
             effects: sindri_scene::Effects2d::default(),
@@ -303,12 +307,22 @@ impl Session {
         )?;
         // No safe area yet: reading a device's insets is the browser host's to
         // report, and it does not yet. The scene needs no change when it does.
-        self.screen_ui.update(
-            world,
-            &self.components,
-            ScreenExtent::new(viewport.0, viewport.1),
-            input.presses(),
-        )?;
+        // Hit-tested against what was drawn, styled, when the host presents
+        // through a stylesheet; a click belongs to where an element is shown.
+        let extent = ScreenExtent::new(viewport.0, viewport.1);
+        match &self.presented {
+            Some(presented) => self.screen_ui.update_presented(
+                presented,
+                world,
+                &self.components,
+                extent,
+                input.presses(),
+            )?,
+            None => {
+                self.screen_ui
+                    .update(world, &self.components, extent, input.presses())?;
+            }
+        }
         // Before the scripts, so a fleck thrown this frame is drawn where it
         // was thrown rather than one frame along.
         self.effects
@@ -449,6 +463,19 @@ impl Session {
             }
         }
         Ok(())
+    }
+
+    /// Hands the session what the host just drew, styled, for the next
+    /// step's hit-testing.
+    pub fn set_presented(&mut self, presented: World) {
+        self.presented = Some(presented);
+    }
+
+    /// The element under the pointer and the one held down, for the
+    /// stylesheet's `:hover` and `:active`.
+    #[must_use]
+    pub fn pointer(&self) -> (Option<sindri_core::EntityId>, Option<sindri_core::EntityId>) {
+        (self.screen_ui.hovered(), self.screen_ui.active())
     }
 
     #[must_use]

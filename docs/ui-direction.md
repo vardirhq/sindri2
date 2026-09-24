@@ -60,10 +60,11 @@ Each step is its own pull request. A step is checked here when it has landed.
    - [x] State pseudo-classes: `:disabled` and `:checked` from the entity's
      own data everywhere, and `:hover`, `:active`, `:focus` wherever a host
      passes input state in.
-   - [ ] A live presentation layer in every host (editor Play, native,
+   - [x] A live presentation layer in every host (editor Play, native,
      browser) that resolves each frame with pointer state and hit-tests the
      presented geometry, so `:hover` and `:active` work in the running game.
-   - [ ] `transition` and `@keyframes`.
+   - [x] `transition`.
+   - [ ] `@keyframes`.
    - [ ] The box model: margin, per-side padding, borders per side, shadows.
    - [ ] Flexbox complete: wrap, grow, shrink, basis, order, `align-self`,
      stretch; intrinsic `auto` sizing from content.

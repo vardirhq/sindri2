@@ -220,10 +220,9 @@ and named viewport presets are not integrated into the editor yet.
 ## Current limits
 
 Still smaller than browser CSS, and closing the gap is the plan in
-[`ui-direction.md`](ui-direction.md). It has no transitions, per-side padding,
+[`ui-direction.md`](ui-direction.md). It has no `@keyframes`, per-side padding,
 margin, flexible growth/shrink, wrapping, grid, accessibility mapping,
-integrated stylesheet editor, or named viewport presets, and the running hosts
-do not yet feed pointer state to `:hover` and `:active`.
+integrated stylesheet editor, or named viewport presets.
 The demo proves reusable classes, cascade behavior, responsive geometry,
 min/max constraints, uniform content padding, main/cross-axis alignment, font
 metrics, fills, strokes, rounded shapes, and composable stylesheet sources on

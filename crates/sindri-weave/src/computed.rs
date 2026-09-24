@@ -84,15 +84,25 @@ impl ComputedStyle {
     /// The declarations the cascade settled on, ready for the bridge to
     /// apply: custom properties are left behind, having done their work.
     #[must_use]
+    #[cfg(test)]
     pub(super) fn from_computed(computed: &weave::Computed) -> Self {
-        Self {
-            declarations: computed
+        Self::from_declarations(
+            computed
                 .declarations()
+                .map(|(property, value)| (property.to_owned(), value.to_owned()))
+                .collect(),
+        )
+    }
+
+    /// Declarations to apply, after any transition has eased them.
+    #[must_use]
+    pub(super) fn from_declarations(declarations: BTreeMap<String, String>) -> Self {
+        Self {
+            declarations: declarations
+                .into_iter()
                 .map(|(property, value)| {
-                    (
-                        property.to_owned(),
-                        ComputedDeclaration::new(property, value.to_owned()),
-                    )
+                    let computed = ComputedDeclaration::new(&property, value);
+                    (property, computed)
                 })
                 .collect(),
         }

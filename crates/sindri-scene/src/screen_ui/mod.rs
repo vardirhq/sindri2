@@ -70,6 +70,37 @@ impl ScreenUi {
         Ok(())
     }
 
+    /// Hit-tests `presented`, what is actually on screen, while writing
+    /// what the pointer does (a slider dragged) into `world`.
+    ///
+    /// For a host whose screen UI is styled: a stylesheet can move and resize
+    /// elements, and a click belongs to where an element is drawn, not where
+    /// the scene first put it. `presented` must be a styled copy of `world`,
+    /// with the same entities.
+    pub fn update_presented(
+        &mut self,
+        presented: &World,
+        world: &mut World,
+        components: &ComponentSchemaRegistry,
+        extent: ScreenExtent,
+        presses: &Presses,
+    ) -> Result<(), ComponentRegistryError> {
+        self.viewport_half = extent.half();
+        self.rects = Self::place(presented, components, extent)?;
+        self.read_presses(world, extent, presses);
+        Ok(())
+    }
+
+    /// The element held down under the pointer, or being dragged: what a
+    /// stylesheet's `:active` means.
+    #[must_use]
+    pub fn active(&self) -> Option<EntityId> {
+        self.slider_drag.map(|(dragged, _)| dragged).or_else(|| {
+            self.pressing
+                .filter(|pressing| self.hovered == Some(*pressing))
+        })
+    }
+
     #[must_use]
     pub const fn pointer_overlay(&self) -> Option<[f32; 2]> {
         self.pointer_overlay

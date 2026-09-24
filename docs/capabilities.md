@@ -324,9 +324,13 @@ text properties inherit from the containing entity, `inherit`, `initial` and
 substitute through `var()` with fallbacks, so a theme's tokens live in one
 place. Media queries test orientation and minimum or maximum width and height,
 combined with `and`, commas and nesting. `:disabled` and `:checked` follow the
-entity's own component data everywhere; `:hover`, `:active` and `:focus` match
-when a host passes input state to `PresentationWorld::resolve_with_states`,
-which no running host does yet. The language workspace now has its own CI
+entity's own component data everywhere. Every running host (the editor's
+Play, native games, browser exports) presents the world through a
+`sindri_weave::Presenter` each frame with the pointer's state, so `:hover`
+(which, as in CSS, also matches the hovered element's containers) and
+`:active` follow the pointer, and hit-testing uses the presented geometry.
+CSS `transition` eases colours, lengths and numbers between states with named
+or `cubic-bezier` easings, delays and `all`. The language workspace now has its own CI
 workflow. `docs/ui-direction.md` is the plan beyond this. Percentage sizing,
 min/max constraints, padding, gaps, wrapping, alignment, and text wrapping cover
 the responsive composition used by the shipped examples.
@@ -346,9 +350,9 @@ presentation after a broken save, and reports composition failures with their
 source path, line, and column. Stylesheet source editing and named viewport
 presets still live outside the editor.
 
-This is not a general CSS implementation. Compound selectors, pseudo-states,
-variables, intrinsic content sizing, accessibility mapping, transitions, and
-flexible growth remain absent.
+This is not a general CSS implementation yet. `@keyframes`, the box model's
+margins and per-side values, intrinsic content sizing, grid, accessibility
+mapping, and flexible growth remain absent.
 
 ### Screen UI
 

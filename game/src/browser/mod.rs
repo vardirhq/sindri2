@@ -22,7 +22,7 @@ use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings, Ti
 use weave::{Stylesheet, Viewport as WeaveViewport};
 
 use self::loader::{BrowserProjectAssets, BrowserProjectLoader};
-use crate::assets::{extractor, presented_world};
+use crate::assets::extractor;
 use crate::error::CausewayError;
 use crate::session::Session;
 
@@ -47,6 +47,10 @@ pub(super) struct BrowserCausewayApp {
     platform_suspended: bool,
     paused_for_page: bool,
     stylesheets: Vec<Stylesheet>,
+    /// The live presentation: pointer states and transitions, resolved each
+    /// frame from the gameplay world rather than baked into it, so `:hover`
+    /// can come and go.
+    presenter: sindri_weave::Presenter,
 }
 
 impl BrowserCausewayApp {
@@ -56,15 +60,6 @@ impl BrowserCausewayApp {
             width: self.layout_viewport[0] as f32,
             height: self.layout_viewport[1] as f32,
         }
-    }
-
-    fn apply_styles(&mut self) -> Result<(), CausewayError> {
-        let viewport = self.weave_viewport();
-        let Some(engine) = &mut self.engine else {
-            return Ok(());
-        };
-        *engine.world_mut() = presented_world(engine.world(), &self.stylesheets, viewport)?;
-        Ok(())
     }
 
     fn install(
@@ -128,7 +123,6 @@ impl BrowserCausewayApp {
         // The same ground the native host builds. The scene carries an empty
         // grid on purpose, so without this the browser opens onto nothing.
         crate::assets::fill_the_world(&mut world)?;
-        world = presented_world(&world, &project.stylesheets, self.weave_viewport())?;
 
         let mut session = Session::with_sources(self.scene.components().clone(), project.scripts)
             .with_prefabs(project.prefabs)
@@ -232,6 +226,7 @@ impl DesktopApp for BrowserCausewayApp {
             platform_suspended: false,
             paused_for_page: false,
             stylesheets: Vec::new(),
+            presenter: sindri_weave::Presenter::new(),
         })
     }
 
@@ -268,6 +263,7 @@ impl DesktopApp for BrowserCausewayApp {
             return Ok(Flow::Exit);
         }
         engine.advance(delta)?;
+        self.presenter.advance(delta.as_secs_f32());
         Ok(Flow::Continue)
     }
 
@@ -279,7 +275,7 @@ impl DesktopApp for BrowserCausewayApp {
         if let Some(engine) = self.engine.as_mut() {
             engine.set_viewport(context.width(), context.height());
         }
-        self.apply_styles()
+        Ok(())
     }
 
     fn suspend(&mut self) -> Result<(), Self::Error> {
@@ -308,13 +304,21 @@ impl DesktopApp for BrowserCausewayApp {
             self.install(context, project)?;
         }
 
-        let Some(engine) = &self.engine else {
+        let viewport = self.weave_viewport();
+        let Some(engine) = &mut self.engine else {
             self.clear_loading(context, view);
             return Ok(());
         };
 
+        let (hovered, active) = engine.game().pointer();
+        let states = sindri_weave::pointer_states(engine.world(), hovered, active);
+        let presented = self
+            .presenter
+            .present(engine.world(), &self.stylesheets, viewport, &states)
+            .map_err(|error| CausewayError::Weave(error.to_string()))?;
+        engine.game_mut().set_presented(presented.clone());
         let prepared = self.scene.extract_animated(
-            engine.world(),
+            &presented,
             Viewport::new(context.width(), context.height()),
             CameraView::default(),
             &self.bindings,

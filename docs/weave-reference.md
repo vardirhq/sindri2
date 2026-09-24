@@ -278,6 +278,36 @@ Ui.set_fill("hud-hp", health_ratio)
 
 Presentation changes do not require those bindings to change.
 
+## Transitions
+
+`transition` eases a property from the value it is showing to a new one when
+the rule that sets it changes, as in CSS:
+
+```css
+button { background: #334155; transition: background 150ms ease-out; }
+button:hover { background: #475569; }
+button:active { background: #1e293b; transition: background 50ms linear; }
+```
+
+The shorthand takes the property (or `all`), a duration, an optional easing
+and an optional delay, and a comma-separated list for several properties.
+Durations are `s` or `ms`. Easings are `linear`, `ease`, `ease-in`,
+`ease-out`, `ease-in-out` and `cubic-bezier(x1, y1, x2, y2)`. Colours, lengths
+and plain numbers ease; other values change at once. As in CSS, the
+transition that applies is the one on the rule being changed *to*, and an
+interrupted transition starts again from the value it had reached.
+
+## Pointer states in the running game
+
+Every host presents the scene through Weave each frame with the pointer's
+state: the editor's Play, native games and browser exports. `:hover` matches
+the element under the pointer and every container it is inside, and `:active`
+matches the pressed element while the pointer stays on it (and a slider for
+as long as it is dragged), as in CSS. Hit-testing uses the presented geometry,
+so a button a media query moved or resized is clicked where it is drawn.
+`:disabled` and `:checked` come from the entity's own data. The authored scene
+is never changed by any of this.
+
 ## Authoring guidance
 
 The editor recognizes manifest-listed `.weave` roots, previews their source,
@@ -312,10 +342,9 @@ The following CSS concepts are not implemented:
 - calculations (`calc()`)
 - attribute selectors, sibling combinators, and structural pseudo-classes
   such as `:first-child` or `:not()`
-- hover, pressed and focus in the running game: the language and the bridge
-  match them, but hosts do not yet pass pointer state in (`:disabled` and
-  `:checked` work everywhere, because they come from the entity's own data)
-- transitions and animation
+- `:focus` in the running game: nothing takes focus until keyboard and
+  gamepad navigation land
+- `@keyframes` animation
 - accessibility mapping
 - integrated stylesheet source editing and named viewport preset controls
 

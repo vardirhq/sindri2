@@ -19,8 +19,7 @@ use sindri_scene::SceneExtractor;
 use sindri_scene::{CameraView, SceneRuntime, TextureBindings, TileSetBindings};
 
 use crate::assets::{
-    bind_audio, bind_fonts, bind_textures, bind_tile_sets, extractor, presented_world, scenes,
-    stylesheets, world,
+    bind_audio, bind_fonts, bind_textures, bind_tile_sets, extractor, scenes, stylesheets, world,
 };
 use crate::error::CausewayError;
 use crate::session::{CausewayAudio, Session, causeway_audio_backend};
@@ -40,6 +39,8 @@ pub(crate) struct CausewayApp {
     glyphs: GlyphRenderer,
     shapes: ShapeRenderer,
     stylesheets: Vec<weave::Stylesheet>,
+    /// The live presentation: pointer states and transitions.
+    presenter: sindri_weave::Presenter,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -82,6 +83,7 @@ impl DesktopApp for CausewayApp {
             shapes: ShapeRenderer::new(context.device(), context.format()),
             text,
             stylesheets: stylesheets()?,
+            presenter: sindri_weave::Presenter::new(),
         })
     }
 
@@ -94,6 +96,7 @@ impl DesktopApp for CausewayApp {
             return Ok(Flow::Exit);
         }
         self.engine.advance(delta)?;
+        self.presenter.advance(delta.as_secs_f32());
         Ok(Flow::Continue)
     }
 
@@ -112,14 +115,21 @@ impl DesktopApp for CausewayApp {
         context: &AppContext<'_>,
         view: &wgpu::TextureView,
     ) -> Result<(), Self::Error> {
-        let presented = presented_world(
-            self.engine.world(),
-            &self.stylesheets,
-            weave::Viewport {
-                width: context.width() as f32,
-                height: context.height() as f32,
-            },
-        )?;
+        let (hovered, active) = self.engine.game().pointer();
+        let states = sindri_weave::pointer_states(self.engine.world(), hovered, active);
+        let presented = self
+            .presenter
+            .present(
+                self.engine.world(),
+                &self.stylesheets,
+                weave::Viewport {
+                    width: context.width() as f32,
+                    height: context.height() as f32,
+                },
+                &states,
+            )
+            .map_err(|error| CausewayError::Weave(error.to_string()))?;
+        self.engine.game_mut().set_presented(presented.clone());
         let prepared = self.scene.extract_animated(
             &presented,
             Viewport::new(context.width(), context.height()),
