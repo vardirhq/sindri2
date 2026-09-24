@@ -269,6 +269,7 @@ impl EditorApp {
             self.file.label(),
             self.world.len()
         ));
+        self.frame_scene_camera();
     }
 
     /// Starts the open scene's textures loading from its own directory.

@@ -72,6 +72,19 @@ impl PhysicsWorld2d {
         })
     }
 
+    /// The pull every dynamic body feels, in units per second squared.
+    pub fn gravity(&self) -> [f32; 2] {
+        [self.backend.gravity.x, self.backend.gravity.y]
+    }
+
+    /// Changes gravity from the next step on. Bodies keep the velocity they
+    /// have; only what pulls on them changes.
+    pub fn set_gravity(&mut self, gravity: [f32; 2]) -> Result<(), PhysicsError> {
+        finite2("gravity", gravity)?;
+        self.backend.gravity = r2::Vector::new(gravity[0], gravity[1]);
+        Ok(())
+    }
+
     /// Registers `entity` with a body and the pieces of its collider.
     ///
     /// Nothing is inserted until every piece validates, so a compound with one

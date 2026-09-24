@@ -90,6 +90,9 @@ pub enum CameraProjection {
     #[default]
     Perspective,
     Orthographic,
+    /// Straight onto the XY plane, without perspective or orbiting: the 2D
+    /// view a sprite or tile game is laid out in.
+    Flat,
 }
 
 /// Editor settings that outlive a session.

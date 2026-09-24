@@ -270,3 +270,96 @@ fn a_body_kind_is_read_from_the_scene() {
         RigidBodyKind::KinematicVelocity
     );
 }
+
+/// A level painted as a tilemap, with a tilemap collider: a floor of `#`s
+/// four tiles wide, its top edge at y = -1 (the second row), with the map's
+/// corner at `corner`.
+fn spawn_level(world: &mut World, corner: [f32; 2]) -> EntityId {
+    let mut entity = EntityData {
+        transform_3d: Some(Transform3D {
+            position: [corner[0], corner[1], 0.0],
+            ..Transform3D::default()
+        }),
+        ..EntityData::default()
+    };
+    entity.components.insert(
+        crate::TilemapComponent::TYPE_NAME.to_owned(),
+        json!({
+            "texture": "tiles.png",
+            "palette": ["ground"],
+            "columns": 4,
+            "rows": 2,
+            "tiles": [null, null, null, null, 0, 0, 0, 0]
+        }),
+    );
+    entity.components.insert(
+        crate::TilemapCollider2dComponent::TYPE_NAME.to_owned(),
+        json!({}),
+    );
+    world.spawn(entity)
+}
+
+/// The point of a tilemap collider: a thing dropped on a painted floor lands
+/// on it, with no collider entity placed over the tiles by hand.
+#[test]
+fn a_body_lands_on_a_painted_floor() {
+    let mut world = World::default();
+    spawn_level(&mut world, [-2.0, 0.0]);
+    // A ball of radius 1 dropped from above the middle of the floor.
+    let ball = spawn(&mut world, [0.0, 4.0], Some("dynamic"), false);
+    let mut physics = ScenePhysics2d::new([0.0, -20.0]).expect("a world with gravity");
+    for _ in 0..180 {
+        physics.step(&mut world, &components(), STEP).expect("step");
+    }
+    let resting = position(&world, ball)[1];
+    // The floor's top is at y = -1, so the ball rests with its centre at 0.
+    assert!(
+        resting.abs() < 0.05,
+        "the ball rests on the floor: {resting}"
+    );
+}
+
+/// A tilemap with nothing solid painted yet is not a collider with no shape.
+#[test]
+fn an_unpainted_level_is_not_an_error() {
+    let mut world = World::default();
+    let level = spawn_level(&mut world, [0.0, 0.0]);
+    world
+        .get_mut(level)
+        .expect("just spawned")
+        .components
+        .get_mut(crate::TilemapComponent::TYPE_NAME)
+        .expect("a tilemap")["tiles"] = json!([null, null, null, null, null, null, null, null]);
+    let mut physics = ScenePhysics2d::top_down().expect("a world");
+    physics.step(&mut world, &components(), STEP).expect("step");
+    assert!(physics.world().pose(level).is_err(), "nothing registered");
+}
+
+/// A scene says which way is down; the host's gravity is only for a scene
+/// that says nothing.
+#[test]
+fn a_scene_sets_its_own_gravity() {
+    let mut world = World::default();
+    let mut settings = EntityData::default();
+    settings.components.insert(
+        crate::PhysicsWorld2dComponent::TYPE_NAME.to_owned(),
+        json!({ "gravity": [0.0, -10.0] }),
+    );
+    let settings = world.spawn(settings);
+    let ball = spawn(&mut world, [0.0, 0.0], Some("dynamic"), false);
+    let mut physics = ScenePhysics2d::top_down().expect("a world");
+    for _ in 0..60 {
+        physics.step(&mut world, &components(), STEP).expect("step");
+    }
+    assert!(
+        position(&world, ball)[1] < -3.0,
+        "it fell under the scene's gravity"
+    );
+
+    world.despawn_recursive(settings).expect("despawned");
+    physics.step(&mut world, &components(), STEP).expect("step");
+    assert!(
+        physics.world().gravity() == [0.0, 0.0],
+        "back to the host's"
+    );
+}

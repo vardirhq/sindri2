@@ -9,6 +9,7 @@
 mod animation;
 mod audio;
 mod camera_math;
+mod collision_outline;
 mod components;
 pub(crate) mod effects;
 mod extract;
@@ -22,12 +23,14 @@ pub(crate) mod screen_ui;
 mod textures;
 mod tile_chunk;
 mod tile_surface;
+mod tilemap_collision;
 mod tilesets;
 mod voxel_render;
 
 pub use animation::{AnimationClip, AnimationError, SpriteAnimationComponent, SpriteAnimations};
 pub use audio::AudioSourceComponent;
 pub use camera_math::camera_rotation_from_look_at;
+pub use collision_outline::{CollisionShapes, collision_shapes};
 pub use components::{
     BiomeDocument, CameraBehaviorComponent, CameraBounds, CameraComponent, CameraFit, CameraFollow,
     CameraShake, EnvironmentAmbientOcclusion, EnvironmentBloom, EnvironmentComponent,
@@ -53,7 +56,9 @@ pub use navigation::{GridNavigationError, GridPlacement, WorldGridNavigation};
 pub use occlusion::{
     OcclusionError, OcclusionFinding, OcclusionProbe, OcclusionReport, sweep_occlusion,
 };
-pub use physics::{Collider2dComponent, RigidBody2dComponent, RigidBodyKind};
+pub use physics::{
+    Collider2dComponent, PhysicsWorld2dComponent, RigidBody2dComponent, RigidBodyKind,
+};
 pub use physics_sync::{PhysicsSyncError, ScenePhysics2d};
 pub use placement::{
     GridPlacementError, GridSurfaces, blocking_step_ahead, nearest_cell, resolve_grid_placements,
@@ -63,6 +68,8 @@ pub use screen_ui::{
     SafeArea, ScreenExtent, ScreenRect, ScreenUi, UiButtonComponent, UiDirection, UiHierarchy,
     UiLayoutComponent, UiPlaced, UiSliderComponent, UiSliderOrientation,
 };
+/// The shapes a collider is made of, which the editor draws and resizes.
+pub use sindri_physics::{Collider2d, ColliderShape2d};
 pub use textures::{
     FONT_NAMING_COMPONENTS, PROCEDURAL_TEXTURES, ProceduralTexture, SheetBindError,
     TEXTURE_NAMING_COMPONENTS, TextureBindings, referenced_fonts, referenced_sheets,
@@ -70,6 +77,7 @@ pub use textures::{
 };
 pub use tile_chunk::{TILE_CHUNK_SIZE, TileChunkCoord, TileChunkStore};
 pub use tile_surface::{TileSurfaceError, TileSurfaces};
+pub use tilemap_collision::{TilemapCollider2dComponent, TilemapCollisionError};
 pub mod voxel;
 pub use voxel::{VoxelError, VoxelFace, VoxelHit, cube_faces, face_quad, pick};
 pub use voxel_render::{

@@ -74,6 +74,11 @@ pub(super) fn projection_choice(ui: &mut egui::Ui, current: &mut CameraProjectio
             "Ortho",
             "Look at the scene without perspective, for placing things exactly",
         )
+        .option(
+            CameraProjection::Flat,
+            "2D",
+            "Look straight at the level, as a 2D game is laid out; dragging moves the view",
+        )
         .show(ui);
 }
 

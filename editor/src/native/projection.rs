@@ -89,6 +89,27 @@ pub(super) fn project_segment(
     Some([project_clip(rect, start)?, project_clip(rect, end)?])
 }
 
+/// The point on the plane `z = depth` under a point of the viewport, found by
+/// running the view back through the same matrix that drew it.
+pub(super) fn unproject_to_plane(
+    rect: Rect,
+    view_projection: Mat4,
+    screen: Pos2,
+    depth: f32,
+) -> Option<Vec3> {
+    let ndc_x = (screen.x - rect.min.x) / rect.width().max(1.0) * 2.0 - 1.0;
+    let ndc_y = 1.0 - (screen.y - rect.min.y) / rect.height().max(1.0) * 2.0;
+    let inverse = view_projection.inverse();
+    let near = inverse.project_point3(Vec3::new(ndc_x, ndc_y, 0.0));
+    let far = inverse.project_point3(Vec3::new(ndc_x, ndc_y, 1.0));
+    let along = far - near;
+    if along.z.abs() <= f32::EPSILON {
+        return None;
+    }
+    let point = near + along * ((depth - near.z) / along.z);
+    point.is_finite().then_some(point)
+}
+
 pub(super) fn distance_to_segment(point: Pos2, a: Pos2, b: Pos2) -> f32 {
     let ab = b - a;
     let length_squared = ab.length_sq();
