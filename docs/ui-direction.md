@@ -69,8 +69,12 @@ Each step is its own pull request. A step is checked here when it has landed.
      `sindri.ui.box` component the layout engine itself honours.
    - [x] `box-shadow`: offset, blur, spread and colour.
    - [ ] Borders per side, negative margins, and more than one shadow.
-   - [ ] Flexbox complete: wrap, grow, shrink, basis, order, `align-self`,
-     stretch; intrinsic `auto` sizing from content.
+   - [x] Flexbox: wrap, grow, shrink, basis, order, `align-self`, stretch,
+     `space-around` and `space-evenly`, min/max limits, and layouts that
+     size to their content with `width: auto`. Layout decides sizes as well
+     as places, and what is drawn and clicked uses them.
+   - [ ] Intrinsic sizing from text: a label measured by its font, so text
+     can size a button and be the minimum a flex item shrinks to.
    - [ ] Grid layout.
    - [ ] `calc()`, `:not()`, `:first-child` and the other structural
      pseudo-classes.

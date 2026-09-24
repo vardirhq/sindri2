@@ -1010,35 +1010,72 @@
     {
       "addable": true,
       "default_payload": {
+        "align_self": "auto",
+        "basis": -1.0,
+        "grow": 0.0,
         "margin": [
           0.0,
           0.0,
           0.0,
           0.0
         ],
+        "max_size": [
+          0.0,
+          0.0
+        ],
+        "min_size": [
+          0.0,
+          0.0
+        ],
+        "order": 0,
         "padding": [
           0.0,
           0.0,
           0.0,
           0.0
-        ]
+        ],
+        "shrink": 1.0
       },
       "display_name": "UI Box",
       "fields": {
+        "align_self": "auto",
+        "basis": -1.0,
+        "grow": 0.0,
         "margin": [
           0.0,
           0.0,
           0.0,
           0.0
         ],
+        "max_size": [
+          0.0,
+          0.0
+        ],
+        "min_size": [
+          0.0,
+          0.0
+        ],
+        "order": 0,
         "padding": [
           0.0,
           0.0,
           0.0,
           0.0
-        ]
+        ],
+        "shrink": 1.0
       },
-      "meanings": {},
+      "meanings": {
+        "align_self": {
+          "kind": "choice",
+          "options": [
+            "auto",
+            "start",
+            "center",
+            "end",
+            "stretch"
+          ]
+        }
+      },
       "schema_version": 1,
       "type_name": "sindri.ui.box"
     },
@@ -1119,15 +1156,25 @@
       "default_payload": {
         "align": "center",
         "direction": "column",
+        "fit_content": [
+          false,
+          false
+        ],
         "justify": "center",
-        "spacing": 0.25
+        "spacing": 0.25,
+        "wrap": false
       },
       "display_name": "UI Layout",
       "fields": {
         "align": "center",
         "direction": "column",
+        "fit_content": [
+          false,
+          false
+        ],
         "justify": "center",
-        "spacing": 0.25
+        "spacing": 0.25,
+        "wrap": false
       },
       "meanings": {
         "align": {
@@ -1152,7 +1199,9 @@
             "start",
             "center",
             "end",
-            "space_between"
+            "space_between",
+            "space_around",
+            "space_evenly"
           ]
         }
       },

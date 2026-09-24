@@ -176,15 +176,35 @@ covering the outer border.
 | `padding`, `padding-top`, `-right`, `-bottom`, `-left` | length, one to four as in CSS | Room inside the element's edge; layout children start inside it |
 | `margin`, `margin-top`, `-right`, `-bottom`, `-left` | length, one to four as in CSS | Room a layout keeps free around the element |
 | `anchor` | Sindri anchor name | Anchor for text, image, and shape |
-| `direction` | `row`, `column` | Main layout axis |
-| `gap` | length | Empty space between adjacent child edges |
-| `justify-content` | `start`, `center`, `end`, `space-between` | Main-axis distribution |
-| `align-items` | `start`, `center`, `end` | Cross-axis alignment |
+| `direction`, `flex-direction` | `row`, `column` | Main layout axis |
+| `gap` | length | Empty space between adjacent child edges, and between wrapped lines |
+| `justify-content` | `start`, `center`, `end`, `space-between`, `space-around`, `space-evenly` | Main-axis distribution |
+| `align-items` | `start`, `center`, `end`, `stretch` | Cross-axis alignment |
+| `flex-wrap` | `nowrap`, `wrap` | Whether children that do not fit start a new line |
+| `flex` | `none`, `auto`, or `<grow> [<shrink>] [<basis>]` | Shorthand for the three below, as in CSS |
+| `flex-grow`, `flex-shrink` | number, 0 or more | Share of a line's spare room or shortfall |
+| `flex-basis` | length, or `auto` | Size along the line before growing or shrinking |
+| `order` | integer | Position in the layout, lowest first |
+| `align-self` | `auto`, `start`, `center`, `end`, `stretch` | One item's cross-axis alignment |
+| `width`, `height` | `auto` | On a layout: size to its children, padding and gaps |
 
 Layout is hierarchical. A child must be parented beneath the layout entity in
 the scene; visual overlap does not establish layout membership. Explicit child
 boxes are important because text metrics alone do not currently provide
 intrinsic layout sizing.
+
+Layout is CSS flexbox. Children are put in `order`, broken into lines when
+the layout wraps, and each line's spare room is shared by `flex-grow` or its
+shortfall taken back by `flex-shrink` (weighted by size, and one by default,
+as in CSS), within `min-`/`max-` limits; then the line is justified and each
+child aligned across it. Wrapped lines share the layout's leftover height, as
+CSS's default `align-content` does. What the layout decides is what is drawn
+and what is clicked. `flex-start` and `flex-end` are accepted for `start` and
+`end`. Two differences from a browser: limits are applied in one pass rather
+than by re-sharing what a clamped child could not take, and a child that is
+not itself a layout has no automatic minimum, because text is not measured
+yet. A layout's automatic minimum is its children and padding, so a badge
+does not shrink into its own label.
 
 `padding` and `margin` take one to four values in CSS order (all; vertical
 and horizontal; top, horizontal and bottom; top, right, bottom and left), and
@@ -353,10 +373,12 @@ entity, property, and value. Unknown properties are currently ignored.
 
 The following CSS concepts are not implemented:
 
-- intrinsic `auto` sizing
+- sizing from measured text (`width: auto` on a text element, or text as
+  the minimum a flex item shrinks to)
 - borders per side, negative margins, and more than one or an `inset` shadow
-- flex grow and shrink, including cross-axis stretch
-- grid, wrapping layout, scrolling, and clipping regions
+- `align-content` other than its default, `row-gap`/`column-gap`, and
+  reversed directions
+- grid, scrolling, and clipping regions
 - calculations (`calc()`)
 - attribute selectors, sibling combinators, and structural pseudo-classes
   such as `:first-child` or `:not()`

@@ -39,7 +39,7 @@ pub(super) fn ui_matrix(placed: UiPlaced, transform: Transform3D, extent: Overla
     let position = origin + placed.offset;
     Mat4::from_translation(position.extend(0.0))
         * Mat4::from_quat(placed.rotation)
-        * Mat4::from_scale(Vec2::from_array(transform.scale_2d()).extend(1.0))
+        * Mat4::from_scale(Vec2::from_array(placed.size_or(transform.scale_2d())).extend(1.0))
 }
 
 impl SceneExtractor {

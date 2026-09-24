@@ -1,0 +1,625 @@
+//! The flexbox algorithm behind `sindri.ui.layout`.
+//!
+//! CSS's, in the single pass a game UI needs. Children are put in `order`,
+//! broken into lines if the layout wraps, and each line's spare room is shared
+//! out by `grow` or its shortfall taken back by `shrink` (weighted by size, as
+//! CSS weights it), within each child's limits. Then the line is justified,
+//! and each child aligned across it, stretched if asked to be.
+//!
+//! What CSS does and this does not: limits are applied once rather than by
+//! freezing a clamped item and sharing its remainder again, and an item has
+//! no minimum from its content, because nothing here measures content yet.
+//!
+//! Everything is worked in a *logical* frame first — along the line from its
+//! start, and across it from the first line — then turned into overlay
+//! offsets, where up is positive and a column starts at the top.
+
+use super::UiAlignSelf;
+use super::box_model::{UiSides, clean};
+use super::layout::{
+    UiAlign, UiDirection, UiJustify, UiLayoutBox, UiLayoutChild, UiLayoutComponent,
+};
+
+const TOP: usize = 0;
+const RIGHT: usize = 1;
+const BOTTOM: usize = 2;
+const LEFT: usize = 3;
+
+/// A sliver of tolerance for "does it still fit on this line", so a row that
+/// is exactly full does not wrap its last item over a rounding error.
+const FIT_EPSILON: f32 = 1.0e-5;
+
+/// The two axes of a layout and which sides of a box are at each end of them.
+struct Axes {
+    direction: UiDirection,
+    main: usize,
+    cross: usize,
+    main_start: usize,
+    main_end: usize,
+    cross_start: usize,
+    cross_end: usize,
+}
+
+impl Axes {
+    fn of(direction: UiDirection) -> Self {
+        match direction {
+            UiDirection::Row => Self {
+                direction,
+                main: 0,
+                cross: 1,
+                main_start: LEFT,
+                main_end: RIGHT,
+                cross_start: TOP,
+                cross_end: BOTTOM,
+            },
+            UiDirection::Column => Self {
+                direction,
+                main: 1,
+                cross: 0,
+                main_start: TOP,
+                main_end: BOTTOM,
+                cross_start: LEFT,
+                cross_end: RIGHT,
+            },
+        }
+    }
+
+    fn along(&self, sides: UiSides) -> f32 {
+        sides[self.main_start] + sides[self.main_end]
+    }
+
+    fn across(&self, sides: UiSides) -> f32 {
+        sides[self.cross_start] + sides[self.cross_end]
+    }
+
+    /// A logical position as an overlay offset from the parent's middle.
+    fn offset(&self, main: f32, cross: f32) -> [f32; 2] {
+        match self.direction {
+            UiDirection::Row => [main, -cross],
+            UiDirection::Column => [cross, -main],
+        }
+    }
+}
+
+/// Each child's box, in the order the children were given.
+pub(super) fn resolve(
+    layout: &UiLayoutComponent,
+    parent_size: [f32; 2],
+    padding: UiSides,
+    children: &[UiLayoutChild],
+) -> Vec<UiLayoutBox> {
+    if children.is_empty() {
+        return Vec::new();
+    }
+    let axes = Axes::of(layout.direction);
+    let padding = clean(padding);
+    let parent_main = parent_size[axes.main].abs();
+    let parent_cross = parent_size[axes.cross].abs();
+    let content_main = (parent_main - axes.along(padding)).max(0.0);
+    let content_cross = (parent_cross - axes.across(padding)).max(0.0);
+    let main_origin = -parent_main / 2.0 + padding[axes.main_start];
+    let cross_origin = -parent_cross / 2.0 + padding[axes.cross_start];
+    let gap = layout.spacing.max(0.0);
+
+    let margins: Vec<UiSides> = children
+        .iter()
+        .map(|child| clean(child.item.margin))
+        .collect();
+    let base: Vec<f32> = children
+        .iter()
+        .map(|child| {
+            let item = &child.item;
+            let size = if item.basis >= 0.0 {
+                item.basis
+            } else {
+                child.size[axes.main].abs()
+            };
+            item.clamp(axes.main, size)
+        })
+        .collect();
+    let outer_base = |index: usize| base[index] + axes.along(margins[index]);
+
+    let mut sequence: Vec<usize> = (0..children.len()).collect();
+    sequence.sort_by_key(|index| children[*index].item.order);
+    let lines = break_lines(&sequence, layout.wrap, content_main, gap, outer_base);
+
+    let mut main_size = base.clone();
+    for line in &lines {
+        flex_line(
+            line,
+            children,
+            &base,
+            content_main,
+            gap,
+            &axes,
+            &margins,
+            &mut main_size,
+        );
+    }
+
+    let cross_size: Vec<f32> = children
+        .iter()
+        .map(|child| child.item.clamp(axes.cross, child.size[axes.cross].abs()))
+        .collect();
+    let line_cross = line_extents(&lines, layout.wrap, content_cross, gap, |index| {
+        cross_size[index] + axes.across(margins[index])
+    });
+
+    let mut boxes = vec![
+        UiLayoutBox {
+            offset: [0.0; 2],
+            size: [0.0; 2],
+        };
+        children.len()
+    ];
+    let frame = Frame {
+        layout,
+        axes: &axes,
+        children,
+        margins: &margins,
+        main_size: &main_size,
+        cross_size: &cross_size,
+        main_origin,
+        content_main,
+        gap,
+    };
+    let mut cross_cursor = cross_origin;
+    for (line, extent) in lines.iter().zip(line_cross) {
+        frame.place_line(line, cross_cursor, extent, &mut boxes);
+        cross_cursor += extent + gap;
+    }
+    boxes
+}
+
+/// Everything placing a line needs, worked out once for the whole layout.
+struct Frame<'a> {
+    layout: &'a UiLayoutComponent,
+    axes: &'a Axes,
+    children: &'a [UiLayoutChild],
+    margins: &'a [UiSides],
+    main_size: &'a [f32],
+    cross_size: &'a [f32],
+    main_origin: f32,
+    content_main: f32,
+    gap: f32,
+}
+
+impl Frame<'_> {
+    /// Justifies one line along its length and aligns each child across it.
+    fn place_line(&self, line: &[usize], cross_start: f32, extent: f32, boxes: &mut [UiLayoutBox]) {
+        let axes = self.axes;
+        let used: f32 = line
+            .iter()
+            .map(|index| self.main_size[*index] + axes.along(self.margins[*index]))
+            .sum::<f32>()
+            + self.gap * gaps_in(line.len());
+        let (mut cursor, between) = justify(
+            self.layout.justify,
+            self.content_main - used,
+            line.len(),
+            self.gap,
+        );
+        for index in line.iter().copied() {
+            let item = &self.children[index].item;
+            let margin = self.margins[index];
+            let along = self.main_size[index];
+            let start = self.main_origin + cursor + margin[axes.main_start];
+            cursor += axes.along(margin) + along + between;
+
+            let align = match item.align_self {
+                UiAlignSelf::Auto => self.layout.align,
+                UiAlignSelf::Start => UiAlign::Start,
+                UiAlignSelf::Center => UiAlign::Center,
+                UiAlignSelf::End => UiAlign::End,
+                UiAlignSelf::Stretch => UiAlign::Stretch,
+            };
+            let room = (extent - axes.across(margin)).max(0.0);
+            let across = if align == UiAlign::Stretch {
+                item.clamp(axes.cross, room)
+            } else {
+                self.cross_size[index]
+            };
+            let slack = room - across;
+            let top = cross_start
+                + margin[axes.cross_start]
+                + match align {
+                    UiAlign::Start | UiAlign::Stretch => 0.0,
+                    UiAlign::Center => slack / 2.0,
+                    UiAlign::End => slack,
+                };
+
+            let mut size = [0.0; 2];
+            size[axes.main] = along;
+            size[axes.cross] = across;
+            boxes[index] = UiLayoutBox {
+                offset: axes.offset(start + along / 2.0, top + across / 2.0),
+                size,
+            };
+        }
+    }
+}
+
+/// The size a layout would be to hold its children exactly: their sizes,
+/// margins and gaps along the line, the largest across it, and its padding.
+///
+/// On one line whatever `wrap` says, because a box sized to its content has
+/// no width of its own to wrap at.
+pub(super) fn content_size(
+    layout: &UiLayoutComponent,
+    padding: UiSides,
+    children: &[UiLayoutChild],
+) -> [f32; 2] {
+    let axes = Axes::of(layout.direction);
+    let padding = clean(padding);
+    let gap = layout.spacing.max(0.0);
+    let mut main = gap * gaps_in(children.len());
+    let mut cross: f32 = 0.0;
+    for child in children {
+        let item = &child.item;
+        let margin = clean(item.margin);
+        let along = if item.basis >= 0.0 {
+            item.basis
+        } else {
+            child.size[axes.main].abs()
+        };
+        main += item.clamp(axes.main, along) + axes.along(margin);
+        cross =
+            cross.max(item.clamp(axes.cross, child.size[axes.cross].abs()) + axes.across(margin));
+    }
+    let mut size = [0.0; 2];
+    size[axes.main] = main + axes.along(padding);
+    size[axes.cross] = cross + axes.across(padding);
+    size
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn gaps_in(count: usize) -> f32 {
+    count.saturating_sub(1) as f32
+}
+
+/// Children in order, broken into lines where the next would not fit.
+fn break_lines(
+    sequence: &[usize],
+    wrap: bool,
+    room: f32,
+    gap: f32,
+    outer: impl Fn(usize) -> f32,
+) -> Vec<Vec<usize>> {
+    let mut lines = Vec::new();
+    let mut current: Vec<usize> = Vec::new();
+    let mut used = 0.0;
+    for index in sequence.iter().copied() {
+        let size = outer(index);
+        let needed = if current.is_empty() {
+            size
+        } else {
+            used + gap + size
+        };
+        if wrap && !current.is_empty() && needed > room + FIT_EPSILON {
+            lines.push(std::mem::take(&mut current));
+            used = size;
+        } else {
+            used = needed;
+        }
+        current.push(index);
+    }
+    lines.push(current);
+    lines
+}
+
+/// Shares one line's spare room by `grow`, or takes back its shortfall by
+/// `shrink` weighted by size, as CSS does.
+#[allow(clippy::too_many_arguments)]
+fn flex_line(
+    line: &[usize],
+    children: &[UiLayoutChild],
+    base: &[f32],
+    room: f32,
+    gap: f32,
+    axes: &Axes,
+    margins: &[UiSides],
+    main_size: &mut [f32],
+) {
+    let used: f32 = line
+        .iter()
+        .map(|index| base[*index] + axes.along(margins[*index]))
+        .sum::<f32>()
+        + gap * gaps_in(line.len());
+    let free = room - used;
+    if free > 0.0 {
+        let total: f32 = line
+            .iter()
+            .map(|index| children[*index].item.grow.max(0.0))
+            .sum();
+        if total > 0.0 {
+            for index in line.iter().copied() {
+                let item = &children[index].item;
+                let share = free * item.grow.max(0.0) / total;
+                main_size[index] = item.clamp(axes.main, base[index] + share);
+            }
+        }
+    } else if free < 0.0 {
+        let total: f32 = line
+            .iter()
+            .map(|index| children[*index].item.shrink.max(0.0) * base[*index])
+            .sum();
+        if total > 0.0 {
+            for index in line.iter().copied() {
+                let child = &children[index];
+                let item = &child.item;
+                let share = free * item.shrink.max(0.0) * base[index] / total;
+                // An authored minimum replaces the automatic one, as in CSS.
+                let floor = if item.min_size[axes.main] > 0.0 {
+                    0.0
+                } else {
+                    child.min_content[axes.main].min(base[index])
+                };
+                main_size[index] = item.clamp(axes.main, (base[index] + share).max(floor));
+            }
+        }
+    }
+}
+
+/// How far across each line reaches.
+///
+/// One line fills the layout, as a single-line flex container's does. Wrapped
+/// lines are as tall as their tallest child, and share any room left over
+/// equally, which is CSS's default `align-content: normal`.
+fn line_extents(
+    lines: &[Vec<usize>],
+    wrap: bool,
+    room: f32,
+    gap: f32,
+    outer: impl Fn(usize) -> f32,
+) -> Vec<f32> {
+    if !wrap {
+        return vec![room; lines.len()];
+    }
+    let mut extents: Vec<f32> = lines
+        .iter()
+        .map(|line| line.iter().copied().map(&outer).fold(0.0, f32::max))
+        .collect();
+    let used: f32 = extents.iter().sum::<f32>() + gap * gaps_in(extents.len());
+    let spare = room - used;
+    if spare > 0.0 {
+        #[allow(clippy::cast_precision_loss)]
+        let each = spare / extents.len() as f32;
+        for extent in &mut extents {
+            *extent += each;
+        }
+    }
+    extents
+}
+
+/// Where the first child starts along a line, and the space between each
+/// child's end and the next one's start.
+fn justify(justify: UiJustify, free: f32, count: usize, gap: f32) -> (f32, f32) {
+    #[allow(clippy::cast_precision_loss)]
+    let count_f = count as f32;
+    match justify {
+        UiJustify::SpaceBetween if free > 0.0 && count > 1 => (0.0, gap + free / (count_f - 1.0)),
+        UiJustify::SpaceAround if free > 0.0 => {
+            let share = free / count_f;
+            (share / 2.0, gap + share)
+        }
+        UiJustify::SpaceEvenly if free > 0.0 => {
+            let share = free / (count_f + 1.0);
+            (share, gap + share)
+        }
+        // With nothing to spread, CSS falls back to the start for
+        // space-between and to centring the line for the other two.
+        UiJustify::Start | UiJustify::SpaceBetween => (0.0, gap),
+        UiJustify::Center | UiJustify::SpaceAround | UiJustify::SpaceEvenly => (free / 2.0, gap),
+        UiJustify::End => (free, gap),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{UiAlignSelf, UiBoxComponent};
+    use super::{content_size, resolve};
+    use crate::screen_ui::layout::{
+        UiAlign, UiDirection, UiJustify, UiLayoutBox, UiLayoutChild, UiLayoutComponent,
+    };
+
+    fn row() -> UiLayoutComponent {
+        UiLayoutComponent {
+            direction: UiDirection::Row,
+            spacing: 0.0,
+            justify: UiJustify::Start,
+            align: UiAlign::Start,
+            wrap: false,
+            fit_content: [false; 2],
+        }
+    }
+
+    fn child(width: f32, item: UiBoxComponent) -> UiLayoutChild {
+        UiLayoutChild {
+            size: [width, 1.0],
+            item,
+            min_content: [0.0; 2],
+        }
+    }
+
+    fn widths(boxes: &[UiLayoutBox]) -> Vec<f32> {
+        boxes.iter().map(|placed| placed.size[0]).collect()
+    }
+
+    #[track_caller]
+    fn near(got: &[f32], want: &[f32]) {
+        assert!(
+            got.len() == want.len() && got.iter().zip(want).all(|(a, b)| (a - b).abs() < 1.0e-5),
+            "{got:?} is not {want:?}"
+        );
+    }
+
+    #[test]
+    fn spare_room_is_shared_by_grow() {
+        let one = UiBoxComponent {
+            grow: 1.0,
+            ..UiBoxComponent::default()
+        };
+        let two = UiBoxComponent { grow: 2.0, ..one };
+        let fixed = UiBoxComponent::default();
+        // 6 wide, 3 used, so 3 spare: one share to the first, two to the second.
+        let boxes = resolve(
+            &row(),
+            [6.0, 1.0],
+            [0.0; 4],
+            &[child(1.0, one), child(1.0, two), child(1.0, fixed)],
+        );
+        near(&widths(&boxes), &[2.0, 3.0, 1.0]);
+        // Packed from the left edge: the first spans -3 to -1.
+        near(&[boxes[0].offset[0]], &[-2.0]);
+    }
+
+    #[test]
+    fn a_shortfall_is_taken_back_by_shrink_weighted_by_size() {
+        let shrinks = UiBoxComponent::default();
+        let rigid = UiBoxComponent {
+            shrink: 0.0,
+            ..shrinks
+        };
+        // 4 wide, 6 wanted: 2 short, taken from the two that shrink in
+        // proportion to their sizes, 1 and 3.
+        let boxes = resolve(
+            &row(),
+            [4.0, 1.0],
+            [0.0; 4],
+            &[child(1.0, shrinks), child(3.0, shrinks), child(2.0, rigid)],
+        );
+        near(&widths(&boxes), &[0.5, 1.5, 2.0]);
+    }
+
+    #[test]
+    fn shrinking_stops_at_what_the_child_holds() {
+        let plain = UiBoxComponent::default();
+        let mut badge = child(3.0, plain);
+        badge.min_content = [2.5, 0.0];
+        // 4 wide, 6 wanted: an even share would take the badge to 2, but its
+        // content needs 2.5. (One pass: the other does not give up more.)
+        let boxes = resolve(&row(), [4.0, 1.0], [0.0; 4], &[child(3.0, plain), badge]);
+        near(&widths(&boxes), &[2.0, 2.5]);
+    }
+
+    #[test]
+    fn basis_and_limits_decide_the_starting_size_and_the_end() {
+        let item = UiBoxComponent {
+            grow: 1.0,
+            basis: 0.0,
+            max_size: [1.5, 0.0],
+            ..UiBoxComponent::default()
+        };
+        let open = UiBoxComponent {
+            grow: 1.0,
+            basis: 0.0,
+            ..UiBoxComponent::default()
+        };
+        // Both start from nothing and would share 4 equally; the first stops
+        // at its maximum. (One pass: the second does not take up the rest.)
+        let boxes = resolve(
+            &row(),
+            [4.0, 1.0],
+            [0.0; 4],
+            &[child(3.0, item), child(3.0, open)],
+        );
+        near(&widths(&boxes), &[1.5, 2.0]);
+    }
+
+    #[test]
+    fn order_moves_a_child_without_moving_it_in_the_scene() {
+        let late = UiBoxComponent {
+            order: 1,
+            ..UiBoxComponent::default()
+        };
+        let plain = UiBoxComponent::default();
+        let boxes = resolve(
+            &row(),
+            [4.0, 1.0],
+            [0.0; 4],
+            &[child(1.0, late), child(1.0, plain)],
+        );
+        // The second child comes first.
+        assert!(boxes[1].offset[0] < boxes[0].offset[0], "{boxes:?}");
+    }
+
+    #[test]
+    fn wrapping_starts_a_new_line_below_and_lines_share_the_height() {
+        let mut layout = row();
+        layout.wrap = true;
+        layout.spacing = 0.5;
+        let plain = UiBoxComponent::default();
+        // Three 1.5-wide children in a 4-wide row: two fit (1.5 + 0.5 + 1.5),
+        // the third wraps. The row is 4 high: two lines of 1, a gap of 0.5,
+        // and 1.5 left over, shared as 0.75 more per line.
+        let boxes = resolve(
+            &layout,
+            [4.0, 4.0],
+            [0.0; 4],
+            &[child(1.5, plain), child(1.5, plain), child(1.5, plain)],
+        );
+        near(&[boxes[0].offset[1], boxes[1].offset[1]], &[1.5, 1.5]);
+        // The second line starts 1.75 + 0.5 below the top (0.25 below the
+        // middle), so its child's middle is 0.75 below.
+        near(&[boxes[2].offset[0], boxes[2].offset[1]], &[-1.25, -0.75]);
+    }
+
+    #[test]
+    fn align_self_overrides_the_layout_for_one_child() {
+        let mut layout = row();
+        layout.align = UiAlign::Start;
+        let stretched = UiBoxComponent {
+            align_self: UiAlignSelf::Stretch,
+            ..UiBoxComponent::default()
+        };
+        let ended = UiBoxComponent {
+            align_self: UiAlignSelf::End,
+            ..UiBoxComponent::default()
+        };
+        let boxes = resolve(
+            &layout,
+            [4.0, 3.0],
+            [0.0; 4],
+            &[child(1.0, stretched), child(1.0, ended)],
+        );
+        near(&[boxes[0].size[1], boxes[0].offset[1]], &[3.0, 0.0]);
+        // One high, at the bottom of three: its middle is 1 below centre.
+        near(&[boxes[1].size[1], boxes[1].offset[1]], &[1.0, -1.0]);
+    }
+
+    #[test]
+    fn space_around_and_evenly_share_the_ends_as_css_does() {
+        let plain = UiBoxComponent::default();
+        let children = [child(1.0, plain), child(1.0, plain)];
+        let mut layout = row();
+        // 6 wide, 2 used, 4 spare.
+        layout.justify = UiJustify::SpaceEvenly;
+        let even = resolve(&layout, [6.0, 1.0], [0.0; 4], &children);
+        // A third of the spare before, between and after.
+        near(
+            &[even[0].offset[0], even[1].offset[0]],
+            &[-3.0 + 4.0 / 3.0 + 0.5, -3.0 + 8.0 / 3.0 + 1.5],
+        );
+        layout.justify = UiJustify::SpaceAround;
+        let around = resolve(&layout, [6.0, 1.0], [0.0; 4], &children);
+        // Two each around: one at each end, two between.
+        near(&[around[0].offset[0], around[1].offset[0]], &[-1.5, 1.5]);
+    }
+
+    #[test]
+    fn a_box_that_fits_its_content_is_its_children_its_gaps_and_its_padding() {
+        let mut layout = row();
+        layout.spacing = 0.25;
+        let plain = UiBoxComponent::default();
+        let spaced = UiBoxComponent {
+            margin: [0.0, 0.0, 0.5, 0.0],
+            ..plain
+        };
+        let size = content_size(
+            &layout,
+            [0.1, 0.2, 0.1, 0.2],
+            &[child(1.0, plain), child(2.0, spaced)],
+        );
+        near(&size, &[1.0 + 0.25 + 2.0 + 0.4, 1.5 + 0.2]);
+    }
+}

@@ -36,6 +36,8 @@ sindri.ui.text {
 .viewport-badge {
     width: 150px;
     height: 38px;
+    /* Keeps its size when the top bar is short of room; the eyebrow gives. */
+    flex-shrink: 0;
     direction: row;
     justify-content: center;
     align-items: center;

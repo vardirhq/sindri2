@@ -117,13 +117,14 @@ fn shadow_instance(
     if shape.geometry.kind == UiShapeKind::Grid {
         return None;
     }
-    let size = transform.scale_2d();
+    let size = placed.size_or(transform.scale_2d());
     let grown = shadow.instance_size(size)?;
     let shorter = size[0].abs().min(size[1].abs());
     let grown_shorter = grown[0].min(grown[1]);
     let radius = shape.geometry.corner_radius.max(0.0) * shorter + shadow.spread.max(0.0);
     let moved = UiPlaced {
         offset: placed.offset + Vec2::from_array(shadow.offset),
+        size: None,
         ..placed
     };
     let scaled = Transform3D {

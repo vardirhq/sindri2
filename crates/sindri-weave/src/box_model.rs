@@ -107,21 +107,81 @@ fn containing_width(world: &World, entity: EntityId, viewport: Viewport) -> f32 
     (width - inset[1] - inset[3]).max(0.0)
 }
 
+/// The element's box, added with nothing set if it has none.
+fn box_of(
+    world: &mut World,
+    entity: EntityId,
+) -> Option<&mut serde_json::Map<String, serde_json::Value>> {
+    world
+        .get_mut(entity)?
+        .components
+        .entry(BOX.to_owned())
+        .or_insert_with(|| serde_json::json!({}))
+        .as_object_mut()
+}
+
+/// Writes one of the box's fields, adding the box if it is missing.
+pub(crate) fn set_field(
+    world: &mut World,
+    entity: EntityId,
+    field: &str,
+    value: serde_json::Value,
+) {
+    if let Some(object) = box_of(world, entity) {
+        object.insert(field.to_owned(), value);
+    }
+}
+
+/// Writes one axis of a pair field, `min_size` or `max_size`.
+pub(crate) fn set_axis(world: &mut World, entity: EntityId, field: &str, axis: usize, value: f32) {
+    set_entry(world, entity, field, 2, axis, value);
+}
+
+/// The length a `flex-basis` percentage is of: the parent's content along
+/// its layout's direction, a column's by default.
+pub(crate) fn containing_main(world: &World, entity: EntityId, viewport: Viewport) -> f32 {
+    let Some(parent) = world.get(entity).and_then(|data| data.parent) else {
+        return 2.0 * viewport.width / viewport.height.max(1.0);
+    };
+    let Some(data) = world.get(parent) else {
+        return 0.0;
+    };
+    let row = data
+        .components
+        .get("sindri.ui.layout")
+        .and_then(|layout| layout.get("direction"))
+        .and_then(serde_json::Value::as_str)
+        == Some("row");
+    let size = data.transform_3d.unwrap_or_default().scale_2d();
+    let inset = padding(world, parent);
+    if row {
+        (size[0].abs() - inset[1] - inset[3]).max(0.0)
+    } else {
+        (size[1].abs() - inset[0] - inset[2]).max(0.0)
+    }
+}
+
 fn set_side(world: &mut World, entity: EntityId, field: &str, index: usize, value: f32) {
-    let Some(data) = world.get_mut(entity) else {
+    set_entry(world, entity, field, 4, index, value);
+}
+
+/// Writes one entry of an array field of `length` numbers.
+fn set_entry(
+    world: &mut World,
+    entity: EntityId,
+    field: &str,
+    length: usize,
+    index: usize,
+    value: f32,
+) {
+    let Some(object) = box_of(world, entity) else {
         return;
     };
-    let payload = data.components.entry(BOX.to_owned()).or_insert_with(
-        || serde_json::json!({ "margin": [0.0, 0.0, 0.0, 0.0], "padding": [0.0, 0.0, 0.0, 0.0] }),
-    );
-    let Some(object) = payload.as_object_mut() else {
-        return;
-    };
-    let sides = object
+    let entries = object
         .entry(field.to_owned())
-        .or_insert_with(|| serde_json::json!([0.0, 0.0, 0.0, 0.0]));
-    if let Some(array) = sides.as_array_mut() {
-        array.resize(4, 0.0.into());
+        .or_insert_with(|| serde_json::Value::Array(vec![0.0.into(); length]));
+    if let Some(array) = entries.as_array_mut() {
+        array.resize(length, 0.0.into());
         array[index] = value.into();
     }
 }

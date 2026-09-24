@@ -353,8 +353,15 @@ presets still live outside the editor.
 Weave's `margin` and `padding` (one to four values, per-side longhands, CSS
 percentages) write that box, and `box-shadow` writes the shape's shadow.
 
-This is not a general CSS implementation yet. `@keyframes`, borders per side, intrinsic content sizing, grid, accessibility
-mapping, and flexible growth remain absent.
+Layouts are CSS flexbox, in the engine: `sindri.ui.layout` wraps and fits
+its content, and each child's `sindri.ui.box` grows, shrinks, takes a
+basis, orders and aligns itself within min/max limits. Layout decides sizes
+as well as places, and drawing, hit-testing and the editor's picking use
+them. Weave's `flex`, its longhands, `flex-wrap`, `order`, `align-self`,
+`width: auto` and the rest write the same data.
+
+This is not a general CSS implementation yet. `@keyframes`, borders per side,
+sizing from measured text, grid, and accessibility mapping remain absent.
 
 ### Screen UI
 

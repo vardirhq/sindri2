@@ -13,6 +13,7 @@ use weave::{Computed, States, Stylesheet, Viewport};
 
 mod box_model;
 mod computed;
+mod flex;
 mod presenter;
 mod shadow;
 mod transition;
@@ -160,9 +161,26 @@ fn apply_sizing(
             ("height", "min-height", "max-height")
         };
         let basis = parent_content[axis];
-        let preferred = dimension(style, id, size_name, viewport, basis)?;
+        // `auto` sizes a layout to its content, which the engine works out
+        // once its children are sized; the element keeps its own size here.
+        let fits = matches!(style.get(size_name), Some("auto" | "fit-content"));
+        let preferred = if fits {
+            None
+        } else {
+            dimension(style, id, size_name, viewport, basis)?
+        };
+        if fits || preferred.is_some() {
+            set_fit_content(world, entity, axis, fits);
+        }
         let minimum = dimension(style, id, min_name, viewport, basis)?;
         let maximum = dimension(style, id, max_name, viewport, basis)?;
+        // The layout honours the limits too, when it grows or shrinks this.
+        if let Some(minimum) = minimum {
+            box_model::set_axis(world, entity, "min_size", axis, minimum);
+        }
+        if let Some(maximum) = maximum {
+            box_model::set_axis(world, entity, "max_size", axis, maximum);
+        }
 
         let mut size = preferred.unwrap_or(current[axis].abs());
         if let Some(minimum) = minimum {
@@ -180,6 +198,25 @@ fn apply_sizing(
     transform.scale[0] = resolved[0];
     transform.scale[1] = resolved[1];
     Ok(())
+}
+
+/// Marks whether a layout fits its content on `axis`. An element that is not
+/// a layout has no content to fit, and is left alone.
+fn set_fit_content(world: &mut World, entity: EntityId, axis: usize, fits: bool) {
+    let Some(layout) = world
+        .get_mut(entity)
+        .and_then(|data| data.components.get_mut("sindri.ui.layout"))
+        .and_then(serde_json::Value::as_object_mut)
+    else {
+        return;
+    };
+    let pair = layout
+        .entry("fit_content".to_owned())
+        .or_insert_with(|| serde_json::json!([false, false]));
+    if let Some(array) = pair.as_array_mut() {
+        array.resize(2, false.into());
+        array[axis] = fits.into();
+    }
 }
 
 fn dimension(
@@ -208,7 +245,9 @@ fn apply_property(
     value: &str,
     viewport: Viewport,
 ) -> Result<(), ApplyError> {
-    if box_model::apply(world, entity, id, property, value, viewport)? {
+    if box_model::apply(world, entity, id, property, value, viewport)?
+        || flex::apply(world, entity, id, property, value, viewport)?
+    {
         return Ok(());
     }
     match property {
@@ -239,47 +278,6 @@ fn apply_property(
                     );
                 }
             }
-        }
-        "direction" => {
-            if !matches!(value.trim(), "row" | "column") {
-                return Err(invalid(id, property, value));
-            }
-            set_component_field(
-                world,
-                entity,
-                "sindri.ui.layout",
-                "direction",
-                value.trim().into(),
-            );
-        }
-        "justify-content" => {
-            let stored = match value.trim() {
-                "start" => "start",
-                "center" => "center",
-                "end" => "end",
-                "space-between" | "space_between" => "space_between",
-                _ => return Err(invalid(id, property, value)),
-            };
-            set_component_field(world, entity, "sindri.ui.layout", "justify", stored.into());
-        }
-        "align-items" => {
-            let stored = match value.trim() {
-                "start" => "start",
-                "center" => "center",
-                "end" => "end",
-                _ => return Err(invalid(id, property, value)),
-            };
-            set_component_field(world, entity, "sindri.ui.layout", "align", stored.into());
-        }
-        "gap" => {
-            let resolved = length(value, viewport).ok_or_else(|| invalid(id, property, value))?;
-            set_component_field(
-                world,
-                entity,
-                "sindri.ui.layout",
-                "spacing",
-                resolved.into(),
-            );
         }
         "font-size" | "line-height" | "letter-spacing" => {
             let resolved = length(value, viewport).ok_or_else(|| invalid(id, property, value))?;

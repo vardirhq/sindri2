@@ -4,8 +4,10 @@
 //! serialized. A host updates it once a frame before scripts run.
 
 mod box_model;
+mod flex;
 mod hierarchy;
 mod layout;
+mod layout_pass;
 mod rect;
 mod slider;
 
@@ -18,9 +20,9 @@ use sindri_core::{
     SceneComponent, World,
 };
 
-pub use box_model::{UiBoxComponent, UiSides};
+pub use box_model::{UiAlignSelf, UiBoxComponent, UiSides};
 pub use hierarchy::{UiHierarchy, UiPlaced};
-pub use layout::{UiAlign, UiDirection, UiJustify, UiLayoutChild, UiLayoutComponent};
+pub use layout::{UiAlign, UiDirection, UiJustify, UiLayoutBox, UiLayoutChild, UiLayoutComponent};
 pub use rect::{SafeArea, ScreenExtent, ScreenRect};
 pub use slider::{UiSliderComponent, UiSliderOrientation};
 
@@ -167,7 +169,7 @@ impl ScreenUi {
             };
             let placed = hierarchy.placement_or(entity, anchor);
             let origin = extent.anchor_origin(placed.anchor.unit_offset());
-            let size = data.transform_3d.unwrap_or_default().scale_2d();
+            let size = placed.size_or(data.transform_3d.unwrap_or_default().scale_2d());
             placements.insert(
                 entity,
                 Element {
