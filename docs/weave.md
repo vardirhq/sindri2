@@ -98,21 +98,20 @@ composed independently and applied in deterministic asset order.
 
 ## Selectors
 
-A rule targets one entity at a time:
+Selectors are CSS's: element names, IDs, classes, states, compounds,
+descendant and child combinators, and lists.
 
 ```css
 #menu { width: 620px; }
 .menu-button { height: 64px; }
-sindri.ui.text { text-align: center; }
+text { text-align: center; }
+.menu > button.primary:hover { background: var(--accent); }
+.menu text, .dialog text { color: #f8fafc; }
 ```
 
-| Selector | Scene input | Specificity |
-| --- | --- | --- |
-| `#id` | The entity's stable authored `id` | 2 |
-| `.class` | A name in `weave.style.classes` | 1 |
-| component type | A component key on the entity | 0 |
-
-Classes are presentation metadata in an opaque scene component:
+An element name is a UI component's short name (`text`, `image`, `shape`,
+`button`, `slider`, `layout`); the full `sindri.ui.text` still works. Classes
+are presentation metadata in an opaque scene component:
 
 ```json
 "weave.style": {
@@ -120,9 +119,11 @@ Classes are presentation metadata in an opaque scene component:
 }
 ```
 
-When matching rules write the same property, higher specificity wins. Rules
-with equal specificity use the later source order. There are no compound
-selectors or inheritance in this proof of concept.
+The most specific rule wins, counting IDs, then classes and states, then
+element names; source order breaks ties. Text properties and `--custom`
+properties inherit from the parent entity, and `var(--name, fallback)`
+substitutes a custom property. [`weave-reference.md`](weave-reference.md) has
+the complete rules.
 
 ## Properties
 
@@ -176,16 +177,15 @@ units before ordinary scene extraction. Parent boxes settle before descendants,
 which keeps percentage sizing deterministic even when a child appears before its
 parent in authored scene order.
 
-Supported media conditions are:
+Supported media conditions are orientation and minimum or maximum width and
+height, combined with `and` and commas as in CSS:
 
 ```css
 @media (orientation: portrait) { /* ... */ }
-@media (orientation: landscape) { /* ... */ }
 @media (max-width: 700px) { /* ... */ }
-@media (min-width: 701px) { /* ... */ }
+@media (min-width: 900px) and (orientation: landscape) { /* ... */ }
+@media (max-height: 500px), (max-width: 400px) { /* ... */ }
 ```
-
-Each condition wraps ordinary rules. Conditions cannot yet be combined.
 
 ## Runtime flow
 
@@ -219,10 +219,11 @@ and named viewport presets are not integrated into the editor yet.
 
 ## Current limits
 
-This is still intentionally smaller than browser CSS. It has no compound or
-descendant selectors, pseudo-states, variables, per-side padding, margin,
-flexible growth/shrink, accessibility mapping, integrated stylesheet editor, or
-named viewport presets.
+Still smaller than browser CSS, and closing the gap is the plan in
+[`ui-direction.md`](ui-direction.md). It has no transitions, per-side padding,
+margin, flexible growth/shrink, wrapping, grid, accessibility mapping,
+integrated stylesheet editor, or named viewport presets, and the running hosts
+do not yet feed pointer state to `:hover` and `:active`.
 The demo proves reusable classes, cascade behavior, responsive geometry,
 min/max constraints, uniform content padding, main/cross-axis alignment, font
 metrics, fills, strokes, rounded shapes, and composable stylesheet sources on

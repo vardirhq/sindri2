@@ -75,34 +75,75 @@ selector {
 ```
 
 A declaration ends with a semicolon. A rule may contain multiple declarations.
-The supported selector forms are:
+Selectors are written as in CSS:
 
-| Form | Example | Matches | Specificity |
-| --- | --- | --- | ---: |
-| Entity ID | `#hud-score` | Stable scene entity ID | 2 |
-| Weave class | `.hud-value` | Entry in `weave.style.classes` | 1 |
-| Component | `sindri.ui.text` | Entity containing that component | 0 |
+| Form | Example | Matches |
+| --- | --- | --- |
+| Element | `text`, `button`, `shape`, `slider` | An entity with that UI component |
+| Entity ID | `#hud-score` | The stable scene entity ID |
+| Class | `.hud-value` | An entry in `weave.style.classes` |
+| Universal | `*` | Any entity |
+| State | `:hover`, `:active` (or `:pressed`), `:focus`, `:disabled`, `:checked` | An entity in that state |
+| Compound | `button.primary:hover` | All of its parts at once |
+| Descendant | `.menu text` | The right-hand entity anywhere inside the left |
+| Child | `.menu > button` | The right-hand entity directly inside the left |
+| List | `.title, .subtitle` | Either |
 
-Selectors currently target one entity at a time. Compound selectors,
-descendant selectors, selector lists, combinators, attributes, and pseudo-classes
-are not implemented.
+An element name is a UI component's short name: `text` for `sindri.ui.text`,
+`image`, `shape`, `button`, `slider`, `layout`, and likewise `sprite` for
+`sindri.sprite`. The full name still works, so `sindri.ui.text { … }` means
+what it always did.
+
+`:disabled` and `:checked` come from the entity's own data: a component with
+`"disabled": true` makes its entity `:disabled`. `:hover`, `:active` and
+`:focus` come from input, which a host passes in when it resolves
+presentation (`PresentationWorld::resolve_with_states`).
 
 ## Cascade
 
-For each property independently:
+For each property independently, as in CSS:
 
-1. A matching rule with greater specificity wins.
+1. A matching rule with greater specificity wins. Specificity counts IDs, then
+   classes and states, then element names: `#play` beats
+   `.menu .row button.primary:hover`, which beats `button:hover`, which beats
+   `button`.
 2. At equal specificity, the declaration appearing later in the stylesheet wins.
 3. A declaration inside an active media rule participates in the same cascade.
-4. There is no inheritance.
-
-A class can therefore establish a reusable baseline while an ID makes a local
-adjustment:
+4. Text properties inherit: `color`, `font-size`, `font-weight`, `font-style`,
+   `line-height`, `letter-spacing`, `text-align`, `text-transform` and
+   `text-wrap`. Colour a panel and every label inside it takes that colour
+   unless it says otherwise. Box properties such as `width` do not inherit.
+5. `inherit` takes the parent's value for any property; `initial` returns a
+   property to the entity's authored value; `unset` inherits a text property
+   and resets any other.
 
 ```css
-.hud-value { color: #cbd5e1; }
-#hud-hp-text { color: #f8fafc; }
+.hud { color: #cbd5e1; font-size: 18px; }   /* every label in the HUD */
+.hud .warning { color: #f87171; }            /* except warnings */
+#hud-hp-text { color: #f8fafc; }             /* and this one */
 ```
+
+### Custom properties
+
+A property whose name starts with `--` is a variable: it inherits like text
+does, and `var(--name)` stands for its value wherever a value is written. A
+fallback follows a comma. Put a theme's tokens on the outermost element and use
+them anywhere inside it:
+
+```css
+.screen {
+    --accent: #f97316;
+    --panel: #111827;
+    --radius: 12px;
+}
+.card { background: var(--panel); border-radius: var(--radius); }
+.card:hover { border-color: var(--accent); }
+.badge { background: var(--badge, var(--accent)); }
+```
+
+A `var()` naming nothing, with no fallback, makes its declaration invalid, and
+the property keeps the entity's authored value, as in CSS. Variables that
+refer to each other in a circle are treated the same way.
 
 ## Lengths
 
@@ -201,11 +242,20 @@ Supported conditions are:
 
 - `orientation: portrait`
 - `orientation: landscape`
-- `max-width: <length>`
-- `min-width: <length>`
+- `max-width: <length>`, `min-width: <length>`
+- `max-height: <length>`, `min-height: <length>`
 
-Conditions cannot currently be combined. Put shared declarations in a normal
-rule and override only what changes inside the media rule.
+Combine them as in CSS: `and` requires every condition, a comma accepts any
+of the alternatives, and a `@media` block nested in another applies only
+where both do.
+
+```css
+@media (min-width: 900px) and (orientation: landscape) { … }
+@media (max-height: 500px), (max-width: 400px) { … }
+```
+
+Put shared declarations in a normal rule and override only what changes inside
+the media rule.
 
 ## Runtime behavior
 
@@ -259,9 +309,12 @@ The following CSS concepts are not implemented:
 - margins or per-side padding
 - flex grow and shrink, including cross-axis stretch
 - grid, wrapping layout, scrolling, and clipping regions
-- variables, calculations, or custom properties
-- selector composition and inheritance
-- hover, pressed, focus, disabled, or other pseudo-states
+- calculations (`calc()`)
+- attribute selectors, sibling combinators, and structural pseudo-classes
+  such as `:first-child` or `:not()`
+- hover, pressed and focus in the running game: the language and the bridge
+  match them, but hosts do not yet pass pointer state in (`:disabled` and
+  `:checked` work everywhere, because they come from the entity's own data)
 - transitions and animation
 - accessibility mapping
 - integrated stylesheet source editing and named viewport preset controls
@@ -274,7 +327,8 @@ Sindri UI layer when a real game proves it is needed.
 
 When an element is misplaced:
 
-1. Confirm the selector matches the intended entity ID, class, or component.
+1. Confirm the selector matches the intended entity ID, class, or element,
+   and that every compound in a descendant selector has an ancestor to match.
 2. Confirm the entity is parented under the expected layout entity.
 3. Check whether a more specific or later rule overrides the property.
 4. Give the child an explicit `width` and `height`.

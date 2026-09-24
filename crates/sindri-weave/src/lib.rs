@@ -5,13 +5,25 @@
 //! ordinary Sindri transforms/component payloads on that clone, and lets the
 //! existing scene/render/input pipeline consume the result normally.
 
+use std::collections::BTreeMap;
+
 use sindri_core::{EntityId, Transform3D, World};
 use thiserror::Error;
-use weave::{Stylesheet, Viewport};
+use weave::{Computed, States, Stylesheet, Viewport};
 
 mod computed;
+mod tree;
 
 use computed::{ComputedStyle, Length};
+use tree::elements;
+
+/// What each element is doing right now: hovered, pressed, focused.
+///
+/// The host that runs input knows this and Weave does not; it is handed in
+/// each time presentation is resolved, so `:hover` rules follow the pointer.
+/// `:disabled` and `:checked` need no entry here: they are read from the
+/// element's own components.
+pub type UiStates = BTreeMap<EntityId, States>;
 
 const RESOLVED_PADDING_FIELD: &str = "_resolved_padding";
 
@@ -37,8 +49,18 @@ impl PresentationWorld {
         stylesheet: &Stylesheet,
         viewport: Viewport,
     ) -> Result<Self, ApplyError> {
+        Self::resolve_with_states(source, stylesheet, viewport, &UiStates::new())
+    }
+
+    /// Resolves presentation for elements in the given interaction states.
+    pub fn resolve_with_states(
+        source: &World,
+        stylesheet: &Stylesheet,
+        viewport: Viewport,
+        states: &UiStates,
+    ) -> Result<Self, ApplyError> {
         let mut world = source.clone();
-        apply(&mut world, stylesheet, viewport)?;
+        apply(&mut world, stylesheet, viewport, states)?;
         Ok(Self { world })
     }
 
@@ -48,52 +70,39 @@ impl PresentationWorld {
     }
 }
 
-fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Result<(), ApplyError> {
-    let mut entities: Vec<(EntityId, String, Vec<String>, Vec<String>)> = world
-        .entities()
-        .filter_map(|(entity, data)| {
-            let id = data.source_id.as_ref()?.as_str().to_owned();
-            let component_types = data.components.keys().cloned().collect();
-            let classes = data
-                .components
-                .get("weave.style")
-                .and_then(|payload| payload.get("classes"))
-                .and_then(serde_json::Value::as_array)
-                .into_iter()
-                .flatten()
-                .filter_map(serde_json::Value::as_str)
-                .map(str::to_owned)
-                .collect();
-            Some((entity, id, classes, component_types))
-        })
-        .collect();
-    // Percent sizes and padding resolve against settled ancestor boxes, so
-    // parents must resolve before their children regardless of authoring order.
-    entities.sort_by_key(|(entity, _, _, _)| hierarchy_depth(world, *entity));
+fn apply(
+    world: &mut World,
+    stylesheet: &Stylesheet,
+    viewport: Viewport,
+    states: &UiStates,
+) -> Result<(), ApplyError> {
+    let tree = elements(world, states);
+    let mut computed: Vec<Computed> = Vec::with_capacity(tree.nodes.len());
+    for (position, node) in tree.nodes.iter().enumerate() {
+        let parent = node.parent.and_then(|parent| computed.get(parent));
+        let style = weave::cascade(stylesheet, &tree, position, viewport, parent);
+        let applied = ComputedStyle::from_computed(&style);
+        computed.push(style);
 
-    for (entity, id, classes, component_types) in entities {
-        let classes: Vec<&str> = classes.iter().map(String::as_str).collect();
-        let kinds: Vec<&str> = component_types.iter().map(String::as_str).collect();
-        let computed = ComputedStyle::resolve(stylesheet, &id, &classes, &kinds, viewport);
-
+        let (entity, id) = (node.entity, node.id.as_str());
         // Visual lengths such as border radius are relative to the final box,
         // so settle both axes and their constraints before decoration.
-        apply_sizing(world, entity, &id, &computed, viewport)?;
-        for (property, value) in computed.into_declarations() {
+        apply_sizing(world, entity, id, &applied, viewport)?;
+        for (property, value) in applied.into_declarations() {
             if !matches!(
                 property.as_str(),
                 "width" | "height" | "min-width" | "max-width" | "min-height" | "max-height"
             ) {
-                apply_property(world, entity, &id, &property, &value, viewport)?;
+                apply_property(world, entity, id, &property, &value, viewport)?;
             }
         }
     }
     Ok(())
 }
 
-const MAX_HIERARCHY_DEPTH: usize = 64;
+pub(crate) const MAX_HIERARCHY_DEPTH: usize = 64;
 
-fn hierarchy_depth(world: &World, entity: EntityId) -> usize {
+pub(crate) fn hierarchy_depth(world: &World, entity: EntityId) -> usize {
     let mut depth = 0;
     let mut current = entity;
     while depth < MAX_HIERARCHY_DEPTH {

@@ -1,0 +1,49 @@
+name: Weave
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'weave/**'
+      - '.github/workflows/weave.yml'
+  pull_request:
+    paths:
+      - 'weave/**'
+      - '.github/workflows/weave.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Superseded pull request runs are cancelled; pushes to main are not, because
+# each commit there is the only record of whether that commit was green.
+concurrency:
+  group: weave-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: Weave workspace
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: weave
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: weave
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace
+      # Weave styles browser games, so it has to keep building for them.
+      - name: Browser target
+        run: cargo check --workspace --all-targets --target wasm32-unknown-unknown

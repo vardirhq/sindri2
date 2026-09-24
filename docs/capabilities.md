@@ -315,10 +315,19 @@ not a source of secrets: a handful of outputs reveals the state.
 ### Weave presentation styling
 
 Weave resolves responsive presentation into a disposable clone of an authored
-world. ID, class, and component-type selectors style ordinary transforms, UI
-layouts, shapes, text, and layout behavior; CSS-like specificity and source
-order decide conflicts. Portrait, landscape, minimum-width, and maximum-width
-rules react to the viewport without changing the scene. Percentage sizing,
+world. Its selectors are CSS's: element names (`text`, `button`, with the long
+`sindri.ui.text` still accepted), IDs, classes, `*`, compounds such as
+`button.primary:hover`, descendant and child combinators, and lists, with CSS
+specificity and source order deciding conflicts. The cascade is CSS's too:
+text properties inherit from the containing entity, `inherit`, `initial` and
+`unset` do what they do in CSS, and custom properties (`--accent`) inherit and
+substitute through `var()` with fallbacks, so a theme's tokens live in one
+place. Media queries test orientation and minimum or maximum width and height,
+combined with `and`, commas and nesting. `:disabled` and `:checked` follow the
+entity's own component data everywhere; `:hover`, `:active` and `:focus` match
+when a host passes input state to `PresentationWorld::resolve_with_states`,
+which no running host does yet. The language workspace now has its own CI
+workflow. `docs/ui-direction.md` is the plan beyond this. Percentage sizing,
 min/max constraints, padding, gaps, wrapping, alignment, and text wrapping cover
 the responsive composition used by the shipped examples.
 
