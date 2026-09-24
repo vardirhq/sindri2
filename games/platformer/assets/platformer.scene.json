@@ -1,0 +1,2086 @@
+{
+  "format_version": 10,
+  "metadata": {
+    "name": "Platformer"
+  },
+  "entities": [
+    {
+      "id": "camera",
+      "name": "Camera",
+      "transform_3d": {
+        "position": [
+          8.0,
+          5.0,
+          10.0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": {
+        "sindri.camera": {
+          "projection": "orthographic",
+          "vertical_size": 9.0,
+          "near": 0.1,
+          "far": 100.0,
+          "fit": "height"
+        },
+        "sindri.camera.behavior": {
+          "follow": {
+            "target": "hero",
+            "offset": [
+              0,
+              1.0,
+              0
+            ],
+            "dead_zone": [
+              1.5,
+              1.0
+            ],
+            "smoothing": 6.0,
+            "max_speed": 30.0
+          },
+          "confine": {
+            "min": [
+              8.0,
+              4.5
+            ],
+            "max": [
+              56.0,
+              9.5
+            ]
+          },
+          "shake": {
+            "trauma": 0.0,
+            "strength": 0.12,
+            "decay": 2.8,
+            "frequency": 57.0,
+            "phase": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "environment",
+      "name": "Environment",
+      "components": {
+        "sindri.environment": {
+          "background": [
+            0.53,
+            0.79,
+            1.0,
+            1.0
+          ],
+          "shadows": {
+            "enabled": false,
+            "map_size": 1024,
+            "distance": 48.0,
+            "bias": 0.002
+          }
+        }
+      }
+    },
+    {
+      "id": "physics",
+      "name": "Physics",
+      "components": {
+        "sindri.physics2d.world": {
+          "gravity": [
+            0.0,
+            -30.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "level",
+      "name": "Level",
+      "transform_3d": {
+        "position": [
+          0,
+          14,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": {
+        "sindri.tilemap": {
+          "texture": "textures/tiles.png",
+          "palette": [
+            "grass",
+            "dirt",
+            "stone",
+            "plank",
+            "tuft"
+          ],
+          "columns": 64,
+          "rows": 14,
+          "tiles": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            2,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            2,
+            2,
+            null,
+            null,
+            2,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            4,
+            null,
+            null,
+            null,
+            4,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            4,
+            null,
+            null,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            null,
+            null,
+            null,
+            null,
+            null,
+            4,
+            null,
+            2,
+            2,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            4,
+            null,
+            null,
+            null,
+            null,
+            2,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            null,
+            null,
+            null,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            null,
+            null,
+            null,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            null,
+            null,
+            null,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            null,
+            null,
+            null,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            null,
+            null,
+            null,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            null,
+            null,
+            null,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "layer": 0
+        },
+        "sindri.physics2d.tilemap_collider": {
+          "passable": [
+            "tuft"
+          ],
+          "layers": {
+            "memberships": 4294967295,
+            "filter": 4294967295
+          },
+          "friction": 0.5,
+          "restitution": 0.0
+        },
+        "sindri.tags": {
+          "tags": [
+            "solid"
+          ]
+        }
+      }
+    },
+    {
+      "id": "hero",
+      "name": "Hero",
+      "transform_3d": {
+        "position": [
+          2.5,
+          4.0,
+          0.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/hero.png#idle-0",
+          "layer": 5
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "idle": {
+              "frames": [
+                "idle-0",
+                "idle-1"
+              ],
+              "seconds_per_frame": 0.45,
+              "looping": true
+            },
+            "run": {
+              "frames": [
+                "run-0",
+                "run-1",
+                "run-2",
+                "run-3"
+              ],
+              "seconds_per_frame": 0.09,
+              "looping": true
+            },
+            "jump": {
+              "frames": [
+                "jump"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "fall": {
+              "frames": [
+                "fall"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            }
+          },
+          "playing": "idle",
+          "speed": 1.0
+        },
+        "sindri.physics2d.rigid_body": {
+          "kind": "dynamic",
+          "pose": {
+            "position": [
+              0,
+              0
+            ],
+            "rotation": 0
+          },
+          "linear_velocity": [
+            0,
+            0
+          ],
+          "angular_velocity": 0,
+          "gravity_scale": 1.0,
+          "linear_damping": 0,
+          "angular_damping": 0,
+          "lock_rotation": true
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "capsule",
+                "half_height": 0.16,
+                "radius": 0.3
+              },
+              "offset": [
+                0.0,
+                -0.04
+              ],
+              "rotation": 0.0,
+              "sensor": false,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.0,
+              "restitution": 0.0
+            },
+            {
+              "shape": {
+                "shape": "box",
+                "half_extents": [
+                  0.2,
+                  0.06
+                ]
+              },
+              "offset": [
+                0.0,
+                -0.5
+              ],
+              "rotation": 0.0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.0,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "hero"
+          ]
+        },
+        "sindri.script": {
+          "source": "scripts/hero.decay",
+          "script": "Hero",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "id": "coin-1",
+      "name": "Coin 1",
+      "transform_3d": {
+        "position": [
+          8.5,
+          4.5,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/coin.png#coin-0",
+          "layer": 4
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "spin": {
+              "frames": [
+                "coin-0",
+                "coin-1",
+                "coin-2",
+                "coin-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            }
+          },
+          "playing": "spin",
+          "speed": 1.0
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "circle",
+                "radius": 0.3
+              },
+              "offset": [
+                0,
+                0
+              ],
+              "rotation": 0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.5,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "coin"
+          ]
+        }
+      }
+    },
+    {
+      "id": "coin-2",
+      "name": "Coin 2",
+      "transform_3d": {
+        "position": [
+          20.5,
+          7.0,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/coin.png#coin-0",
+          "layer": 4
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "spin": {
+              "frames": [
+                "coin-0",
+                "coin-1",
+                "coin-2",
+                "coin-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            }
+          },
+          "playing": "spin",
+          "speed": 1.0
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "circle",
+                "radius": 0.3
+              },
+              "offset": [
+                0,
+                0
+              ],
+              "rotation": 0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.5,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "coin"
+          ]
+        }
+      }
+    },
+    {
+      "id": "coin-3",
+      "name": "Coin 3",
+      "transform_3d": {
+        "position": [
+          21.5,
+          7.0,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/coin.png#coin-0",
+          "layer": 4
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "spin": {
+              "frames": [
+                "coin-0",
+                "coin-1",
+                "coin-2",
+                "coin-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            }
+          },
+          "playing": "spin",
+          "speed": 1.0
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "circle",
+                "radius": 0.3
+              },
+              "offset": [
+                0,
+                0
+              ],
+              "rotation": 0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.5,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "coin"
+          ]
+        }
+      }
+    },
+    {
+      "id": "coin-4",
+      "name": "Coin 4",
+      "transform_3d": {
+        "position": [
+          14.5,
+          5.5,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/coin.png#coin-0",
+          "layer": 4
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "spin": {
+              "frames": [
+                "coin-0",
+                "coin-1",
+                "coin-2",
+                "coin-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            }
+          },
+          "playing": "spin",
+          "speed": 1.0
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "circle",
+                "radius": 0.3
+              },
+              "offset": [
+                0,
+                0
+              ],
+              "rotation": 0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.5,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "coin"
+          ]
+        }
+      }
+    },
+    {
+      "id": "coin-5",
+      "name": "Coin 5",
+      "transform_3d": {
+        "position": [
+          29.5,
+          5.0,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/coin.png#coin-0",
+          "layer": 4
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "spin": {
+              "frames": [
+                "coin-0",
+                "coin-1",
+                "coin-2",
+                "coin-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            }
+          },
+          "playing": "spin",
+          "speed": 1.0
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "circle",
+                "radius": 0.3
+              },
+              "offset": [
+                0,
+                0
+              ],
+              "rotation": 0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.5,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "coin"
+          ]
+        }
+      }
+    },
+    {
+      "id": "coin-6",
+      "name": "Coin 6",
+      "transform_3d": {
+        "position": [
+          34.5,
+          6.0,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/coin.png#coin-0",
+          "layer": 4
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "spin": {
+              "frames": [
+                "coin-0",
+                "coin-1",
+                "coin-2",
+                "coin-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            }
+          },
+          "playing": "spin",
+          "speed": 1.0
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "circle",
+                "radius": 0.3
+              },
+              "offset": [
+                0,
+                0
+              ],
+              "rotation": 0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.5,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "coin"
+          ]
+        }
+      }
+    },
+    {
+      "id": "coin-7",
+      "name": "Coin 7",
+      "transform_3d": {
+        "position": [
+          40.5,
+          7.5,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/coin.png#coin-0",
+          "layer": 4
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "spin": {
+              "frames": [
+                "coin-0",
+                "coin-1",
+                "coin-2",
+                "coin-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            }
+          },
+          "playing": "spin",
+          "speed": 1.0
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "circle",
+                "radius": 0.3
+              },
+              "offset": [
+                0,
+                0
+              ],
+              "rotation": 0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.5,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "coin"
+          ]
+        }
+      }
+    },
+    {
+      "id": "coin-8",
+      "name": "Coin 8",
+      "transform_3d": {
+        "position": [
+          48.0,
+          7.0,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/coin.png#coin-0",
+          "layer": 4
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "spin": {
+              "frames": [
+                "coin-0",
+                "coin-1",
+                "coin-2",
+                "coin-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            }
+          },
+          "playing": "spin",
+          "speed": 1.0
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "circle",
+                "radius": 0.3
+              },
+              "offset": [
+                0,
+                0
+              ],
+              "rotation": 0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.5,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "coin"
+          ]
+        }
+      }
+    },
+    {
+      "id": "coin-9",
+      "name": "Coin 9",
+      "transform_3d": {
+        "position": [
+          53.5,
+          7.0,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/coin.png#coin-0",
+          "layer": 4
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "spin": {
+              "frames": [
+                "coin-0",
+                "coin-1",
+                "coin-2",
+                "coin-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            }
+          },
+          "playing": "spin",
+          "speed": 1.0
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "circle",
+                "radius": 0.3
+              },
+              "offset": [
+                0,
+                0
+              ],
+              "rotation": 0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.5,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "coin"
+          ]
+        }
+      }
+    },
+    {
+      "id": "coin-10",
+      "name": "Coin 10",
+      "transform_3d": {
+        "position": [
+          59.5,
+          4.0,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/coin.png#coin-0",
+          "layer": 4
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "spin": {
+              "frames": [
+                "coin-0",
+                "coin-1",
+                "coin-2",
+                "coin-3"
+              ],
+              "seconds_per_frame": 0.12,
+              "looping": true
+            }
+          },
+          "playing": "spin",
+          "speed": 1.0
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "circle",
+                "radius": 0.3
+              },
+              "offset": [
+                0,
+                0
+              ],
+              "rotation": 0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.5,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "coin"
+          ]
+        }
+      }
+    },
+    {
+      "id": "flag",
+      "name": "Flag",
+      "transform_3d": {
+        "position": [
+          60.5,
+          4.0,
+          0.1
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          2,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/flag.png#wave-0",
+          "layer": 3
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "wave": {
+              "frames": [
+                "wave-0",
+                "wave-1"
+              ],
+              "seconds_per_frame": 0.3,
+              "looping": true
+            }
+          },
+          "playing": "wave",
+          "speed": 1.0
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "box",
+                "half_extents": [
+                  0.4,
+                  1.0
+                ]
+              },
+              "offset": [
+                0,
+                0
+              ],
+              "rotation": 0,
+              "sensor": true,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.5,
+              "restitution": 0.0
+            }
+          ]
+        },
+        "sindri.tags": {
+          "tags": [
+            "goal"
+          ]
+        }
+      }
+    },
+    {
+      "id": "hud",
+      "name": "HUD",
+      "transform_3d": {
+        "position": [
+          0.03,
+          -0.03,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "top_left",
+          "color": [
+            1.0,
+            0.95,
+            0.6,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.04,
+          "line_height": 0.048,
+          "layer": 100,
+          "text": "Coins {}/{}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.003
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.45
+            ],
+            "softness": 0.002
+          },
+          "bold": true
+        },
+        "sindri.script": {
+          "source": "scripts/hud.decay",
+          "script": "Hud",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "id": "banner",
+      "name": "Banner",
+      "transform_3d": {
+        "position": [
+          0,
+          0.05,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.08,
+          "line_height": 0.096,
+          "layer": 100,
+          "text": "You made it!",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.003
+            ],
+            "color": [
+              0.0,
+              0.0,
+              0.0,
+              0.45
+            ],
+            "softness": 0.002
+          },
+          "bold": true
+        }
+      },
+      "disabled": true
+    }
+  ]
+}

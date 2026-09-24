@@ -1,0 +1,15 @@
+// The coin count, and the banner when the flag is reached.
+script Hud {
+    var banner: Entity = null;
+
+    fn start() {
+        this.banner = World.find("Banner");
+    }
+
+    fn update(dt: f32) {
+        Ui.set_numbers(this.entity, Game.get("coins", 0.0), Game.get("coins_total", 0.0));
+        if this.banner != null {
+            World.set_active(this.banner, Game.get("won", 0.0) > 0.0);
+        }
+    }
+}

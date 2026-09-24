@@ -363,3 +363,31 @@ fn a_scene_sets_its_own_gravity() {
         "back to the host's"
     );
 }
+
+/// Moving a body's transform moves the body, as setting a `Rigidbody2D`'s
+/// position does in Unity: a respawn or a screen-edge clamp written by a
+/// script is not undone by the next step putting back where physics had it.
+#[test]
+fn moving_a_body_by_its_transform_teleports_it() {
+    let mut world = World::default();
+    let ball = spawn(&mut world, [0.0, 0.0], Some("dynamic"), false);
+    let mut physics = ScenePhysics2d::new([0.0, -10.0]).expect("a world");
+    for _ in 0..30 {
+        physics.step(&mut world, &components(), STEP).expect("step");
+    }
+    let transform = world
+        .get_mut(ball)
+        .expect("still there")
+        .transform_3d
+        .as_mut()
+        .expect("a transform");
+    transform.position[0] = 5.0;
+    transform.position[1] = 8.0;
+    physics.step(&mut world, &components(), STEP).expect("step");
+    let [x, y, _] = position(&world, ball);
+    assert!((x - 5.0).abs() < 0.05, "moved across: {x}");
+    assert!(
+        (y - 8.0).abs() < 0.5,
+        "moved up, then fell a step's worth: {y}"
+    );
+}

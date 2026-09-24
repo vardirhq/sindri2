@@ -370,6 +370,9 @@ impl Session {
         }
         self.animations
             .advance(world, &self.components, delta_seconds)?;
+        // After the scripts, so a camera following the player follows where
+        // this step left it, and before the terrain asks where the camera is.
+        sindri_scene::update_camera_behaviors(world, delta_seconds);
         // The camera may have moved in Build or Play this frame. Materialize
         // its new neighbourhood before placement/navigation and rendering ask
         // about it; the renderer itself remains mode-agnostic.

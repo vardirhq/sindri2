@@ -182,7 +182,7 @@ The ordered work required to close these gaps is tracked in
 | **Nine-slice sprites** | ❌ | ❌ | — | — | **Absent** | Every UI panel that resizes needs it |
 | **Sprite masking / stencil** | ❌ | ❌ | ❌ | ❌ | **Absent** | — |
 | Sorting and draw order | ✅ | ✅ | 🟡 | ✅ | **Par** | Layers plus the ground anchor |
-| **Camera follow / confine / shake** | ✅ | 🟡 | 🟡 | 🟡 | **Behind** | `sindri.camera.behavior` provides stable-target follow with offset/dead zone/smoothing/max speed, XY confinement, and deterministic trauma shake. `examples/camera` now drives target movement and impact trauma from Decay through the same fixed-step behavior path on native/browser architecture; `Camera.add_trauma` is the first typed behavior control. The richer acceptance UI, broader Decay camera-mode controls, dedicated authoring UX/gizmos, and Orbital migration remain. |
+| **Camera follow / confine / shake** | ✅ | 🟡 | 🟡 | ✅ | **Behind** | `sindri.camera.behavior` provides stable-target follow with offset/dead zone/smoothing/max speed, XY confinement, and deterministic trauma shake, and every gameplay host (editor Play, the browser host, the camera example) advances it after the scripts. The platformer follows its hero inside the level's bounds and a test holds it. `Camera.add_trauma` is the first typed behavior control. Broader Decay camera-mode controls and dedicated authoring UX/gizmos remain. |
 
 ## 3D rendering
 
@@ -226,10 +226,12 @@ events, blending, tweening, and animating anything that is not a sprite frame.
 | Masks, sensors, collision events | ✅ | 🟡 | ✅ | ✅ | **Par** | — |
 | **Named collision layers** | ❌ | ❌ | ❌ | — | **Behind** | Masks are raw `u32` bit values. Unity and Godot both name layers in project settings. Cheap to fix, daily friction |
 | Per-piece validation naming the failing index | ✅ | — | — | ✅ | **Ahead** | Neither baseline tells you *which* collider was wrong |
-| **Raycast / overlap / shape queries** | ❌ | ❌ | ❌ | ❌ | **Absent** | Line of sight, ground checks, click-to-select in-game, AI vision. Close to universal, and we have none |
+| **Raycast / overlap / shape queries** | ❌ | ❌ | ❌ | ❌ | **Absent** | Line of sight, ground checks, click-to-select in-game, AI vision. Close to universal, and we have none. The platformer checks the ground with a foot sensor instead, which works for standing and cannot answer "how far to the ground" |
 | **Joints and constraints** | 🟡 | ❌ | ✅ | ❌ | **Behind** | One joint kind: `Physics.connect_distance(first, second, max_distance)` holds two bodies within a distance, queued when a chain is built in a single script pass and its bodies do not exist yet. No hinge, slider, spring, or motor, and nothing authors a joint in a scene — a joint exists only if a script makes one. Added for the spine boss, which ships without it: `games/orbital-baked/assets/scripts/spine-segment.decay` chains its segments by hand, each one reading its leader and steering toward a point `spacing` behind it. `crates/sindri-physics/tests/distance_joint.rs` is the only exercise |
 | **Physics materials as assets** | ❌ | ❌ | ❌ | — | **Behind** | Friction and restitution are per-collider literals |
-| **Character controller** | ❌ | ❌ | ❌ | ❌ | **Absent** | Every platformer and top-down game writes one |
+| **Character controller** | ❌ | ❌ | ❌ | ❌ | **Absent** | Every platformer and top-down game writes one. The platformer's hero is a dynamic body driven by velocity, with a foot sensor for standing and coyote time and a jump buffer in Decay: it works, and it is exactly the code a controller would own |
+| Moving a body by its transform | ✅ | — | ✅ | ✅ | **Par** | A script writing a body's position teleports it, keeping its velocity, as in Unity; a position-kinematic body takes it as its next target. The platformer's respawn is the proof |
+| **One-way platforms** | ❌ | ❌ | ❌ | ❌ | **Absent** | Unity's Platform Effector, Godot's one-way collision. The platformer's plank tile is drawn and not yet used for want of it |
 | **Continuous collision (CCD)** | ❌ | — | — | — | **Absent** | Fast bullets tunnel |
 | Collider gizmos in the Scene view | — | ✅ | — | — | **Par** | Every 2D collider is outlined from the pieces physics is given, tilemap boxes included; the selected one's box edges, circle radius and capsule height drag, one undo step a drag. Offsets and rotations are still typed, and 3D colliders have no gizmo |
 | Scene gravity | ✅ | ✅ | — | ❌ | **Par** | `sindri.physics2d.world` sets the scene's gravity, so editor Play runs a platformer as its build will. One vector; no per-area gravity |

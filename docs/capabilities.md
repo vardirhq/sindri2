@@ -182,7 +182,10 @@ one keeps its host's, which for the editor and both Orbital games is none.
 those components, keeps it in step as entities are spawned, switched off, and
 despawned — a body outliving its entity would collide on behalf of nothing — and
 writes what physics decided back into the transforms the renderer reads, leaving
-the authored Z and the 3D scale alone. A body whose authored values have not
+the authored Z and the 3D scale alone. A transform moved by something other
+than physics since then, a script respawning the player, moves the body with
+it before the next step rather than being put back. Friction combines as the
+smaller of two colliders' values, so a frictionless hero slides down walls. A body whose authored values have not
 changed is left as it is rather than rebuilt, because rebuilding one discards the
 velocity and contacts the simulation owns. Editor Play and the game session both
 step it once per fixed update, before scripts run, so a script observes the
@@ -1557,6 +1560,38 @@ the README.
 - The only numeric type is spelled `f32` and every value it holds is an `f64`
 
 ---
+
+## The platformer
+
+`games/platformer` is the first genre showcase: a side-view level painted as a
+tilemap and made solid by a Tilemap Collider 2D, a hero who runs and jumps, ten
+coins and a flag, a HUD, and a camera that follows. It has no Rust of its own;
+the scene and two Decay scripts are the game, and it exports to the site.
+
+**Its hero is a dynamic body driven by velocity.** A capsule collider with
+zero friction and a foot sensor under it: the sensor touches the ground and
+nothing else, so walls and ceilings never count as floor. Decay counts the
+ground contacts from `Physics.sensor_entered`/`sensor_exited`, and gives the
+jump the two forgivenesses players expect, a buffer for a press just before
+landing and coyote time for one just after running off a ledge. Letting go
+early cuts the rise short.
+
+**It found three gaps, all closed as general capabilities.** A script moving a
+body's transform was undone by the next physics step, so a respawn did
+nothing; a frictionless hero clung to walls because friction averaged; and
+camera behaviors ran only in the camera example, so no other game's camera
+followed anything. See Physics and `docs/cameras.md`.
+
+**It is checked, not just run.** `games/platformer/tests/` stands the hero on
+the painted ground, has a scripted player hold right and jump at every gap and
+wall until it reaches the flag without falling (in about nine seconds), and
+holds the camera to following it inside the level.
+
+### Not yet
+
+- No enemies, hazards or one-way platforms; the plank tile waits on the last.
+- No level after the first, no pause and no restart without Stop.
+- No site card or captured screenshot yet; the showcase library adds them.
 
 ## The companion game
 

@@ -24,6 +24,7 @@ members = [
     "game",
     "games/orbital-last-stand",
     "games/orbital-baked",
+    "games/platformer",
     "games/weave-poc",
     "games/voxel-lab",
 ]
