@@ -29,10 +29,13 @@ and generating one never depends on another.
    slopes of three voxels or more; otherwise the biome's own ground. Every
    height threshold is frayed, as Causeway's are.
 6. **Volume.** In the heart of a range, a band of three-dimensional noise
-   around the surface undercuts faces into ledges and overhangs. Tunnels run
-   where two fields both cross their middle, and caverns open deep below the
-   sea. Neither breaks the surface except in the ranges, where a tunnel
-   coming out is a cave mouth.
+   around the surface undercuts faces into ledges and overhangs. It only
+   takes rock from a few voxels into the side of a wall thick enough, both
+   ways across, to keep a core, so a thin ridge or spur is never cut through
+   into a window. Tunnels run where two fields both cross their middle, and
+   caverns open deep below the sea. Neither breaks the surface except in the
+   ranges, where a tunnel coming out is a cave mouth, and a tunnel never runs
+   through a wall too thin to hold it.
 7. **Water and trees.** Open voxels at or below sea level are water, and the
    surface freezes to ice where it is cold. Trees stand at most one to a
    6×6 square, on a biome's own gentle ground, as often as its `trees`
