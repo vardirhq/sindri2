@@ -14,6 +14,8 @@
 use serde::Deserialize;
 use sindri_core::SceneComponent;
 
+use super::box_model::{UiSides, shift, span};
+
 /// Which way a layout runs.
 #[derive(Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -95,6 +97,14 @@ impl UiAlign {
 pub struct UiLayoutBox {
     pub offset: [f32; 2],
     pub size: [f32; 2],
+}
+
+/// One child as its parent's layout sees it: its own size and the margin it
+/// keeps around itself.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct UiLayoutChild {
+    pub size: [f32; 2],
+    pub margin: UiSides,
 }
 
 /// Places an entity's active children along one axis.
@@ -206,6 +216,55 @@ impl UiLayoutComponent {
             .collect()
     }
 
+    /// Resolve the sibling line with the box model: children flow inside the
+    /// parent's `padding`, and each keeps its own margin free around it.
+    ///
+    /// As in CSS flexbox, margins do not collapse: two neighbours' margins and
+    /// the layout's gap all add up. A stretched child fills the cross axis
+    /// less its own margins.
+    #[must_use]
+    pub fn resolve_boxes(
+        self,
+        parent_size: [f32; 2],
+        padding: UiSides,
+        children: &[UiLayoutChild],
+    ) -> Vec<UiLayoutBox> {
+        let inset = span(padding);
+        let content = [
+            (parent_size[0].abs() - inset[0]).max(0.0),
+            (parent_size[1].abs() - inset[1]).max(0.0),
+        ];
+        let content_middle = shift(padding);
+        let outer: Vec<[f32; 2]> = children
+            .iter()
+            .map(|child| {
+                let around = span(child.margin);
+                [
+                    child.size[0].abs() + around[0],
+                    child.size[1].abs() + around[1],
+                ]
+            })
+            .collect();
+        self.resolve_in_box(content, &outer)
+            .into_iter()
+            .zip(children)
+            .map(|(placed, child)| {
+                let around = span(child.margin);
+                let own_middle = shift(child.margin);
+                UiLayoutBox {
+                    offset: [
+                        placed.offset[0] + content_middle[0] + own_middle[0],
+                        placed.offset[1] + content_middle[1] + own_middle[1],
+                    ],
+                    size: [
+                        (placed.size[0] - around[0]).max(0.0),
+                        (placed.size[1] - around[1]).max(0.0),
+                    ],
+                }
+            })
+            .collect()
+    }
+
     /// Resolve only the child offsets for callers that do not need sizing.
     #[must_use]
     pub fn offsets_in_box(self, parent_size: [f32; 2], child_sizes: &[[f32; 2]]) -> Vec<[f32; 2]> {
@@ -233,7 +292,7 @@ impl UiLayoutComponent {
 
 #[cfg(test)]
 mod tests {
-    use super::{UiAlign, UiDirection, UiJustify, UiLayoutComponent};
+    use super::{UiAlign, UiDirection, UiJustify, UiLayoutChild, UiLayoutComponent};
 
     #[track_caller]
     fn assert_at(got: [f32; 2], want: [f32; 2]) {
@@ -341,5 +400,59 @@ mod tests {
         assert_at(resolved[1].size, [0.5, 2.0]);
         assert_at(resolved[0].offset, [-0.5, 0.0]);
         assert_at(resolved[1].offset, [0.75, 0.0]);
+    }
+
+    #[test]
+    fn children_start_inside_the_padding() {
+        let mut column = layout(UiDirection::Column);
+        column.justify = UiJustify::Start;
+        column.align = UiAlign::Start;
+        let child = UiLayoutChild {
+            size: [1.0, 0.5],
+            margin: [0.0; 4],
+        };
+        // A 4 x 2 panel with 0.25 above and 0.5 to the left.
+        let placed = column.resolve_boxes([4.0, 2.0], [0.25, 0.0, 0.0, 0.5], &[child]);
+        // Its top-left corner sits exactly at the padding's inner corner.
+        let top = placed[0].offset[1] + 0.25;
+        let left = placed[0].offset[0] - 0.5;
+        assert_at([left, top], [-2.0 + 0.5, 1.0 - 0.25]);
+    }
+
+    #[test]
+    fn margins_add_to_the_gap_between_neighbours() {
+        let mut row = layout(UiDirection::Row);
+        row.spacing = 0.1;
+        let plain = UiLayoutChild {
+            size: [1.0, 1.0],
+            margin: [0.0; 4],
+        };
+        let spaced = UiLayoutChild {
+            margin: [0.0, 0.0, 0.0, 0.3],
+            ..plain
+        };
+        let placed = row.resolve_boxes([4.0, 2.0], [0.0; 4], &[plain, spaced]);
+        let first_right = placed[0].offset[0] + 0.5;
+        let second_left = placed[1].offset[0] - 0.5;
+        assert!(
+            (second_left - first_right - 0.4).abs() < 1.0e-5,
+            "{placed:?}"
+        );
+    }
+
+    #[test]
+    fn stretch_fills_the_content_box_less_the_childs_margins() {
+        let mut row = layout(UiDirection::Row);
+        row.align = UiAlign::Stretch;
+        let child = UiLayoutChild {
+            size: [1.0, 0.5],
+            margin: [0.1, 0.0, 0.2, 0.0],
+        };
+        let placed = row.resolve_boxes([4.0, 2.0], [0.25, 0.25, 0.25, 0.25], &[child]);
+        // 2 high, less 0.5 of padding, less 0.3 of margin.
+        assert_at(placed[0].size, [1.0, 1.2]);
+        // 0.1 of margin above and 0.2 below, so its middle sits 0.05 above
+        // the content's middle.
+        assert_at(placed[0].offset, [0.0, 0.05]);
     }
 }

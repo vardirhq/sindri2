@@ -35,7 +35,7 @@ use std::collections::BTreeMap;
 use glam::{Quat, Vec2};
 use sindri_core::{ComponentRegistryError, ComponentSchemaRegistry, EntityId, Transform3D, World};
 
-use super::{UiButtonComponent, UiLayoutComponent};
+use super::{UiBoxComponent, UiButtonComponent, UiLayoutChild, UiLayoutComponent};
 use crate::{UiAnchor, UiImageComponent, UiShapeComponent, UiTextComponent};
 
 /// How deep a parent chain is followed.
@@ -227,31 +227,37 @@ fn layout_offsets(
     world: &World,
     components: &ComponentSchemaRegistry,
 ) -> Result<BTreeMap<EntityId, Vec2>, ComponentRegistryError> {
+    let boxes: BTreeMap<EntityId, UiBoxComponent> = components
+        .query::<UiBoxComponent>(world)?
+        .into_iter()
+        .collect();
     let mut offsets = BTreeMap::new();
     for (parent, layout) in components.query::<UiLayoutComponent>(world)? {
         let Some(data) = world.get(parent) else {
             continue;
         };
         let parent_size = data.transform_3d.unwrap_or_default().scale_2d();
+        let padding = boxes.get(&parent).map_or([0.0; 4], |own| own.padding);
         let shown: Vec<EntityId> = data
             .children
             .iter()
             .copied()
             .filter(|child| world.is_active(*child))
             .collect();
-        let child_sizes: Vec<[f32; 2]> = shown
+        let children: Vec<UiLayoutChild> = shown
             .iter()
-            .map(|child| {
-                world
+            .map(|child| UiLayoutChild {
+                size: world
                     .get(*child)
                     .and_then(|data| data.transform_3d)
                     .unwrap_or_default()
-                    .scale_2d()
+                    .scale_2d(),
+                margin: boxes.get(child).map_or([0.0; 4], |own| own.margin),
             })
             .collect();
-        let resolved = layout.offsets_in_box(parent_size, &child_sizes);
-        for (child, offset) in shown.into_iter().zip(resolved) {
-            offsets.insert(child, Vec2::from_array(offset));
+        let resolved = layout.resolve_boxes(parent_size, padding, &children);
+        for (child, placed) in shown.into_iter().zip(resolved) {
+            offsets.insert(child, Vec2::from_array(placed.offset));
         }
     }
     Ok(offsets)
@@ -502,5 +508,39 @@ mod tests {
         );
         assert_eq!(hud.anchor, UiAnchor::TopLeft);
         assert!(hud.rotation.abs_diff_eq(Quat::IDENTITY, 1.0e-6));
+    }
+
+    /// A layout's children start inside its padding and keep their margins,
+    /// as they would in a browser.
+    #[test]
+    fn a_layout_places_children_inside_its_padding_and_around_their_margins() {
+        let (world, extractor) = world(&format!(
+            r#"{{ "id": "panel", "name": "panel",
+                  "transform_3d": {{ "scale": [4.0, 2.0, 1.0] }},
+                  "components": {{ {IMAGE},
+                      "sindri.ui.layout": {{ "direction": "row", "spacing": 0.0,
+                                             "justify": "start", "align": "start" }},
+                      "sindri.ui.box": {{ "padding": [0.2, 0.0, 0.0, 0.5] }} }} }},
+               {{ "id": "first", "name": "first", "parent": "panel",
+                  "transform_3d": {{ "scale": [1.0, 0.5, 1.0] }},
+                  "components": {{ {IMAGE} }} }},
+               {{ "id": "second", "name": "second", "parent": "panel",
+                  "transform_3d": {{ "scale": [1.0, 0.5, 1.0] }},
+                  "components": {{ {IMAGE},
+                      "sindri.ui.box": {{ "margin": [0.1, 0.0, 0.0, 0.25] }} }} }}"#
+        ));
+        let first = placement(&world, &extractor, "first");
+        // Left edge at the padding: -2 + 0.5; top edge at 1 - 0.2.
+        assert!(
+            (first.offset - Vec2::new(-1.5 + 0.5, 0.8 - 0.25)).length() < 1.0e-5,
+            "{first:?}"
+        );
+        let second = placement(&world, &extractor, "second");
+        // The first's right edge is at -0.5; then a quarter of margin and
+        // half its width. A tenth lower than the first, for its top margin.
+        assert!(
+            (second.offset - Vec2::new(-0.5 + 0.25 + 0.5, 0.8 - 0.1 - 0.25)).length() < 1.0e-5,
+            "{second:?}"
+        );
     }
 }

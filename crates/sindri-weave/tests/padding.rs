@@ -109,3 +109,75 @@ fn negative_padding_is_rejected() {
     assert!(error.to_string().contains("padding"));
     assert!(error.to_string().contains("-8px"));
 }
+
+#[test]
+fn padding_and_margin_reach_the_box_side_by_side() {
+    let document = SceneDocument::from_json(
+        r#"{
+            "format_version": 10,
+            "metadata": { "name": "weave-box" },
+            "entities": [
+                {
+                    "id": "panel",
+                    "name": "panel",
+                    "components": {
+                        "sindri.ui.shape": { "kind": "rect", "anchor": "center" }
+                    }
+                },
+                {
+                    "id": "child",
+                    "name": "child",
+                    "parent": "panel",
+                    "components": {
+                        "sindri.ui.shape": { "kind": "rect", "anchor": "center" }
+                    }
+                }
+            ]
+        }"#,
+    )
+    .expect("scene parses");
+    let source = World::from_scene(&document).expect("scene loads").world;
+    // 800 pixels high is two overlay units, so 40px is 0.1.
+    let sheet = parse(
+        r"
+            #panel { width: 800px; padding: 40px 80px; padding-top: 0; }
+            #child { margin: 10%; margin-bottom: 40px; }
+        ",
+    )
+    .expect("Weave parses");
+    let styled = PresentationWorld::resolve(
+        &source,
+        &sheet,
+        Viewport {
+            width: 1_200.0,
+            height: 800.0,
+        },
+    )
+    .expect("styles resolve");
+
+    let sides = |name: &str, field: &str| -> Vec<f32> {
+        let (_, data) = styled
+            .world()
+            .entities()
+            .find(|(_, data)| data.name.as_deref() == Some(name))
+            .expect("entity is there");
+        data.components["sindri.ui.box"][field]
+            .as_array()
+            .expect("four sides")
+            .iter()
+            .map(|side| side.as_f64().expect("a number") as f32)
+            .collect()
+    };
+    let near = |got: Vec<f32>, want: [f32; 4]| {
+        assert!(
+            got.iter()
+                .zip(want)
+                .all(|(got, want)| (got - want).abs() < 1.0e-5),
+            "{got:?} is not {want:?}"
+        );
+    };
+    // The later `padding-top` overrides one side of the shorthand, as in CSS.
+    near(sides("panel", "padding"), [0.0, 0.2, 0.1, 0.2]);
+    // A percentage is of the panel's content width: 2.0 less 0.4 of padding.
+    near(sides("child", "margin"), [0.16, 0.16, 0.1, 0.16]);
+}

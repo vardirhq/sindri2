@@ -173,7 +173,8 @@ covering the outer border.
 | `min-width`, `max-width` | length | Horizontal size constraint |
 | `min-height`, `max-height` | length | Vertical size constraint |
 | `x`, `y` | length | Authored transform position override |
-| `padding` | length | Uniform content inset |
+| `padding`, `padding-top`, `-right`, `-bottom`, `-left` | length, one to four as in CSS | Room inside the element's edge; layout children start inside it |
+| `margin`, `margin-top`, `-right`, `-bottom`, `-left` | length, one to four as in CSS | Room a layout keeps free around the element |
 | `anchor` | Sindri anchor name | Anchor for text, image, and shape |
 | `direction` | `row`, `column` | Main layout axis |
 | `gap` | length | Empty space between adjacent child edges |
@@ -184,6 +185,16 @@ Layout is hierarchical. A child must be parented beneath the layout entity in
 the scene; visual overlap does not establish layout membership. Explicit child
 boxes are important because text metrics alone do not currently provide
 intrinsic layout sizing.
+
+`padding` and `margin` take one to four values in CSS order (all; vertical
+and horizontal; top, horizontal and bottom; top, right, bottom and left), and
+the language expands them into their per-side longhands where they are
+written, so a later `padding-top` overrides one side and keeps the rest. A
+percentage on any side is of the containing element's content width, as in
+CSS. Both are written to the element's `sindri.ui.box`, which the engine's
+layout reads, so an authored scene gets the same box model without Weave.
+As in flexbox, margins do not collapse: neighbours' margins and the `gap` add
+up. Negative margins are accepted and currently count as none.
 
 `gap` measures edge-to-edge space, not distance between child centres.
 `space-between` places the first and last child at the content edges and
@@ -197,8 +208,15 @@ distributes remaining space between the interior gaps.
 | `border-color` | color |
 | `border-width` | length |
 | `border-radius` | length |
+| `box-shadow` | `<x> <y> [<blur> [<spread>]] [<color>]`, or `none` |
 
-These declarations target `sindri.ui.shape`. A button can carry both
+These declarations target `sindri.ui.shape`.
+
+`box-shadow` draws the shape's silhouette behind it, grown by the spread,
+moved by the offset (positive `y` is down, as in CSS) and blurred over the
+blur radius, with corners rounded to match. With no colour it is black at
+half opacity. One shadow per element: a comma-separated list and `inset` are
+refused rather than half drawn. A button can carry both
 `sindri.ui.button` and `sindri.ui.shape`, allowing its hit target and visual
 box to remain the same entity.
 
@@ -336,7 +354,7 @@ entity, property, and value. Unknown properties are currently ignored.
 The following CSS concepts are not implemented:
 
 - intrinsic `auto` sizing
-- margins or per-side padding
+- borders per side, negative margins, and more than one or an `inset` shadow
 - flex grow and shrink, including cross-axis stretch
 - grid, wrapping layout, scrolling, and clipping regions
 - calculations (`calc()`)

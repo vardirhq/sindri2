@@ -3,6 +3,7 @@
 //! Runtime state beside the world, derived from what a scene authors and never
 //! serialized. A host updates it once a frame before scripts run.
 
+mod box_model;
 mod hierarchy;
 mod layout;
 mod rect;
@@ -17,8 +18,9 @@ use sindri_core::{
     SceneComponent, World,
 };
 
+pub use box_model::{UiBoxComponent, UiSides};
 pub use hierarchy::{UiHierarchy, UiPlaced};
-pub use layout::{UiAlign, UiDirection, UiJustify, UiLayoutComponent};
+pub use layout::{UiAlign, UiDirection, UiJustify, UiLayoutChild, UiLayoutComponent};
 pub use rect::{SafeArea, ScreenExtent, ScreenRect};
 pub use slider::{UiSliderComponent, UiSliderOrientation};
 

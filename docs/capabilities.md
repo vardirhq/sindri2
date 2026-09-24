@@ -350,8 +350,10 @@ presentation after a broken save, and reports composition failures with their
 source path, line, and column. Stylesheet source editing and named viewport
 presets still live outside the editor.
 
-This is not a general CSS implementation yet. `@keyframes`, the box model's
-margins and per-side values, intrinsic content sizing, grid, accessibility
+Weave's `margin` and `padding` (one to four values, per-side longhands, CSS
+percentages) write that box, and `box-shadow` writes the shape's shadow.
+
+This is not a general CSS implementation yet. `@keyframes`, borders per side, intrinsic content sizing, grid, accessibility
 mapping, and flexible growth remain absent.
 
 ### Screen UI
@@ -400,7 +402,10 @@ its proof column as ❌ until Gather or Orbital Last Stand adopts it.
 
 `sindri.ui.layout` places a parent's active children in a row or column. Three
 buttons could be authored as three offsets; what cannot be authored is a menu
-closing up around an entry that was switched off.
+closing up around an entry that was switched off. `sindri.ui.box` gives any
+element CSS's padding and margin per side: a layout's children flow inside its
+padding and keep their own margins free, without collapsing, as in flexbox.
+A `sindri.ui.shape` can cast a soft `shadow` (colour, offset, blur, spread).
 
 The overlay is authored in normalized units — two tall, centred, running out to
 the aspect ratio — so one authored scene is responsive across a portrait phone

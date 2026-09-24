@@ -10,6 +10,18 @@ publish = false
 sindri-core = { path = "../../crates/sindri-core" }
 sindri-weave = { path = "../../crates/sindri-weave" }
 weave = { path = "../../weave/crates/weave" }
+# For the capture binary, which draws a presented scene offscreen.
+sindri-assets = { path = "../../crates/sindri-assets" }
+sindri-gpu = { path = "../../crates/sindri-gpu" }
+sindri-render = { path = "../../crates/sindri-render" }
+sindri-scene = { path = "../../crates/sindri-scene" }
+png = "0.18"
+pollster.workspace = true
+wgpu.workspace = true
+
+[[bin]]
+name = "weave-poc-capture"
+path = "src/bin/capture.rs"
 
 [dev-dependencies]
 serde_json.workspace = true

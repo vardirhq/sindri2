@@ -105,6 +105,7 @@ fn describe_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
         ("anchor", anchors()),
         ("fill", COLOUR),
         ("stroke", COLOUR),
+        ("shadow.color", COLOUR),
         ("sweep_start", FieldMeaning::Angle),
     ])?;
     components.describe::<UiSliderComponent>([(

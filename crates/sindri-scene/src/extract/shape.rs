@@ -7,17 +7,18 @@
 
 use std::collections::BTreeMap;
 
-use glam::Mat4;
-use sindri_core::{EntityId, World};
+use glam::{Mat4, Vec2};
+use sindri_core::{EntityId, Transform3D, World};
 use sindri_render::{
-    ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage, ShapeBlend,
-    ShapeInstance,
+    ExtractedFrame, FrameCamera, FrameCommand, FramePass, RenderLayer, RenderStage, Shape,
+    ShapeBlend, ShapeInstance,
 };
 
-use crate::screen_ui::UiHierarchy;
+use crate::screen_ui::{UiHierarchy, UiPlaced};
 use crate::{ShapeComponent, UiShapeComponent, UiShapeKind};
 
 use super::camera::ResolvedCameras;
+use super::camera::view::OverlayExtent;
 use super::ui::ui_matrix;
 use super::{SceneExtractError, SceneExtractor, transform_matrix};
 
@@ -103,6 +104,46 @@ fn shape_instance(
     instance.with_polygon_points(&points)
 }
 
+/// The shadow an overlay shape casts, as CSS draws a `box-shadow`: its
+/// silhouette grown by the spread, moved by the offset and blurred, with the
+/// corners rounded by as much more as it grew.
+fn shadow_instance(
+    shape: &UiShapeComponent,
+    placed: UiPlaced,
+    transform: Transform3D,
+    extent: OverlayExtent,
+) -> Option<ShapeInstance> {
+    let shadow = shape.shadow;
+    if shape.geometry.kind == UiShapeKind::Grid {
+        return None;
+    }
+    let size = transform.scale_2d();
+    let grown = shadow.instance_size(size)?;
+    let shorter = size[0].abs().min(size[1].abs());
+    let grown_shorter = grown[0].min(grown[1]);
+    let radius = shape.geometry.corner_radius.max(0.0) * shorter + shadow.spread.max(0.0);
+    let moved = UiPlaced {
+        offset: placed.offset + Vec2::from_array(shadow.offset),
+        ..placed
+    };
+    let scaled = Transform3D {
+        scale: [grown[0], grown[1], 1.0],
+        ..transform
+    };
+    let kind = match shape.geometry.kind {
+        UiShapeKind::Ellipse => Shape::Ellipse,
+        UiShapeKind::Polygon => Shape::Polygon {
+            sides: shape.geometry.count,
+        },
+        UiShapeKind::Rect | UiShapeKind::Grid => Shape::Rect,
+    };
+    Some(
+        ShapeInstance::filled(ui_matrix(moved, scaled, extent), kind, shadow.color)
+            .with_corner_radius(radius / grown_shorter)
+            .feathered(shadow.blur.max(0.0) / grown_shorter),
+    )
+}
+
 impl SceneExtractor {
     pub(super) fn push_shapes(
         &self,
@@ -139,6 +180,14 @@ impl SceneExtractor {
                 .and_then(|data| data.transform_3d)
                 .unwrap_or_default();
             let placed = hierarchy.placement_or(entity, shape.anchor);
+            if let Some(shadow) = shadow_instance(&shape, placed, transform, extent) {
+                // Paint, whatever the shape is, and ahead of it in its layer so
+                // the shape covers its own shadow.
+                batches
+                    .entry((shape.layer, false))
+                    .or_default()
+                    .push(shadow);
+            }
             let model = ui_matrix(placed, transform, extent);
             batches
                 .entry((shape.layer, shape.geometry.blend() == ShapeBlend::Add))

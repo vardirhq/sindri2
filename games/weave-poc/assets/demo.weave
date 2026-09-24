@@ -105,6 +105,7 @@ sindri.ui.text {
     border-color: #3b4a63;
     border-width: 1px;
     border-radius: 22px;
+    box-shadow: 0 18px 40px #000000b0;
 }
 
 .proof-kicker {
@@ -155,11 +156,13 @@ sindri.ui.text {
 .primary {
     background: #5eead4;
     border-color: #99f6e4;
+    box-shadow: 0 8px 24px #5eead455;
 }
 
 .secondary {
     background: #8b5cf6;
     border-color: #a78bfa;
+    box-shadow: 0 8px 24px #8b5cf655;
 }
 
 .button-label {

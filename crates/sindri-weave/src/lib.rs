@@ -11,8 +11,10 @@ use sindri_core::{EntityId, Transform3D, World};
 use thiserror::Error;
 use weave::{Computed, States, Stylesheet, Viewport};
 
+mod box_model;
 mod computed;
 mod presenter;
+mod shadow;
 mod transition;
 mod tree;
 
@@ -29,8 +31,6 @@ pub use transition::Transitions;
 /// `:disabled` and `:checked` need no entry here: they are read from the
 /// element's own components.
 pub type UiStates = BTreeMap<EntityId, States>;
-
-const RESOLVED_PADDING_FIELD: &str = "_resolved_padding";
 
 #[derive(Debug, Error, PartialEq)]
 pub enum ApplyError {
@@ -141,12 +141,10 @@ fn apply_sizing(
         .and_then(|parent| world.get(parent))
         .and_then(|data| data.transform_3d)
         .map_or(viewport_size, Transform3D::scale_2d);
-    let parent_padding = parent
-        .and_then(|parent| resolved_padding(world, parent))
-        .unwrap_or(0.0);
+    let parent_padding = parent.map_or([0.0; 4], |parent| box_model::padding(world, parent));
     let parent_content = [
-        (parent_size[0].abs() - 2.0 * parent_padding).max(0.0),
-        (parent_size[1].abs() - 2.0 * parent_padding).max(0.0),
+        (parent_size[0].abs() - parent_padding[1] - parent_padding[3]).max(0.0),
+        (parent_size[1].abs() - parent_padding[0] - parent_padding[2]).max(0.0),
     ];
     let current = world
         .get(entity)
@@ -210,6 +208,9 @@ fn apply_property(
     value: &str,
     viewport: Viewport,
 ) -> Result<(), ApplyError> {
+    if box_model::apply(world, entity, id, property, value, viewport)? {
+        return Ok(());
+    }
     match property {
         "width" | "height" => {
             let axis = usize::from(property == "height");
@@ -280,19 +281,6 @@ fn apply_property(
                 resolved.into(),
             );
         }
-        "padding" => {
-            let scale = world
-                .get(entity)
-                .and_then(|data| data.transform_3d)
-                .unwrap_or_default()
-                .scale_2d();
-            let basis = scale[0].abs().min(scale[1].abs());
-            let resolved = Length::parse(value)
-                .and_then(|length| length.resolve(viewport, Some(basis)))
-                .filter(|value| *value >= 0.0)
-                .ok_or_else(|| invalid(id, property, value))?;
-            set_resolved_padding(world, entity, resolved);
-        }
         "font-size" | "line-height" | "letter-spacing" => {
             let resolved = length(value, viewport).ok_or_else(|| invalid(id, property, value))?;
             let field = match property {
@@ -322,6 +310,7 @@ fn apply_property(
                 serde_json::json!(resolved),
             );
         }
+        "box-shadow" => shadow::apply(world, entity, id, value, viewport)?,
         "border-color" => {
             let resolved = color(value).ok_or_else(|| invalid(id, property, value))?;
             set_component_field(
@@ -385,7 +374,7 @@ fn apply_property(
     Ok(())
 }
 
-fn set_component_field(
+pub(crate) fn set_component_field(
     world: &mut World,
     entity: EntityId,
     type_name: &str,
@@ -402,30 +391,6 @@ fn set_component_field(
         return;
     };
     object.insert(field.to_owned(), value);
-}
-
-fn set_resolved_padding(world: &mut World, entity: EntityId, padding: f32) {
-    let Some(data) = world.get_mut(entity) else {
-        return;
-    };
-    let payload = data
-        .components
-        .entry("weave.style".to_owned())
-        .or_insert_with(|| serde_json::json!({}));
-    let Some(object) = payload.as_object_mut() else {
-        return;
-    };
-    object.insert(RESOLVED_PADDING_FIELD.to_owned(), padding.into());
-}
-
-fn resolved_padding(world: &World, entity: EntityId) -> Option<f32> {
-    world
-        .get(entity)?
-        .components
-        .get("weave.style")?
-        .get(RESOLVED_PADDING_FIELD)?
-        .as_f64()
-        .map(|value| value as f32)
 }
 
 fn size_fraction(world: &World, entity: EntityId, value: &str, viewport: Viewport) -> Option<f32> {
@@ -446,7 +411,7 @@ fn size_fraction(world: &World, entity: EntityId, value: &str, viewport: Viewpor
     (shorter > f32::EPSILON).then_some((absolute / shorter).max(0.0))
 }
 
-fn color(value: &str) -> Option<[f32; 4]> {
+pub(crate) fn color(value: &str) -> Option<[f32; 4]> {
     match value.trim() {
         "transparent" => return Some([0.0; 4]),
         "black" => return Some([0.0, 0.0, 0.0, 1.0]),
@@ -497,7 +462,7 @@ const fn hex_digit(byte: u8) -> Option<u8> {
     }
 }
 
-fn length(value: &str, viewport: Viewport) -> Option<f32> {
+pub(crate) fn length(value: &str, viewport: Viewport) -> Option<f32> {
     Length::parse(value)?.resolve(viewport, None)
 }
 
@@ -516,7 +481,7 @@ fn anchor(value: &str) -> Option<&'static str> {
     }
 }
 
-fn invalid(entity: &str, property: &str, value: &str) -> ApplyError {
+pub(crate) fn invalid(entity: &str, property: &str, value: &str) -> ApplyError {
     ApplyError::InvalidValue {
         entity: entity.to_owned(),
         property: property.to_owned(),

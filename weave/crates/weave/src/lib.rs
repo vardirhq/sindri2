@@ -14,6 +14,7 @@ mod cascade;
 mod composition;
 mod media;
 mod selector;
+pub mod shorthand;
 
 pub use cascade::{Computed, INHERITED, cascade};
 pub use composition::{ComposeError, compose, compose_all, imports, resolve_import};
@@ -119,7 +120,14 @@ fn parse_rules(source: String, inherited: &[MediaQuery]) -> Result<Stylesheet, P
             let Some((name, value)) = raw.split_once(':') else {
                 return Err(ParseError::MissingColon(raw.to_owned()));
             };
-            declarations.insert(name.trim().to_owned(), value.trim().to_owned());
+            let (name, value) = (name.trim(), value.trim());
+            if let Some(longhands) = shorthand::expand(name, value) {
+                for (longhand, side) in longhands {
+                    declarations.insert(longhand.to_owned(), side);
+                }
+            } else {
+                declarations.insert(name.to_owned(), value.to_owned());
+            }
         }
         for selector in selector::parse_list(selector_text)? {
             stylesheet.rules.push(Rule {

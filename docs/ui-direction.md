@@ -65,7 +65,10 @@ Each step is its own pull request. A step is checked here when it has landed.
      presented geometry, so `:hover` and `:active` work in the running game.
    - [x] `transition`.
    - [ ] `@keyframes`.
-   - [ ] The box model: margin, per-side padding, borders per side, shadows.
+   - [x] The box model's spacing: margin and padding per side, as a
+     `sindri.ui.box` component the layout engine itself honours.
+   - [x] `box-shadow`: offset, blur, spread and colour.
+   - [ ] Borders per side, negative margins, and more than one shadow.
    - [ ] Flexbox complete: wrap, grow, shrink, basis, order, `align-self`,
      stretch; intrinsic `auto` sizing from content.
    - [ ] Grid layout.

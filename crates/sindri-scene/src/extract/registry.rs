@@ -30,7 +30,7 @@ use crate::components::{
     UiShapeKind, UiTextComponent, VoxelGeneratorDocument, VoxelWorldComponent,
 };
 use crate::effects::EffectBurstComponent;
-use crate::screen_ui::{UiButtonComponent, UiLayoutComponent, UiSliderComponent};
+use crate::screen_ui::{UiBoxComponent, UiButtonComponent, UiLayoutComponent, UiSliderComponent};
 use crate::textures::PROCEDURAL_TEXTURES;
 
 use super::SceneExtractError;
@@ -86,7 +86,13 @@ fn register_shapes(components: &mut ComponentSchemaRegistry) -> Result<(), Scene
             "sweep_turns": 1.0,
             "blend": UiShapeBlend::default().as_str(),
             "anchor": "center",
-            "layer": 0
+            "layer": 0,
+            "shadow": {
+                "color": [0.0, 0.0, 0.0, 0.0],
+                "offset": [0.0, 0.0],
+                "blur": 0.0,
+                "spread": 0.0
+            }
         }),
     )?;
     Ok(())
@@ -252,6 +258,15 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "spacing": 0.25,
             "justify": "center",
             "align": "center"
+        }),
+    )?;
+    // No room either side: adding a box changes nothing until a side is set,
+    // so it can be added to any element without moving it.
+    components.register_with_default::<UiBoxComponent>(
+        "UI Box",
+        serde_json::json!({
+            "margin": [0.0, 0.0, 0.0, 0.0],
+            "padding": [0.0, 0.0, 0.0, 0.0]
         }),
     )?;
     // A visible burst, because one that threw nothing would look like a
