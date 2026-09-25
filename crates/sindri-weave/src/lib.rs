@@ -16,6 +16,7 @@ mod calc;
 mod computed;
 mod flex;
 mod grid;
+mod inspect;
 mod presenter;
 mod shadow;
 mod transition;
@@ -25,6 +26,7 @@ mod undo;
 use computed::{ComputedStyle, Length};
 use tree::elements;
 
+pub use inspect::{InspectedRule, Inspection, inspect};
 pub use presenter::{Presenter, pointer_states};
 pub use transition::Transitions;
 pub use undo::Undo;

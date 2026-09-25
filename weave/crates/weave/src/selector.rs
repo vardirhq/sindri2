@@ -9,7 +9,6 @@
 //! `:not()`, `:is()` and `:where()`. Specificity is CSS's: IDs, then classes
 //! and states, then element names.
 
-pub(crate) use crate::parse_selector::parse_list;
 pub use crate::structural::{Position, Structural};
 
 /// The interaction states an element can be in, as pseudo-classes match them.
@@ -306,6 +305,7 @@ impl Selector {
 mod tests {
     use super::*;
     use crate::ParseError;
+    use crate::parse_selector::parse_list;
 
     /// One element of the test tree: id, classes, names, states, parent.
     type Node = (String, Vec<String>, Vec<String>, States, Option<usize>);

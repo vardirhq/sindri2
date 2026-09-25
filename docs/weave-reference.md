@@ -403,14 +403,41 @@ only what pointer states and running transitions change is laid over that for
 the draw, and taken off again before the scripts run; with nothing hovered
 and nothing easing, a frame does no styling work at all.
 
+## Inspecting styles in the editor
+
+Select a UI element and the inspector's **Styles** section shows what Weave
+did to it, as a browser's devtools do:
+
+- the box model as drawn: margin, padding and size, in the stylesheet's
+  pixels at the size the scene is presented at;
+- every rule that matched, strongest first, with the file and line it was
+  written on; a declaration a stronger rule, or a later stylesheet,
+  overrode is struck through;
+- the computed values the element ends up with, inherited ones included,
+  and the custom properties in scope.
+
+It follows the Game view's size, so switching the device preset shows the
+rules its media queries choose. Click a declaration's value to change it:
+Enter or clicking away writes the new value into the stylesheet on the
+rule's line, leaving the rest of the file as it was, and the styles reload
+from the file; Escape leaves it alone. A value that comes from a shorthand
+(`padding-top` from `padding`) is refused rather than guessed at; edit the
+shorthand. While the game is playing or paused, the Game view's **Pick**
+toggle turns the next click in the game into a selection: the frontmost
+element under it is selected, and the game does not receive the click.
+
+`sindri_weave::inspect` answers the same questions for other tools, and
+`weave::set_declaration` makes the same edit to a stylesheet's source.
+
 ## Authoring guidance
 
 The editor recognizes manifest-listed `.weave` roots, previews their source,
 authors `weave.style.classes`, and applies the composed result to Scene and Game
 views. It hot-reloads saved changes throughout each root's `@use` graph. A
 broken reload keeps the last good presentation and reports the source path,
-line, and column. Editing stylesheet source and choosing named viewport presets
-remain external workflows.
+line, and column. The Game view's device presets choose the viewport, and a
+single value can be changed from the Styles section; writing stylesheets
+otherwise happens in a text editor.
 
 - Keep semantic identity in entity IDs and reusable appearance in classes.
 - Keep one small entry stylesheet and split large surfaces with `@use`.

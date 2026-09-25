@@ -36,6 +36,9 @@ pub struct ProjectStyles {
     presenter: Presenter,
     /// What Play last drew, styled, for the next step's hit-testing.
     live: Option<World>,
+    /// The screen the scene was last presented at, which the devtools panel
+    /// inspects at so it shows the media queries that are on screen.
+    viewport: Option<Viewport>,
 }
 
 impl Default for ProjectStyles {
@@ -47,6 +50,7 @@ impl Default for ProjectStyles {
             next_poll: Instant::now(),
             presenter: Presenter::new(),
             live: None,
+            viewport: None,
         }
     }
 }
@@ -65,6 +69,7 @@ impl ProjectStyles {
             next_poll: Instant::now() + POLL_INTERVAL,
             presenter: Presenter::new(),
             live: None,
+            viewport: None,
         })
     }
 
@@ -121,6 +126,7 @@ impl ProjectStyles {
         viewport: Viewport,
         states: &UiStates,
     ) -> Result<World, String> {
+        self.viewport = Some(viewport);
         let presented = self
             .presenter
             .present(authored, &self.sheets, viewport, states)
@@ -146,7 +152,8 @@ impl ProjectStyles {
         self.presenter = Presenter::new();
     }
 
-    pub fn resolve(&self, authored: &World, viewport: Viewport) -> Result<World, String> {
+    pub fn resolve(&mut self, authored: &World, viewport: Viewport) -> Result<World, String> {
+        self.viewport = Some(viewport);
         let mut world = authored.clone();
         for sheet in &self.sheets {
             let presented = PresentationWorld::resolve(&world, sheet, viewport)
@@ -154,6 +161,65 @@ impl ProjectStyles {
             world = presented.world().clone();
         }
         Ok(world)
+    }
+}
+
+impl ProjectStyles {
+    /// What the cascade decided for `entity`, at the size the scene was last
+    /// presented at, in `states`: the devtools panel's answer. `None` before
+    /// anything has been presented, or for a project with no stylesheets.
+    #[must_use]
+    pub fn inspect(
+        &self,
+        authored: &World,
+        entity: sindri_core::EntityId,
+        states: &UiStates,
+    ) -> Option<(sindri_weave::Inspection, Viewport)> {
+        let viewport = self.viewport?;
+        if self.sheets.is_empty() {
+            return None;
+        }
+        sindri_weave::inspect(authored, &self.sheets, viewport, states, entity)
+            .map(|inspection| (inspection, viewport))
+    }
+
+    /// Sets one declaration where the devtools panel says it was written:
+    /// `property` in the rule `selector` on `line` of the stylesheet `file`,
+    /// an asset id. Only the value changes in the file, and the styles reload
+    /// on the next poll, as they would for a save in a text editor.
+    pub fn set_declaration(
+        &mut self,
+        file: &str,
+        line: usize,
+        selector: &str,
+        property: &str,
+        value: &str,
+    ) -> Result<(), String> {
+        let root = self
+            .root
+            .as_deref()
+            .ok_or("the project has no stylesheets to write to")?;
+        let path = resolve(root, file);
+        let source = std::fs::read_to_string(&path)
+            .map_err(|error| format!("{}: {error}", path.display()))?;
+        let edited = weave::set_declaration(&source, line, selector, property, value)
+            .map_err(|error| format!("{file}:{line}: {error}"))?;
+        std::fs::write(&path, edited).map_err(|error| format!("{}: {error}", path.display()))?;
+        // A write within the same tick can leave the size and time as they
+        // were, so the reload is not left to the snapshot to notice.
+        self.snapshot.clear();
+        self.next_poll = Instant::now();
+        Ok(())
+    }
+
+    /// The scene as last presented, styled, for reading what was drawn: the
+    /// live game's when Play is running, and a fresh resolution otherwise.
+    pub fn drawn(&mut self, authored: &World) -> Option<World> {
+        if let Some(live) = &self.live {
+            return Some(live.clone());
+        }
+        let viewport = self.viewport?;
+        self.resolve(authored, viewport).ok()
     }
 }
 
@@ -312,7 +378,7 @@ mod tests {
         fs::write(assets.join("ui/base.weave"), ".card { height: 25vh; }").expect("imported style");
 
         let project = Project::open(directory.path()).expect("project opens");
-        let styles = ProjectStyles::load(&project).expect("styles compose");
+        let mut styles = ProjectStyles::load(&project).expect("styles compose");
         assert_eq!(styles.len(), 1, "only the manifest entry is a root");
 
         let mut world = World::default();
@@ -356,6 +422,117 @@ mod tests {
         fs::write(&imported, "#panel { width: 75vw; }\n").expect("style changes");
         styles.next_poll = Instant::now();
         assert!(styles.poll_reload().expect("reload succeeds"));
+    }
+
+    #[test]
+    fn devtools_inspect_at_the_presented_size_and_name_each_rules_file_and_line() {
+        let directory = project_with_manifest(
+            "format_version = 1\n\n[project]\nname = \"Styled\"\n\n[assets]\ninclude = [\"ui.weave\"]\n",
+        );
+        let assets = directory.path().join("assets");
+        fs::create_dir_all(assets.join("ui")).expect("style directory");
+        fs::write(
+            assets.join("ui.weave"),
+            "@use \"ui/base.weave\";\n\n#panel { width: 50vw; }\n\
+             @media (orientation: portrait) {\n  #panel { width: 90vw; }\n}\n",
+        )
+        .expect("entry style");
+        fs::write(assets.join("ui/base.weave"), "\n.card { width: 10vw; }")
+            .expect("imported style");
+        let project = Project::open(directory.path()).expect("project opens");
+        let mut styles = ProjectStyles::load(&project).expect("styles compose");
+
+        let mut world = World::default();
+        let panel = world.spawn(EntityData {
+            source_id: Some(SceneEntityId::new("panel").expect("id")),
+            transform_3d: Some(Transform3D::default()),
+            components: std::collections::BTreeMap::from([(
+                "weave.style".to_owned(),
+                json!({ "classes": ["card"] }),
+            )]),
+            ..EntityData::default()
+        });
+        let states = sindri_weave::UiStates::new();
+        assert!(
+            styles.inspect(&world, panel, &states).is_none(),
+            "nothing to inspect before anything is presented"
+        );
+
+        // Landscape: the portrait rule does not match, and the ID beats the
+        // imported class.
+        styles
+            .resolve(
+                &world,
+                Viewport {
+                    width: 1000.0,
+                    height: 500.0,
+                },
+            )
+            .expect("presentation resolves");
+        let (inspection, viewport) = styles.inspect(&world, panel, &states).expect("inspects");
+        assert!((viewport.width - 1000.0).abs() < f32::EPSILON);
+        let rules: Vec<(&str, usize, &str, bool)> = inspection
+            .rules
+            .iter()
+            .map(|rule| {
+                (
+                    rule.origin.file.as_str(),
+                    rule.origin.line,
+                    rule.origin.selector.as_str(),
+                    rule.declarations[0].2,
+                )
+            })
+            .collect();
+        assert_eq!(
+            rules,
+            [
+                ("ui.weave", 3, "#panel", true),
+                ("ui/base.weave", 2, ".card", false)
+            ]
+        );
+
+        // Portrait: the media query's rule now matches, and wins.
+        styles
+            .resolve(
+                &world,
+                Viewport {
+                    width: 400.0,
+                    height: 800.0,
+                },
+            )
+            .expect("presentation resolves");
+        let (portrait, _) = styles.inspect(&world, panel, &states).expect("inspects");
+        assert_eq!(portrait.rules[0].origin.line, 5);
+        assert!(portrait.rules[0].declarations[0].2);
+        assert!(!portrait.rules[1].declarations[0].2);
+    }
+
+    #[test]
+    fn devtools_edits_write_only_the_value_and_reload() {
+        let directory = project_with_manifest(
+            "format_version = 1\n\n[project]\nname = \"Styled\"\n\n[assets]\ninclude = [\"ui.weave\"]\n",
+        );
+        let assets = directory.path().join("assets");
+        fs::create_dir_all(&assets).expect("asset directory");
+        let sheet = assets.join("ui.weave");
+        fs::write(
+            &sheet,
+            "/* Panel. */\n#panel {\n  width: 25vw; /* a quarter */\n}\n",
+        )
+        .expect("style");
+
+        let project = Project::open(directory.path()).expect("project opens");
+        let mut styles = ProjectStyles::load(&project).expect("styles compose");
+        styles
+            .set_declaration("ui.weave", 2, "#panel", "width", "40vw")
+            .expect("edits");
+        assert_eq!(
+            fs::read_to_string(&sheet).expect("reads"),
+            "/* Panel. */\n#panel {\n  width: 40vw; /* a quarter */\n}\n"
+        );
+        assert!(styles.poll_reload().expect("reload succeeds"));
+        let refused = styles.set_declaration("ui.weave", 3, "#panel", "width", "1px");
+        assert!(refused.is_err_and(|error| error.starts_with("ui.weave:3: ")));
     }
 
     #[test]

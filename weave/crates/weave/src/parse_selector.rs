@@ -4,6 +4,14 @@ use crate::ParseError;
 use crate::selector::{Combinator, Compound, ListKind, Selector, States, Structural};
 
 /// Parses a selector list, `a, b > c`, into its selectors.
+/// Parses a selector list, keeping each selector's text as it was written.
+pub(crate) fn parse_list_written(text: &str) -> Result<Vec<(&str, Selector)>, ParseError> {
+    top_level(text, ',')
+        .into_iter()
+        .map(|part| Ok((part.trim(), parse_selector(part.trim())?)))
+        .collect()
+}
+
 pub(crate) fn parse_list(text: &str) -> Result<Vec<Selector>, ParseError> {
     top_level(text, ',')
         .into_iter()

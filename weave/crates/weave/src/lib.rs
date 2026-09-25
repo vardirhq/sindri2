@@ -12,14 +12,16 @@ use thiserror::Error;
 
 mod cascade;
 mod composition;
+mod edit;
 mod media;
 mod parse_selector;
 mod selector;
 pub mod shorthand;
 mod structural;
 
-pub use cascade::{Computed, INHERITED, cascade};
+pub use cascade::{Computed, INHERITED, Matched, cascade, matched};
 pub use composition::{ComposeError, compose, compose_all, imports, resolve_import};
+pub use edit::{EditError, set_declaration};
 pub use media::{MediaCondition, MediaQuery};
 pub use selector::{
     Combinator, Compound, Element, ListKind, Position, Selector, Specificity, States, Structural,
@@ -42,6 +44,20 @@ pub struct Rule {
     /// nested in another applies only where both do.
     pub conditions: Vec<MediaQuery>,
     pub declarations: BTreeMap<String, String>,
+    /// Where the rule was written, for tools that show it back.
+    pub origin: Origin,
+}
+
+/// Where a rule came from: its file, its line, and its selector as written.
+///
+/// What a devtools panel shows beside a matched rule, so the rule can be
+/// found and edited. The file is the asset ID composition read it from, and
+/// empty for a stylesheet parsed on its own.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Origin {
+    pub file: String,
+    pub line: usize,
+    pub selector: String,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -71,8 +87,44 @@ pub enum ParseError {
 }
 
 pub fn parse(source: &str) -> Result<Stylesheet, ParseError> {
-    parse_rules(strip_comments(source), &[])
+    let stripped = strip_comments(source);
+    let mut source = Source {
+        root: &stripped,
+        markers: vec![(0, String::new(), 1)],
+    };
+    parse_rules(&mut source, &stripped, &[])
 }
+
+/// The whole text being parsed, and where each file composed into it
+/// begins: a byte offset, the file, and the line that offset is on.
+struct Source<'a> {
+    root: &'a str,
+    markers: Vec<(usize, String, usize)>,
+}
+
+impl Source<'_> {
+    /// The file and line of `text`, a slice of the root.
+    fn locate(&self, text: &str) -> (String, usize) {
+        let offset = (text.as_ptr() as usize).saturating_sub(self.root.as_ptr() as usize);
+        let (start, file, line) = self
+            .markers
+            .iter()
+            .rev()
+            .find(|(start, _, _)| *start <= offset)
+            .cloned()
+            .unwrap_or_default();
+        let between = self.root.get(start..offset).unwrap_or_default();
+        (
+            file,
+            line + between.bytes().filter(|byte| *byte == b'\n').count(),
+        )
+    }
+}
+
+/// The directive composition writes before each file's own rules, so a rule
+/// can say where it was written: `@origin "ui/menu.weave" 12;`. Internal to
+/// Weave; a stylesheet has no reason to write it.
+pub(crate) const ORIGIN: &str = "@origin";
 
 fn strip_comments(source: &str) -> String {
     let mut out = String::with_capacity(source.len());
@@ -80,12 +132,15 @@ fn strip_comments(source: &str) -> String {
     while let Some(ch) = chars.next() {
         if ch == '/' && chars.peek() == Some(&'*') {
             chars.next();
+            let mut comment = String::new();
             while let Some(inner) = chars.next() {
                 if inner == '*' && chars.peek() == Some(&'/') {
                     chars.next();
                     break;
                 }
+                comment.push(inner);
             }
+            out.push_str(&keep_lines(&comment));
         } else {
             out.push(ch);
         }
@@ -93,11 +148,39 @@ fn strip_comments(source: &str) -> String {
     out
 }
 
-fn parse_rules(source: String, inherited: &[MediaQuery]) -> Result<Stylesheet, ParseError> {
+/// A comment's newlines, which stripping keeps so every line number after it
+/// still counts from the file's first line.
+fn keep_lines(text: &str) -> String {
+    text.chars().filter(|c| *c == '\n').collect()
+}
+
+fn parse_rules<'a>(
+    source: &mut Source<'a>,
+    text: &'a str,
+    inherited: &[MediaQuery],
+) -> Result<Stylesheet, ParseError> {
     let mut stylesheet = Stylesheet::default();
-    let mut rest = source.as_str();
+    let mut rest = text;
     while !rest.trim_start().is_empty() {
         rest = rest.trim_start();
+        if let Some(after) = rest.strip_prefix(ORIGIN) {
+            let end = after
+                .find(';')
+                .ok_or_else(|| ParseError::MissingBlock(ORIGIN.into()))?;
+            let (file, line) = after[..end]
+                .trim()
+                .rsplit_once(' ')
+                .ok_or_else(|| ParseError::MissingBlock(ORIGIN.into()))?;
+            let line = line
+                .parse()
+                .map_err(|_| ParseError::MissingBlock(ORIGIN.into()))?;
+            let offset = (after.as_ptr() as usize - source.root.as_ptr() as usize) + end + 1;
+            source
+                .markers
+                .push((offset, file.trim().trim_matches('"').to_owned(), line));
+            rest = &after[end + 1..];
+            continue;
+        }
         if let Some(after_media) = rest.strip_prefix("@media") {
             let open = after_media
                 .find('{')
@@ -106,7 +189,7 @@ fn parse_rules(source: String, inherited: &[MediaQuery]) -> Result<Stylesheet, P
             let (body, tail) = take_block(&after_media[open + 1..])?;
             let mut conditions = inherited.to_vec();
             conditions.push(media::parse_query(query)?);
-            let nested = parse_rules(body.to_owned(), &conditions)?;
+            let nested = parse_rules(source, body, &conditions)?;
             stylesheet.rules.extend(nested.rules);
             rest = tail;
             continue;
@@ -115,6 +198,7 @@ fn parse_rules(source: String, inherited: &[MediaQuery]) -> Result<Stylesheet, P
             .find('{')
             .ok_or_else(|| ParseError::MissingBlock(rest.trim().into()))?;
         let selector_text = rest[..open].trim();
+        let (file, line) = source.locate(rest);
         let (body, tail) = take_block(&rest[open + 1..])?;
         let mut declarations = BTreeMap::new();
         for raw in body
@@ -134,11 +218,16 @@ fn parse_rules(source: String, inherited: &[MediaQuery]) -> Result<Stylesheet, P
                 declarations.insert(name.to_owned(), value.to_owned());
             }
         }
-        for selector in selector::parse_list(selector_text)? {
+        for (written, selector) in parse_selector::parse_list_written(selector_text)? {
             stylesheet.rules.push(Rule {
                 selector,
                 conditions: inherited.to_vec(),
                 declarations: declarations.clone(),
+                origin: Origin {
+                    file: file.clone(),
+                    line,
+                    selector: written.to_owned(),
+                },
             });
         }
         rest = tail;
