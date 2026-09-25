@@ -1073,6 +1073,18 @@ frame.
   why it is one. `sindri.environment` and `sindri.voxel_world` declare every
   colour, range, choice, and texture they hold, with a test that each declared
   range is one validation accepts
+- **When an inspector edit applies.** A component declares, per field or as a
+  whole, how an edit to it reaches the scene (`ApplyMode`, registered with
+  `apply_when` beside its meanings and checked against its fields the same
+  way): `Instant`, as it is made, which is every field that says nothing;
+  `Settled`, once the person stops, after a short pause in typing, on Enter
+  or leaving the field, or on letting go of a drag; and `Manual`, only when
+  Apply in the component's header is pressed, with Revert beside it. A held
+  edit shows in the field as typed while the scene keeps what it had, and
+  another change to the same component meanwhile, an undo or a script, is
+  kept rather than overwritten. A voxel world is `Manual`: several edits can
+  be made and the terrain regenerated once, behind a "Regenerating…" notice,
+  instead of regenerating, with the editor frozen, at every keystroke
 - **Switching an entity off without deleting it.** Off means it takes no part
   in the scene — not drawn, not stepped, not scripted, not picked — and neither
   does anything under it, while it stays in the world and in the file. An Active

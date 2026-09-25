@@ -37,6 +37,7 @@ use crate::ui::widgets::{
 use super::super::hierarchy::row::component_label;
 use super::super::{GRID_NAVIGATION_COMPONENT, GRID_OCCUPANT_COMPONENT, UI_TEXT_COMPONENT};
 use super::field::object_rows;
+use super::held::{ApplyFrame, apply_actions};
 use super::{InspectorProject, InspectorTools};
 
 /// Draws every component on an entity, editable, and reports what changed.
@@ -49,6 +50,7 @@ pub(super) fn components_sections(
     registry: &ComponentSchemaRegistry,
     project: &InspectorProject<'_>,
     tools: &mut InspectorTools<'_>,
+    apply: &mut ApplyFrame,
 ) -> Option<String> {
     let InspectorProject {
         scripts,
@@ -112,6 +114,10 @@ pub(super) fn components_sections(
                 {
                     removed = Some(name.clone());
                 }
+                // In the header, whether or not the fields show, so edits that
+                // have not reached the scene are not forgotten behind a fold,
+                // and so appearing moves no field out from under the caret.
+                apply_actions(ui, &name, apply);
             },
         );
         if !open {

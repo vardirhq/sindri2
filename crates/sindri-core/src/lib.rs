@@ -31,8 +31,8 @@ pub use asset::{
 };
 pub use command::{CommandBuffer, CommandError, CommandHistory, Transaction, WorldCommand};
 pub use component::{
-    AssetKind, ComponentMetadata, ComponentRegistryError, ComponentSchemaRegistry, FieldMeaning,
-    SceneComponent, UnknownComponentPolicy,
+    ApplyMode, AssetKind, ComponentMetadata, ComponentRegistryError, ComponentSchemaRegistry,
+    FieldMeaning, SceneComponent, UnknownComponentPolicy,
 };
 pub use engine::{EngineCore, EngineError, EngineFrame};
 pub use entity::EntityId;

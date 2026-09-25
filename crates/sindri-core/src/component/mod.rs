@@ -6,12 +6,14 @@ use thiserror::Error;
 
 use crate::{EntityId, SceneDocument, SceneEntityId, SceneError, World};
 
+mod apply;
 mod fields;
 mod meaning;
 #[cfg(test)]
 mod tests;
 mod variant;
 
+pub use apply::ApplyMode;
 use fields::declared_fields;
 pub use meaning::{AssetKind, FieldMeaning};
 
@@ -78,6 +80,8 @@ struct ComponentRegistration {
     /// Empty for the ordinary case, which is a component with no field that
     /// decides the shape of another.
     variants: Vec<variant::TaggedField>,
+    /// How edits to its fields are applied, by path; see [`ApplyMode`].
+    apply: Vec<(String, ApplyMode)>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -215,6 +219,7 @@ impl ComponentSchemaRegistry {
                 default_payload,
                 meanings: Vec::new(),
                 variants: Vec::new(),
+                apply: Vec::new(),
             },
         );
         Ok(())

@@ -7,7 +7,7 @@
 //! one careless drag away. Each range here is the one the component's own
 //! validation enforces; the tests below hold the two together.
 
-use sindri_core::{AssetKind, ComponentSchemaRegistry, FieldMeaning};
+use sindri_core::{ApplyMode, AssetKind, ComponentSchemaRegistry, FieldMeaning};
 
 use super::SceneExtractError;
 use super::voxel_source::{
@@ -110,6 +110,10 @@ fn describe_voxel_world(components: &mut ComponentSchemaRegistry) -> Result<(), 
             range(0.0, f64::from(MAX_RESIDENCY_RADIUS)),
         ),
     ])?;
+    // Every change regenerates the terrain, which is long enough that
+    // applying each keystroke froze the editor: a world's edits wait for
+    // Apply, and several can be made and seen at once.
+    components.apply_when::<VoxelWorldComponent>(ApplyMode::Manual, [""])?;
     describe_generators(components)?;
     components.describe::<VoxelWorldComponent>([
         ("generator.surface_voxel", BLOCK),
