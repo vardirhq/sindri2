@@ -57,7 +57,7 @@ fn flex(value: &str) -> Option<Vec<(&'static str, String)>> {
         "auto" => ("1", "1", "auto"),
         "initial" => ("0", "1", "auto"),
         other => {
-            let parts: Vec<&str> = other.split_whitespace().collect();
+            let parts: Vec<&str> = words(other);
             let number = |text: &str| text.parse::<f32>().is_ok();
             match parts.as_slice() {
                 [grow] if number(grow) => (*grow, "1", "0"),
@@ -76,12 +76,39 @@ fn flex(value: &str) -> Option<Vec<(&'static str, String)>> {
     ])
 }
 
+/// A value's words: split at whitespace, except inside parentheses, so
+/// `calc(1vw + 4px) 8px` is two words, as CSS reads it.
+#[must_use]
+pub fn words(value: &str) -> Vec<&str> {
+    let mut words = Vec::new();
+    let mut depth = 0_usize;
+    let mut start = None;
+    for (at, c) in value.char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+        if c.is_whitespace() && depth == 0 {
+            if let Some(from) = start.take() {
+                words.push(&value[from..at]);
+            }
+        } else if start.is_none() {
+            start = Some(at);
+        }
+    }
+    if let Some(from) = start {
+        words.push(&value[from..]);
+    }
+    words
+}
+
 /// One to four values as top, right, bottom, left, the way CSS reads them:
 /// one is every side, two are vertical then horizontal, three are top, the
 /// sides, then bottom.
 #[must_use]
 pub fn split_sides(value: &str) -> Option<[&str; 4]> {
-    let parts: Vec<&str> = value.split_whitespace().collect();
+    let parts: Vec<&str> = words(value);
     match parts.as_slice() {
         [all] => Some([all, all, all, all]),
         [vertical, horizontal] => Some([vertical, horizontal, vertical, horizontal]),
@@ -93,7 +120,19 @@ pub fn split_sides(value: &str) -> Option<[&str; 4]> {
 
 #[cfg(test)]
 mod tests {
-    use super::{expand, split_sides};
+    use super::{expand, split_sides, words};
+
+    #[test]
+    fn words_keep_parentheses_whole() {
+        assert_eq!(
+            words("calc(1vw + 4px)  8px calc(2 * (3px - 1px))"),
+            ["calc(1vw + 4px)", "8px", "calc(2 * (3px - 1px))"]
+        );
+        assert_eq!(
+            split_sides("calc(100% - 4px) 2px"),
+            Some(["calc(100% - 4px)", "2px", "calc(100% - 4px)", "2px"])
+        );
+    }
 
     #[test]
     fn one_to_four_values_read_as_css_reads_them() {

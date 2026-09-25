@@ -375,6 +375,11 @@ tracks, gaps and cell alignment. Weave's `display: grid` and the
 `grid-template-*`, `grid-column`/`grid-row`, gap and alignment properties
 write it.
 
+Selectors include the structural pseudo-classes (`:first-child`,
+`:nth-child(2n+1)`, `:root` and the rest), `:not()`, `:is()`, `:where()`,
+and the `+` and `~` sibling combinators, matched in scene order; lengths
+take `calc()`.
+
 This is not a general CSS implementation yet. `@keyframes`, borders per side,
 grid's `minmax()` and named areas, and accessibility mapping remain absent.
 

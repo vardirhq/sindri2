@@ -13,13 +13,18 @@ use thiserror::Error;
 mod cascade;
 mod composition;
 mod media;
+mod parse_selector;
 mod selector;
 pub mod shorthand;
+mod structural;
 
 pub use cascade::{Computed, INHERITED, cascade};
 pub use composition::{ComposeError, compose, compose_all, imports, resolve_import};
 pub use media::{MediaCondition, MediaQuery};
-pub use selector::{Combinator, Compound, Element, Selector, Specificity, States, Tree};
+pub use selector::{
+    Combinator, Compound, Element, ListKind, Position, Selector, Specificity, States, Structural,
+    Tree,
+};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Stylesheet {

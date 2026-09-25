@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 
 use sindri_core::{EntityId, World};
-use weave::{Element, States, Tree};
+use weave::{Element, Position, States, Tree};
 
 use crate::{UiStates, hierarchy_depth};
 
@@ -15,6 +15,10 @@ pub(crate) struct Node {
     classes: Vec<String>,
     names: Vec<String>,
     states: States,
+    /// Where it sits among its siblings, in the scene's order.
+    position: Position,
+    /// The node just before it among its siblings.
+    previous: Option<usize>,
 }
 
 /// The scene's entities as the element tree selectors walk.
@@ -35,6 +39,14 @@ impl Tree for Elements {
 
     fn parent(&self, node: usize) -> Option<usize> {
         self.nodes[node].parent
+    }
+
+    fn position(&self, node: usize) -> Option<Position> {
+        Some(self.nodes[node].position)
+    }
+
+    fn previous_sibling(&self, node: usize) -> Option<usize> {
+        self.nodes[node].previous
     }
 }
 
@@ -83,10 +95,36 @@ pub(crate) fn elements(world: &World, states: &UiStates) -> Elements {
         .enumerate()
         .map(|(position, entity)| (*entity, position))
         .collect();
+    // Siblings in the order the scene gives them, which is not the order
+    // above: a parent's children list, and the scene's own order for roots.
+    // One pass over each line, so a large scene is not scanned per entity.
+    let roots: Vec<EntityId> = world
+        .entities()
+        .filter(|(_, data)| data.parent.is_none())
+        .map(|(entity, _)| entity)
+        .collect();
+    let mut placed: BTreeMap<EntityId, (Position, Option<usize>)> = BTreeMap::new();
+    let lines = std::iter::once(roots.as_slice())
+        .chain(world.entities().map(|(_, data)| data.children.as_slice()));
+    for line in lines {
+        for (at, entity) in line.iter().enumerate() {
+            let previous = at
+                .checked_sub(1)
+                .and_then(|before| line.get(before))
+                .and_then(|sibling| index.get(sibling).copied());
+            let position = Position {
+                index: at,
+                count: line.len(),
+            };
+            placed.insert(*entity, (position, previous));
+        }
+    }
+    let alone = (Position { index: 0, count: 1 }, None);
     let nodes = ordered
         .iter()
         .filter_map(|entity| {
             let data = world.get(*entity)?;
+            let (position, previous) = placed.get(entity).copied().unwrap_or(alone);
             let classes = data
                 .components
                 .get("weave.style")
@@ -109,6 +147,8 @@ pub(crate) fn elements(world: &World, states: &UiStates) -> Elements {
                 names: element_names(data.components.keys().cloned()),
                 states: component_states(data)
                     .with(states.get(entity).copied().unwrap_or_default()),
+                position,
+                previous,
             })
         })
         .collect();

@@ -9,6 +9,8 @@ use std::collections::BTreeMap;
 
 use weave::Viewport;
 
+use crate::calc::{self, Mix};
+
 /// A length with its authored unit preserved until the viewport is known.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) enum Length {
@@ -17,11 +19,16 @@ pub(super) enum Length {
     ViewWidth(f32),
     ViewHeight(f32),
     Percent(f32),
+    /// Several units at once, from a `calc()`.
+    Calc(Mix),
 }
 
 impl Length {
     pub(super) fn parse(value: &str) -> Option<Self> {
         let value = value.trim();
+        if value.starts_with("calc(") {
+            return calc::parse(value).map(Self::Calc);
+        }
         let (number, make): (&str, fn(f32) -> Self) = if let Some(number) = value.strip_suffix('%')
         {
             (number, Self::Percent)
@@ -48,6 +55,25 @@ impl Length {
             }
             Self::ViewHeight(value) => Some((value / 100.0) * 2.0),
             Self::Percent(value) => Some((value / 100.0) * percent_basis?),
+            Self::Calc(mix) => {
+                let percent = if mix.relative {
+                    (mix.percent / 100.0) * percent_basis?
+                } else {
+                    0.0
+                };
+                let parts = [
+                    Self::Overlay(mix.overlay),
+                    Self::Pixels(mix.pixels),
+                    Self::ViewWidth(mix.view_width),
+                    Self::ViewHeight(mix.view_height),
+                ];
+                let sum: f32 = parts
+                    .into_iter()
+                    .filter_map(|part| part.resolve(viewport, None))
+                    .sum();
+                let total = sum + percent;
+                total.is_finite().then_some(total)
+            }
         }
     }
 }

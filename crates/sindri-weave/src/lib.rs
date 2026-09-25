@@ -12,6 +12,7 @@ use thiserror::Error;
 use weave::{Computed, States, Stylesheet, Viewport};
 
 mod box_model;
+mod calc;
 mod computed;
 mod flex;
 mod grid;

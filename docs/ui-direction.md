@@ -82,8 +82,10 @@ Each step is its own pull request. A step is checked here when it has landed.
      item alignment in the cell.
    - [ ] Grid's `minmax()`, named lines and areas, `auto-fill`, dense
      packing, and spanning items sizing the tracks they cross.
-   - [ ] `calc()`, `:not()`, `:first-child` and the other structural
-     pseudo-classes.
+   - [x] `calc()`, `:not()`, `:is()`, `:where()`, `:root`, `:first-child`,
+     `:nth-child()` and the other structural pseudo-classes, and the `+` and
+     `~` sibling combinators.
+   - [ ] `min()`, `max()`, `clamp()`, attribute selectors and `-of-type`.
 2. **Devtools in the editor.** Pick any UI element to see its box model,
    computed style, and every rule that matched with the overridden ones
    struck through; edit a value in place and write it to the stylesheet;

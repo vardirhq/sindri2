@@ -62,8 +62,8 @@ pub(crate) fn apply(
         // CSS's `gap` is the row gap then the column gap; a flex line takes
         // the one along it, which for the lines here is the first.
         "gap" | "row-gap" | "column-gap" => {
-            let parts: Vec<f32> = value
-                .split_whitespace()
+            let parts: Vec<f32> = weave::shorthand::words(value)
+                .into_iter()
                 .map(|part| length(part, viewport).filter(|gap| *gap >= 0.0))
                 .collect::<Option<_>>()
                 .ok_or_else(refuse)?;
@@ -201,9 +201,9 @@ fn tracks(value: &str, viewport: Viewport, room: f32) -> Option<Vec<String>> {
             rest = after[close + 1..].trim_start();
             continue;
         }
-        let end = rest.find(char::is_whitespace).unwrap_or(rest.len());
-        stored.push(track(&rest[..end], viewport, room)?);
-        rest = rest[end..].trim_start();
+        let word = weave::shorthand::words(rest).into_iter().next()?;
+        stored.push(track(word, viewport, room)?);
+        rest = rest[word.len()..].trim_start();
     }
     (!stored.is_empty()).then_some(stored)
 }

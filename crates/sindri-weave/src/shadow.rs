@@ -26,12 +26,13 @@ fn parse(value: &str, viewport: Viewport) -> Option<serde_json::Value> {
     if value == "none" {
         return Some(serde_json::json!({ "color": [0.0, 0.0, 0.0, 0.0] }));
     }
-    if value.contains(',') || value.split_whitespace().any(|part| part == "inset") {
+    let parts = weave::shorthand::words(value);
+    if value.contains(',') || parts.contains(&"inset") {
         return None;
     }
     let mut lengths = Vec::new();
     let mut tint = None;
-    for part in value.split_whitespace() {
+    for part in parts {
         if let Some(resolved) = length(part, viewport) {
             lengths.push(resolved);
         } else if tint.is_none() {

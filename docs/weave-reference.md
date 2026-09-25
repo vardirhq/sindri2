@@ -87,12 +87,23 @@ Selectors are written as in CSS:
 | Compound | `button.primary:hover` | All of its parts at once |
 | Descendant | `.menu text` | The right-hand entity anywhere inside the left |
 | Child | `.menu > button` | The right-hand entity directly inside the left |
+| Next sibling | `text + slider` | The right-hand entity straight after the left, under the same parent |
+| Later sibling | `.primary ~ button` | The right-hand entity anywhere after the left, under the same parent |
+| Position | `:first-child`, `:last-child`, `:only-child`, `:nth-child(2n+1)`, `:nth-last-child(2)`, `:root` | An entity by where it sits among its siblings, in scene order |
+| Negation | `button:not(.primary, :first-child)` | An entity none of the list matches |
+| Any of | `:is(#a, .b)`, `:where(#a, .b)` | An entity any of the list matches |
 | List | `.title, .subtitle` | Either |
 
 An element name is a UI component's short name: `text` for `sindri.ui.text`,
 `image`, `shape`, `button`, `slider`, `layout`, and likewise `sprite` for
 `sindri.sprite`. The full name still works, so `sindri.ui.text { … }` means
 what it always did.
+
+Siblings are an entity's parent's children in the scene's order, and the
+scene's top-level entities for one with no parent; `:root` is an entity with
+no parent. `:nth-child()` takes CSS's `an+b`, `odd` and `even`. `:not()` and
+`:is()` are as specific as their most specific argument, and `:where()` is
+not specific at all, as in CSS.
 
 `:disabled` and `:checked` come from the entity's own data: a component with
 `"disabled": true` makes its entity `:disabled`. `:hover`, `:active` and
@@ -164,6 +175,11 @@ parent content box, so `width: 100%` fills the padded interior rather than
 covering the outer border.
 
 `min-*` and `max-*` constraints apply to the final resolved size.
+
+`calc()` mixes units wherever a length goes: `width: calc(100% - 40px)`,
+`padding: calc(var(--gap) * 2) 8px`. Lengths add and subtract, and multiply
+or divide by plain numbers; `u` names the overlay's own unit inside one.
+`min()`, `max()` and `clamp()` are not read yet.
 
 ## Layout properties
 
@@ -421,9 +437,8 @@ The following CSS concepts are not implemented:
   reversed directions
 - grid's `minmax()`, named lines and areas, `auto-fill`, and dense packing
 - scrolling and clipping regions
-- calculations (`calc()`)
-- attribute selectors, sibling combinators, and structural pseudo-classes
-  such as `:first-child` or `:not()`
+- `min()`, `max()` and `clamp()`
+- attribute selectors, and the `-of-type` pseudo-classes
 - `:focus` in the running game: nothing takes focus until keyboard and
   gamepad navigation land
 - `@keyframes` animation

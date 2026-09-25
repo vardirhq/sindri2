@@ -3,11 +3,14 @@
 //! The same shape as CSS, because the point of Weave is that someone who has
 //! styled a web page already knows it: element names, `#id`, `.class`,
 //! state pseudo-classes, compound selectors such as `button.primary:hover`,
-//! descendant (`.menu text`) and child (`.menu > button`) combinators, and
-//! selector lists (`h1, h2`). Specificity is CSS's: IDs, then classes and
-//! states, then element names.
+//! descendant (`.menu text`), child (`.menu > button`) and sibling
+//! (`label + slider`, `h1 ~ text`) combinators, selector lists (`h1, h2`),
+//! the structural pseudo-classes (`:first-child`, `:nth-child(odd)`), and
+//! `:not()`, `:is()` and `:where()`. Specificity is CSS's: IDs, then classes
+//! and states, then element names.
 
-use crate::ParseError;
+pub(crate) use crate::parse_selector::parse_list;
+pub use crate::structural::{Position, Structural};
 
 /// The interaction states an element can be in, as pseudo-classes match them.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
@@ -56,6 +59,23 @@ pub struct Compound {
     pub id: Option<String>,
     pub classes: Vec<String>,
     pub states: States,
+    /// Where it must sit among its siblings.
+    pub structural: Vec<Structural>,
+    /// `:not()`, `:is()` and `:where()`, each a selector list.
+    pub lists: Vec<(ListKind, Vec<Selector>)>,
+}
+
+/// How a selector list inside a compound applies.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ListKind {
+    /// `:not()`: matches when none of the list does. As specific as its most
+    /// specific selector.
+    Not,
+    /// `:is()`: matches when any of the list does, as specific as its most
+    /// specific selector.
+    Is,
+    /// `:where()`: `:is()` with no specificity at all.
+    Where,
 }
 
 /// What joins two compounds.
@@ -65,6 +85,10 @@ pub enum Combinator {
     Descendant,
     /// `>`: directly inside.
     Child,
+    /// `+`: the sibling just after.
+    NextSibling,
+    /// `~`: any sibling after.
+    LaterSibling,
 }
 
 /// A complex selector: compounds joined by combinators, read left to right.
@@ -92,10 +116,28 @@ pub struct Element<'a> {
 pub trait Tree {
     fn element(&self, node: usize) -> Element<'_>;
     fn parent(&self, node: usize) -> Option<usize>;
+
+    /// Where the node sits among its siblings. A host that does not say
+    /// matches no structural pseudo-class.
+    fn position(&self, _node: usize) -> Option<Position> {
+        None
+    }
+
+    /// The sibling just before the node. A host that does not say matches
+    /// no sibling combinator.
+    fn previous_sibling(&self, _node: usize) -> Option<usize> {
+        None
+    }
 }
 
 impl Compound {
-    fn matches(&self, element: Element<'_>) -> bool {
+    fn matches(&self, tree: &impl Tree, node: usize) -> bool {
+        let element = tree.element(node);
+        let position = if self.structural.is_empty() {
+            None
+        } else {
+            tree.position(node)
+        };
         self.element
             .as_ref()
             .is_none_or(|name| element.names.iter().any(|known| known == name))
@@ -105,22 +147,58 @@ impl Compound {
                 .iter()
                 .all(|class| element.classes.iter().any(|known| known == class))
             && element.states.contains(self.states)
+            && self.structural.iter().all(|structural| match structural {
+                Structural::Root => tree.parent(node).is_none(),
+                _ => structural.matches(position),
+            })
+            && self.lists.iter().all(|(kind, list)| {
+                let any = list.iter().any(|selector| selector.matches(tree, node));
+                match kind {
+                    ListKind::Not => !any,
+                    ListKind::Is | ListKind::Where => any,
+                }
+            })
     }
 
     fn specificity(&self) -> Specificity {
         let states = u16::try_from(self.states.0.count_ones()).unwrap_or(u16::MAX);
-        Specificity(
+        let structural = u16::try_from(self.structural.len()).unwrap_or(u16::MAX);
+        let own = Specificity(
             u16::from(self.id.is_some()),
             u16::try_from(self.classes.len())
                 .unwrap_or(u16::MAX)
-                .saturating_add(states),
+                .saturating_add(states)
+                .saturating_add(structural),
             u16::from(self.element.is_some()),
-        )
+        );
+        self.lists
+            .iter()
+            .filter(|(kind, _)| *kind != ListKind::Where)
+            .map(|(_, list)| {
+                list.iter()
+                    .map(Selector::specificity)
+                    .max()
+                    .unwrap_or_default()
+            })
+            .fold(own, add)
     }
 
-    fn is_empty(&self) -> bool {
-        self.element.is_none() && self.id.is_none() && self.classes.is_empty()
+    pub(crate) fn is_empty(&self) -> bool {
+        self.element.is_none()
+            && self.id.is_none()
+            && self.classes.is_empty()
+            && self.states.is_empty()
+            && self.structural.is_empty()
+            && self.lists.is_empty()
     }
+}
+
+fn add(total: Specificity, part: Specificity) -> Specificity {
+    Specificity(
+        total.0.saturating_add(part.0),
+        total.1.saturating_add(part.1),
+        total.2.saturating_add(part.2),
+    )
 }
 
 impl Selector {
@@ -160,16 +238,10 @@ impl Selector {
 
     #[must_use]
     pub fn specificity(&self) -> Specificity {
-        self.compounds.iter().map(Compound::specificity).fold(
-            Specificity::default(),
-            |total, part| {
-                Specificity(
-                    total.0.saturating_add(part.0),
-                    total.1.saturating_add(part.1),
-                    total.2.saturating_add(part.2),
-                )
-            },
-        )
+        self.compounds
+            .iter()
+            .map(Compound::specificity)
+            .fold(Specificity::default(), add)
     }
 
     /// Whether the element at `node` is one this selector is about.
@@ -185,7 +257,7 @@ impl Selector {
     }
 
     fn match_from(&self, tree: &impl Tree, node: usize, index: usize) -> bool {
-        if !self.compounds[index].matches(tree.element(node)) {
+        if !self.compounds[index].matches(tree, node) {
             return false;
         }
         let Some(previous) = index.checked_sub(1) else {
@@ -210,142 +282,30 @@ impl Selector {
                 }
                 false
             }
-        }
-    }
-}
-
-/// Parses a selector list, `a, b > c`, into its selectors.
-pub(crate) fn parse_list(text: &str) -> Result<Vec<Selector>, ParseError> {
-    text.split(',')
-        .map(|part| parse_selector(part.trim()))
-        .collect()
-}
-
-fn parse_selector(text: &str) -> Result<Selector, ParseError> {
-    let invalid = || ParseError::InvalidSelector(text.to_owned());
-    let chars: Vec<char> = text.chars().collect();
-    let mut position = 0;
-    let mut compounds = Vec::new();
-    let mut combinators = Vec::new();
-    loop {
-        let compound = parse_compound(&chars, &mut position, text)?;
-        if compound.is_empty() && compound.states.is_empty() && !starts_universal(&chars, position)
-        {
-            return Err(invalid());
-        }
-        compounds.push(compound);
-        let mut saw_space = false;
-        while chars.get(position).is_some_and(|c| c.is_whitespace()) {
-            saw_space = true;
-            position += 1;
-        }
-        match chars.get(position) {
-            None => break,
-            Some('>') => {
-                position += 1;
-                while chars.get(position).is_some_and(|c| c.is_whitespace()) {
-                    position += 1;
+            Combinator::NextSibling => tree
+                .previous_sibling(node)
+                .is_some_and(|sibling| self.match_from(tree, sibling, previous)),
+            Combinator::LaterSibling => {
+                let mut sibling = tree.previous_sibling(node);
+                for _ in 0..4096 {
+                    let Some(current) = sibling else {
+                        return false;
+                    };
+                    if self.match_from(tree, current, previous) {
+                        return true;
+                    }
+                    sibling = tree.previous_sibling(current);
                 }
-                combinators.push(Combinator::Child);
-            }
-            Some(_) if saw_space => combinators.push(Combinator::Descendant),
-            Some(_) => return Err(invalid()),
-        }
-    }
-    Ok(Selector {
-        compounds,
-        combinators,
-    })
-}
-
-/// Whether the compound just parsed was written as `*`, which is empty but
-/// still a selector.
-fn starts_universal(chars: &[char], position: usize) -> bool {
-    chars[..position]
-        .iter()
-        .rev()
-        .find(|c| !c.is_whitespace())
-        .is_some_and(|c| *c == '*')
-}
-
-fn parse_compound(
-    chars: &[char],
-    position: &mut usize,
-    text: &str,
-) -> Result<Compound, ParseError> {
-    let mut compound = Compound::default();
-    if chars.get(*position) == Some(&'*') {
-        *position += 1;
-    } else if chars.get(*position).is_some_and(|c| is_name_start(*c)) {
-        let mut name = take_name(chars, position);
-        // `sindri.ui.text`, the long form of an element name written before
-        // Weave had short ones, is read as one name rather than as the
-        // element `sindri` with classes `ui` and `text`.
-        if name == "sindri" {
-            while chars.get(*position) == Some(&'.')
-                && chars.get(*position + 1).is_some_and(|c| is_name_start(*c))
-            {
-                *position += 1;
-                name.push('.');
-                name.push_str(&take_name(chars, position));
+                false
             }
         }
-        compound.element = Some(name);
     }
-    loop {
-        match chars.get(*position) {
-            Some('#') => {
-                *position += 1;
-                let id = take_name(chars, position);
-                if id.is_empty() {
-                    return Err(ParseError::InvalidSelector(text.to_owned()));
-                }
-                compound.id = Some(id);
-            }
-            Some('.') => {
-                *position += 1;
-                let class = take_name(chars, position);
-                if class.is_empty() {
-                    return Err(ParseError::InvalidSelector(text.to_owned()));
-                }
-                compound.classes.push(class);
-            }
-            Some(':') => {
-                *position += 1;
-                let name = take_name(chars, position);
-                let state = match name.as_str() {
-                    "hover" => States::HOVER,
-                    "active" | "pressed" => States::ACTIVE,
-                    "focus" => States::FOCUS,
-                    "disabled" => States::DISABLED,
-                    "checked" => States::CHECKED,
-                    _ => return Err(ParseError::UnsupportedPseudoClass(name)),
-                };
-                compound.states = compound.states.with(state);
-            }
-            _ => return Ok(compound),
-        }
-    }
-}
-
-const fn is_name_start(c: char) -> bool {
-    c.is_ascii_alphabetic() || c == '_' || c == '-' || !c.is_ascii()
-}
-
-fn take_name(chars: &[char], position: &mut usize) -> String {
-    let start = *position;
-    while chars
-        .get(*position)
-        .is_some_and(|c| c.is_ascii_alphanumeric() || *c == '_' || *c == '-' || !c.is_ascii())
-    {
-        *position += 1;
-    }
-    chars[start..*position].iter().collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ParseError;
 
     /// One element of the test tree: id, classes, names, states, parent.
     type Node = (String, Vec<String>, Vec<String>, States, Option<usize>);
