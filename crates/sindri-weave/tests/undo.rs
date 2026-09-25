@@ -178,7 +178,7 @@ fn settling_a_spawn_does_not_overwrite_an_existing_script_value() {
         .scale[1] = 0.01;
     spawn_late(&mut live);
 
-    presenter
+    let undo = presenter
         .present_over(&mut live, &[sheet], VIEWPORT, &UiStates::new())
         .expect("settles the spawn");
     let existing = live
@@ -186,6 +186,7 @@ fn settling_a_spawn_does_not_overwrite_an_existing_script_value() {
         .and_then(|data| data.transform_3d)
         .expect("a transform");
     assert!((existing.scale[1] - 0.01).abs() < 1.0e-6, "{existing:?}");
+    undo.undo(&mut live);
 }
 
 #[test]
