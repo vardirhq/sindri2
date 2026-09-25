@@ -1,0 +1,265 @@
+// One player: walks with the left stick, picks a skin and readies up in the
+// lobby, and kicks with the right bumper, aimed with the right stick.
+//
+// A player is made by the match when a pad joins, and told which slot it is.
+// Odd slots play for Blue, who defend the left goal; even slots for Red.
+script Player {
+    @export let slot: f32 = 1.0;
+    @export let arrow: Prefab;
+    @export let speed: f32 = 10.0;
+    @export let kick_speed: f32 = 22.0;
+    @export let boost_kick: f32 = 36.0;
+    // How big a player is drawn: an unready player stands tall in the lobby,
+    // and the Enlarger makes one bigger for a while.
+    @export let normal: f32 = 3.2;
+    @export let big: f32 = 1.75;
+    @export let grown: f32 = 1.6;
+    @export let power_time: f32 = 20.0;
+    @export let burn_time: f32 = 5.0;
+
+    var team: f32 = 1.0;
+    var skin: f32 = 0.0;
+    var ready: bool = false;
+    var size: f32 = 1.75;
+    var grow_left: f32 = 0.0;
+    var boost_left: f32 = 0.0;
+    var burn_left: f32 = 0.0;
+    var burn_turn: f32 = 0.0;
+    var burn_x: f32 = 0.0;
+    var burn_y: f32 = 0.0;
+    var fire_clock: f32 = 0.0;
+    var vx: f32 = 0.0;
+    var vy: f32 = 0.0;
+    var face_right: bool = true;
+    var face_down: bool = true;
+    var moving: bool = false;
+    var marker: Entity = null;
+    var referee: Entity = null;
+    var ball: Entity = null;
+
+    fn start() {
+        if this.slot % 2.0 == 1.0 {
+            this.team = 1.0;
+            this.skin = 0.0;
+        } else {
+            this.team = 2.0;
+            this.skin = 1.0;
+            this.face_right = false;
+        }
+        this.referee = World.find("Match");
+        this.ball = World.find("Ball");
+        // A child is not carried by its parent's transform, so the marker is
+        // placed over the player's head every frame in `mark`; being a child
+        // is what takes it away with the player.
+        let marker = World.spawn_child(this.arrow, this.entity);
+        Animation.play(marker, marker_clip());
+        this.marker = marker;
+        show();
+    }
+
+    fn update(dt: f32) {
+        let phase = Game.get("phase", 0.0);
+        take_signals();
+        lobby(phase);
+        if this.ready {
+            World.send_signal(this.referee, "ready", 1.0);
+        }
+        move(dt, phase);
+        try_kick(phase);
+        grow(dt);
+        burn(dt);
+        show();
+        mark();
+    }
+
+    fn mark() {
+        let marker = this.marker;
+        if marker == null {
+            return;
+        }
+        let scale = this.transform.scale.y;
+        marker.transform.position.x = this.transform.position.x;
+        marker.transform.position.y = this.transform.position.y + 0.31 * scale + 0.55;
+        marker.transform.position.z = this.transform.position.z + 0.01;
+    }
+
+    fn take_signals() {
+        if World.take_signal("grow") > 0.0 {
+            this.grow_left = this.power_time;
+        }
+        if World.take_signal("boost") > 0.0 {
+            this.boost_left = this.power_time;
+        }
+        if World.take_signal("burn") > 0.0 && this.burn_left <= 0.0 {
+            this.burn_left = this.burn_time;
+            this.burn_turn = 0.0;
+            Audio.play("audio/hit.wav", 0.8);
+        }
+    }
+
+    // Before kickoff a player picks a skin with the d-pad and readies with
+    // North (Y on most pads). Readying again takes it back until the match
+    // starts; a player joining mid-match readies straight into play.
+    fn lobby(phase: f32) {
+        if !this.ready && (Gamepad.just_pressed(this.slot, "dpad_up") || Gamepad.just_pressed(this.slot, "dpad_down")) {
+            this.skin = 1.0 - this.skin;
+        }
+        if Gamepad.just_pressed(this.slot, "north") {
+            if !this.ready {
+                this.ready = true;
+                Audio.play("audio/run.wav", 0.6);
+            } else if phase < 2.0 {
+                this.ready = false;
+            }
+        }
+    }
+
+    fn move(dt: f32, phase: f32) {
+        var tx: f32 = 0.0;
+        var ty: f32 = 0.0;
+        if this.burn_left > 0.0 {
+            tx = this.burn_x * this.speed;
+            ty = this.burn_y * this.speed;
+        } else if this.ready && phase >= 2.0 {
+            var x: f32 = Gamepad.axis(this.slot, "left_x");
+            var y: f32 = Gamepad.axis(this.slot, "left_y");
+            if Gamepad.is_down(this.slot, "dpad_left") { x = -1.0; }
+            if Gamepad.is_down(this.slot, "dpad_right") { x = 1.0; }
+            if Gamepad.is_down(this.slot, "dpad_up") { y = -1.0; }
+            if Gamepad.is_down(this.slot, "dpad_down") { y = 1.0; }
+            // The pad measures down as positive; the pitch measures up.
+            tx = x * this.speed;
+            ty = -y * this.speed;
+        }
+        tx += Game.get("wind", 0.0) * 0.4;
+        // Eased towards, as the old forces and drag did, so a player leans
+        // into a turn rather than snapping round.
+        let ease = min(1.0, dt * 12.0);
+        this.vx += (tx - this.vx) * ease;
+        this.vy += (ty - this.vy) * ease;
+        Physics.set_velocity(this.entity, this.vx, this.vy);
+
+        this.moving = abs(this.vx) > 1.0 || abs(this.vy) > 1.0;
+        if this.vx > 1.0 { this.face_right = true; }
+        if this.vx < -1.0 { this.face_right = false; }
+        if this.vy < -1.0 { this.face_down = true; }
+        if this.vy > 1.0 { this.face_down = false; }
+
+        // Kept on the grass, and drawn in front of whoever is further up it.
+        this.transform.position.x = max(-15.8, min(15.8, this.transform.position.x));
+        this.transform.position.y = max(-6.4, min(7.0, this.transform.position.y));
+        this.transform.position.z = 1.0 - this.transform.position.y * 0.01;
+        mark();
+    }
+
+    // The right bumper sends the ball where the right stick points, or the
+    // way the player faces with the stick at rest.
+    fn try_kick(phase: f32) {
+        if phase < 2.0 || this.burn_left > 0.0 || Game.get("holder", 0.0) != this.slot {
+            return;
+        }
+        if !Gamepad.just_pressed(this.slot, "right_bumper") {
+            return;
+        }
+        var ax: f32 = Gamepad.axis(this.slot, "right_x");
+        var ay: f32 = -Gamepad.axis(this.slot, "right_y");
+        let length = sqrt(ax * ax + ay * ay);
+        if length < 0.3 {
+            ax = -1.0;
+            if this.face_right { ax = 1.0; }
+            ay = 0.0;
+        } else {
+            ax = ax / length;
+            ay = ay / length;
+        }
+        var force: f32 = this.kick_speed;
+        if this.boost_left > 0.0 {
+            force = this.boost_kick;
+        }
+        World.send_signal(this.ball, "kick_x", ax * force);
+        World.send_signal(this.ball, "kick_y", ay * force);
+        World.send_signal(this.ball, "kick", 1.0);
+        Audio.play("audio/hit.wav", 1.0);
+    }
+
+    fn grow(dt: f32) {
+        this.grow_left = max(0.0, this.grow_left - dt);
+        this.boost_left = max(0.0, this.boost_left - dt);
+        var target: f32 = 1.0;
+        if !this.ready {
+            target = this.big;
+        } else if this.grow_left > 0.0 {
+            target = this.grown;
+        }
+        this.size += (target - this.size) * min(1.0, dt * 3.0);
+        this.transform.scale.x = this.normal * this.size;
+        this.transform.scale.y = this.normal * this.size;
+    }
+
+    // On fire: running wild in a new direction every second, trailing flame,
+    // until it burns out.
+    fn burn(dt: f32) {
+        if this.burn_left <= 0.0 {
+            return;
+        }
+        this.burn_left -= dt;
+        this.burn_turn -= dt;
+        if this.burn_turn <= 0.0 {
+            this.burn_turn = 1.0;
+            this.burn_x = Random.range(-1.5, 1.5);
+            this.burn_y = Random.range(-1.5, 1.5);
+        }
+        this.fire_clock -= dt;
+        if this.fire_clock <= 0.0 {
+            this.fire_clock = 0.07;
+            Effects.burst(this.entity);
+        }
+    }
+
+    fn show() {
+        let clip = clip_name();
+        if Animation.clip(this.entity) != clip {
+            Animation.play(this.entity, clip);
+        }
+    }
+
+    fn clip_name() -> String {
+        if this.skin == 0.0 {
+            if this.moving {
+                if this.face_right {
+                    if this.face_down { return "ginger-walk-rd"; }
+                    return "ginger-walk-ru";
+                }
+                if this.face_down { return "ginger-walk-ld"; }
+                return "ginger-walk-lu";
+            }
+            if this.face_right {
+                if this.face_down { return "ginger-idle-rd"; }
+                return "ginger-idle-ru";
+            }
+            if this.face_down { return "ginger-idle-ld"; }
+            return "ginger-idle-lu";
+        }
+        if this.moving {
+            if this.face_right {
+                if this.face_down { return "yellow-walk-rd"; }
+                return "yellow-walk-ru";
+            }
+            if this.face_down { return "yellow-walk-ld"; }
+            return "yellow-walk-lu";
+        }
+        if this.face_right {
+            if this.face_down { return "yellow-idle-rd"; }
+            return "yellow-idle-ru";
+        }
+        if this.face_down { return "yellow-idle-ld"; }
+        return "yellow-idle-lu";
+    }
+
+    fn marker_clip() -> String {
+        if this.slot == 1.0 { return "p1"; }
+        if this.slot == 2.0 { return "p2"; }
+        if this.slot == 3.0 { return "p3"; }
+        return "p4";
+    }
+}

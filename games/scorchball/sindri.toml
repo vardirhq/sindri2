@@ -1,0 +1,9 @@
+format_version = 1
+
+[project]
+name = "Scorchball"
+main_scene = "assets/scorchball.scene.json"
+
+# Sounds the scripts play by name, which no walk of the scene can see.
+[assets]
+include = ["audio/hit.wav", "audio/run.wav"]

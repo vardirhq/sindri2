@@ -1,0 +1,167 @@
+// The match: players join from their pads, ready up, and after a countdown
+// it kicks off. It keeps the score, throws power-ups onto the pitch, and
+// holds the wind.
+//
+// The phase is on the board for everyone: 0 is the lobby, 1 the countdown,
+// 2 play.
+script Match {
+    @export let player: Prefab;
+    @export let powerup: Prefab;
+    @export let countdown_time: f32 = 3.5;
+    @export let power_min: f32 = 5.0;
+    @export let power_max: f32 = 15.0;
+    @export let wind_speed: f32 = 15.0;
+    @export let wind_time: f32 = 20.0;
+
+    var phase: f32 = 0.0;
+    var countdown: f32 = 0.0;
+    var kickoff_shown: f32 = 0.0;
+    var goal_shown: f32 = 0.0;
+    var next_power: f32 = 5.0;
+    var wind_left: f32 = 0.0;
+    var joins: f32 = 0.0;
+    var blue_digit: Entity = null;
+    var red_digit: Entity = null;
+    var hint: Entity = null;
+    var count_text: Entity = null;
+    var kickoff_text: Entity = null;
+    var goal_text: Entity = null;
+
+    fn start() {
+        this.blue_digit = World.find("Blue Score");
+        this.red_digit = World.find("Red Score");
+        this.hint = World.find("Hint");
+        this.count_text = World.find("Countdown");
+        this.kickoff_text = World.find("Kickoff");
+        this.goal_text = World.find("Goal");
+        Game.set("phase", 0.0);
+        Game.set("score_blue", 0.0);
+        Game.set("score_red", 0.0);
+        Game.set("wind", 0.0);
+        this.next_power = this.power_min;
+    }
+
+    fn update(dt: f32) {
+        players();
+        let ready = World.take_signal("ready");
+        if this.phase == 0.0 && ready >= 2.0 {
+            this.phase = 1.0;
+            this.countdown = this.countdown_time;
+        } else if this.phase == 1.0 && ready < 2.0 {
+            // Someone unreadied or left: back to waiting.
+            this.phase = 0.0;
+        }
+        if this.phase == 1.0 {
+            this.countdown -= dt;
+            Ui.set_number(this.count_text, this.countdown - this.countdown % 1.0 + 1.0);
+            if this.countdown <= 0.0 {
+                this.phase = 2.0;
+                this.kickoff_shown = 2.0;
+                Audio.play("audio/hit.wav", 1.0);
+            }
+        }
+        Game.set("phase", this.phase);
+        if this.phase == 2.0 {
+            goals();
+            powerups(dt);
+            wind(dt);
+        }
+        this.kickoff_shown = max(0.0, this.kickoff_shown - dt);
+        this.goal_shown = max(0.0, this.goal_shown - dt);
+        World.set_active(this.hint, this.phase == 0.0);
+        World.set_active(this.count_text, this.phase == 1.0);
+        World.set_active(this.kickoff_text, this.kickoff_shown > 0.0);
+        World.set_active(this.goal_text, this.goal_shown > 0.0);
+        digit(this.blue_digit, Game.get("score_blue", 0.0));
+        digit(this.red_digit, Game.get("score_red", 0.0));
+    }
+
+    // A pad that joins gets a player on its side of the pitch; a pad that is
+    // unplugged takes its player with it.
+    fn players() {
+        let joined = Gamepad.joined();
+        if joined > 0.0 {
+            let made = World.spawn(this.player);
+            World.set_property(made, "slot", joined);
+            // Blue on the left, Red on the right, pairs spread up and down.
+            var x: f32 = -7.0;
+            if joined % 2.0 == 0.0 { x = 7.0; }
+            var y: f32 = 1.0;
+            if joined > 2.0 { y = -3.5; }
+            made.transform.position.x = x;
+            made.transform.position.y = y;
+            this.joins += 1.0;
+            Game.set("joins", this.joins);
+        }
+        let left = Gamepad.left();
+        if left > 0.0 {
+            for someone in World.with_tag("player") {
+                if World.property_number(someone, "slot", 0.0) == left {
+                    World.despawn(someone);
+                }
+            }
+        }
+    }
+
+    fn goals() {
+        let blue = World.take_signal("goal_blue");
+        let red = World.take_signal("goal_red");
+        if blue > 0.0 {
+            Game.set("score_blue", Game.get("score_blue", 0.0) + blue);
+        }
+        if red > 0.0 {
+            Game.set("score_red", Game.get("score_red", 0.0) + red);
+        }
+        if blue > 0.0 || red > 0.0 {
+            this.goal_shown = 2.0;
+            Camera.add_trauma(0.6);
+            Audio.play("audio/hit.wav", 1.0);
+        }
+    }
+
+    // Every few seconds a signpost drops somewhere on the pitch with one of
+    // the four powers in it.
+    fn powerups(dt: f32) {
+        this.next_power -= dt;
+        if this.next_power > 0.0 {
+            return;
+        }
+        this.next_power = Random.range(this.power_min, this.power_max);
+        let made = World.spawn(this.powerup);
+        World.set_property(made, "kind", Random.int(1.0, 4.0));
+        made.transform.position.x = Random.range(-12.0, 12.0);
+        made.transform.position.y = Random.range(-5.0, 4.5);
+    }
+
+    // Wind blows towards the goal of whoever did not pick it up.
+    fn wind(dt: f32) {
+        let blown = World.take_signal("wind");
+        if blown != 0.0 {
+            this.wind_left = this.wind_time;
+            Game.set("wind", blown * this.wind_speed);
+        }
+        if this.wind_left > 0.0 {
+            this.wind_left -= dt;
+            if this.wind_left <= 0.0 {
+                Game.set("wind", 0.0);
+            }
+        }
+    }
+
+    fn digit(shown: Entity, score: f32) {
+        let value = score % 10.0;
+        var clip: String = "d0";
+        if value == 1.0 { clip = "d1"; }
+        if value == 2.0 { clip = "d2"; }
+        if value == 3.0 { clip = "d3"; }
+        if value == 4.0 { clip = "d4"; }
+        if value == 5.0 { clip = "d5"; }
+        if value == 6.0 { clip = "d6"; }
+        if value == 7.0 { clip = "d7"; }
+        if value == 8.0 { clip = "d8"; }
+        if value == 9.0 { clip = "d9"; }
+        if Animation.clip(shown) != clip {
+            Animation.play(shown, clip);
+        }
+    }
+}

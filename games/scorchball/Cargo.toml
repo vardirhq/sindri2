@@ -1,0 +1,24 @@
+[package]
+name = "scorchball"
+description = "A couch football game for two to four pads, and the harness that plays it"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# No game code. The game is its scene, its prefabs and its Decay, a project
+# rather than a crate. What lives here is the harness that plays it, assembled
+# from the same public pieces a host uses, with pads a test can press.
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+sindri-core = { path = "../../crates/sindri-core" }
+sindri-decay = { path = "../../crates/sindri-decay" }
+sindri-platform = { path = "../../crates/sindri-platform", default-features = false }
+sindri-scene = { path = "../../crates/sindri-scene" }
+serde_json.workspace = true
+
+[lints]
+workspace = true
