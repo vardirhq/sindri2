@@ -31,7 +31,8 @@ use crate::components::{UiAnchor, UiTextCase, UiTextLineAlign, UiTextWrap};
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
 use crate::screen_ui::{
-    UiAlign, UiDirection, UiJustify, UiLayoutComponent, UiSliderComponent, UiSliderOrientation,
+    UiAlign, UiAlignSelf, UiBoxComponent, UiDirection, UiJustify, UiLayoutComponent,
+    UiSliderComponent, UiSliderOrientation,
 };
 use crate::tilemap_collision::TilemapCollider2dComponent;
 
@@ -105,6 +106,7 @@ fn describe_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
         ("anchor", anchors()),
         ("fill", COLOUR),
         ("stroke", COLOUR),
+        ("shadow.color", COLOUR),
         ("sweep_start", FieldMeaning::Angle),
     ])?;
     components.describe::<UiSliderComponent>([(
@@ -129,6 +131,10 @@ fn describe_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             FieldMeaning::choice(UiAlign::ALL.into_iter().map(UiAlign::as_str)),
         ),
     ])?;
+    components.describe::<UiBoxComponent>([(
+        "align_self",
+        FieldMeaning::choice(UiAlignSelf::ALL.into_iter().map(UiAlignSelf::as_str)),
+    )])?;
     describe_text(components)?;
     Ok(())
 }

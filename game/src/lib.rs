@@ -28,6 +28,7 @@ mod assets;
 mod error;
 mod session;
 mod streaming;
+mod styling;
 pub mod worldgen;
 
 // The crate's public surface: what `bin/`, `tests/`, and the browser host

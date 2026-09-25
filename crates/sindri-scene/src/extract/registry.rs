@@ -30,7 +30,7 @@ use crate::components::{
     UiShapeKind, UiTextComponent, VoxelGeneratorDocument, VoxelWorldComponent,
 };
 use crate::effects::EffectBurstComponent;
-use crate::screen_ui::{UiButtonComponent, UiLayoutComponent, UiSliderComponent};
+use crate::screen_ui::{UiBoxComponent, UiButtonComponent, UiLayoutComponent, UiSliderComponent};
 use crate::textures::PROCEDURAL_TEXTURES;
 
 use super::SceneExtractError;
@@ -86,7 +86,13 @@ fn register_shapes(components: &mut ComponentSchemaRegistry) -> Result<(), Scene
             "sweep_turns": 1.0,
             "blend": UiShapeBlend::default().as_str(),
             "anchor": "center",
-            "layer": 0
+            "layer": 0,
+            "shadow": {
+                "color": [0.0, 0.0, 0.0, 0.0],
+                "offset": [0.0, 0.0],
+                "blur": 0.0,
+                "spread": 0.0
+            }
         }),
     )?;
     Ok(())
@@ -251,7 +257,25 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "direction": "column",
             "spacing": 0.25,
             "justify": "center",
-            "align": "center"
+            "align": "center",
+            "wrap": false,
+            "fit_content": [false, false]
+        }),
+    )?;
+    // No room either side and CSS's item defaults: adding a box changes
+    // nothing until something is set, so it can go on any element.
+    components.register_with_default::<UiBoxComponent>(
+        "UI Box",
+        serde_json::json!({
+            "margin": [0.0, 0.0, 0.0, 0.0],
+            "padding": [0.0, 0.0, 0.0, 0.0],
+            "grow": 0.0,
+            "shrink": 1.0,
+            "basis": -1.0,
+            "order": 0,
+            "align_self": "auto",
+            "min_size": [0.0, 0.0],
+            "max_size": [0.0, 0.0]
         }),
     )?;
     // A visible burst, because one that threw nothing would look like a

@@ -5,15 +5,35 @@
 //! ordinary Sindri transforms/component payloads on that clone, and lets the
 //! existing scene/render/input pipeline consume the result normally.
 
+use std::collections::BTreeMap;
+
 use sindri_core::{EntityId, Transform3D, World};
 use thiserror::Error;
-use weave::{Stylesheet, Viewport};
+use weave::{Computed, States, Stylesheet, Viewport};
 
+mod box_model;
 mod computed;
+mod flex;
+mod presenter;
+mod shadow;
+mod transition;
+mod tree;
+mod undo;
 
 use computed::{ComputedStyle, Length};
+use tree::elements;
 
-const RESOLVED_PADDING_FIELD: &str = "_resolved_padding";
+pub use presenter::{Presenter, pointer_states};
+pub use transition::Transitions;
+pub use undo::Undo;
+
+/// What each element is doing right now: hovered, pressed, focused.
+///
+/// The host that runs input knows this and Weave does not; it is handed in
+/// each time presentation is resolved, so `:hover` rules follow the pointer.
+/// `:disabled` and `:checked` need no entry here: they are read from the
+/// element's own components.
+pub type UiStates = BTreeMap<EntityId, States>;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum ApplyError {
@@ -37,8 +57,18 @@ impl PresentationWorld {
         stylesheet: &Stylesheet,
         viewport: Viewport,
     ) -> Result<Self, ApplyError> {
+        Self::resolve_with_states(source, stylesheet, viewport, &UiStates::new())
+    }
+
+    /// Resolves presentation for elements in the given interaction states.
+    pub fn resolve_with_states(
+        source: &World,
+        stylesheet: &Stylesheet,
+        viewport: Viewport,
+        states: &UiStates,
+    ) -> Result<Self, ApplyError> {
         let mut world = source.clone();
-        apply(&mut world, stylesheet, viewport)?;
+        apply(&mut world, stylesheet, viewport, states, Pass::default())?;
         Ok(Self { world })
     }
 
@@ -48,52 +78,79 @@ impl PresentationWorld {
     }
 }
 
-fn apply(world: &mut World, stylesheet: &Stylesheet, viewport: Viewport) -> Result<(), ApplyError> {
-    let mut entities: Vec<(EntityId, String, Vec<String>, Vec<String>)> = world
-        .entities()
-        .filter_map(|(entity, data)| {
-            let id = data.source_id.as_ref()?.as_str().to_owned();
-            let component_types = data.components.keys().cloned().collect();
-            let classes = data
-                .components
-                .get("weave.style")
-                .and_then(|payload| payload.get("classes"))
-                .and_then(serde_json::Value::as_array)
-                .into_iter()
-                .flatten()
-                .filter_map(serde_json::Value::as_str)
-                .map(str::to_owned)
-                .collect();
-            Some((entity, id, classes, component_types))
-        })
-        .collect();
-    // Percent sizes and padding resolve against settled ancestor boxes, so
-    // parents must resolve before their children regardless of authoring order.
-    entities.sort_by_key(|(entity, _, _, _)| hierarchy_depth(world, *entity));
+/// Each element's declarations as one stylesheet resolved them, keyed by
+/// entity: what a settled world was styled with.
+pub(crate) type Declared = BTreeMap<EntityId, BTreeMap<String, String>>;
 
-    for (entity, id, classes, component_types) in entities {
-        let classes: Vec<&str> = classes.iter().map(String::as_str).collect();
-        let kinds: Vec<&str> = component_types.iter().map(String::as_str).collect();
-        let computed = ComputedStyle::resolve(stylesheet, &id, &classes, &kinds, viewport);
+/// What a styling pass does besides writing the declarations.
+#[derive(Default)]
+pub(crate) struct Pass<'a> {
+    /// Eases values between passes, for one stylesheet by its index.
+    pub transitions: Option<(&'a mut Transitions, usize)>,
+    /// Saves what is about to change, so it can be put back.
+    pub undo: Option<&'a mut Undo>,
+    /// Records every element's declarations as what it was settled with.
+    pub record: Option<&'a mut Declared>,
+    /// Writes only what differs from what the world was settled with: the
+    /// overlay of pointer states and transitions on a settled world.
+    pub over: Option<&'a Declared>,
+}
+
+pub(crate) fn apply(
+    world: &mut World,
+    stylesheet: &Stylesheet,
+    viewport: Viewport,
+    states: &UiStates,
+    mut pass: Pass<'_>,
+) -> Result<(), ApplyError> {
+    let tree = elements(world, states);
+    let mut computed: Vec<Computed> = Vec::with_capacity(tree.nodes.len());
+    for (position, node) in tree.nodes.iter().enumerate() {
+        let parent = node.parent.and_then(|parent| computed.get(parent));
+        let style = weave::cascade(stylesheet, &tree, position, viewport, parent);
+        let mut declarations: BTreeMap<String, String> = style
+            .declarations()
+            .map(|(property, value)| (property.to_owned(), value.to_owned()))
+            .collect();
+        computed.push(style);
+        let (entity, id) = (node.entity, node.id.as_str());
+        if let Some((transitions, sheet)) = pass.transitions.as_mut() {
+            transitions.ease(*sheet, entity, &mut declarations);
+        }
+        if let Some(record) = pass.record.as_mut() {
+            record.insert(entity, declarations.clone());
+        }
+        if let Some(settled) = pass.over {
+            let base = settled.get(&entity);
+            declarations
+                .retain(|property, value| base.and_then(|base| base.get(property)) != Some(value));
+            if declarations.is_empty() {
+                continue;
+            }
+        }
+        if let Some(undo) = pass.undo.as_mut() {
+            undo.save(world, entity, !declarations.is_empty());
+        }
+        let applied = ComputedStyle::from_declarations(declarations);
 
         // Visual lengths such as border radius are relative to the final box,
         // so settle both axes and their constraints before decoration.
-        apply_sizing(world, entity, &id, &computed, viewport)?;
-        for (property, value) in computed.into_declarations() {
+        apply_sizing(world, entity, id, &applied, viewport)?;
+        for (property, value) in applied.into_declarations() {
             if !matches!(
                 property.as_str(),
                 "width" | "height" | "min-width" | "max-width" | "min-height" | "max-height"
             ) {
-                apply_property(world, entity, &id, &property, &value, viewport)?;
+                apply_property(world, entity, id, &property, &value, viewport)?;
             }
         }
     }
     Ok(())
 }
 
-const MAX_HIERARCHY_DEPTH: usize = 64;
+pub(crate) const MAX_HIERARCHY_DEPTH: usize = 64;
 
-fn hierarchy_depth(world: &World, entity: EntityId) -> usize {
+pub(crate) fn hierarchy_depth(world: &World, entity: EntityId) -> usize {
     let mut depth = 0;
     let mut current = entity;
     while depth < MAX_HIERARCHY_DEPTH {
@@ -119,12 +176,10 @@ fn apply_sizing(
         .and_then(|parent| world.get(parent))
         .and_then(|data| data.transform_3d)
         .map_or(viewport_size, Transform3D::scale_2d);
-    let parent_padding = parent
-        .and_then(|parent| resolved_padding(world, parent))
-        .unwrap_or(0.0);
+    let parent_padding = parent.map_or([0.0; 4], |parent| box_model::padding(world, parent));
     let parent_content = [
-        (parent_size[0].abs() - 2.0 * parent_padding).max(0.0),
-        (parent_size[1].abs() - 2.0 * parent_padding).max(0.0),
+        (parent_size[0].abs() - parent_padding[1] - parent_padding[3]).max(0.0),
+        (parent_size[1].abs() - parent_padding[0] - parent_padding[2]).max(0.0),
     ];
     let current = world
         .get(entity)
@@ -140,9 +195,26 @@ fn apply_sizing(
             ("height", "min-height", "max-height")
         };
         let basis = parent_content[axis];
-        let preferred = dimension(style, id, size_name, viewport, basis)?;
+        // `auto` sizes a layout to its content, which the engine works out
+        // once its children are sized; the element keeps its own size here.
+        let fits = matches!(style.get(size_name), Some("auto" | "fit-content"));
+        let preferred = if fits {
+            None
+        } else {
+            dimension(style, id, size_name, viewport, basis)?
+        };
+        if fits || preferred.is_some() {
+            set_fit_content(world, entity, axis, fits);
+        }
         let minimum = dimension(style, id, min_name, viewport, basis)?;
         let maximum = dimension(style, id, max_name, viewport, basis)?;
+        // The layout honours the limits too, when it grows or shrinks this.
+        if let Some(minimum) = minimum {
+            box_model::set_axis(world, entity, "min_size", axis, minimum);
+        }
+        if let Some(maximum) = maximum {
+            box_model::set_axis(world, entity, "max_size", axis, maximum);
+        }
 
         let mut size = preferred.unwrap_or(current[axis].abs());
         if let Some(minimum) = minimum {
@@ -160,6 +232,25 @@ fn apply_sizing(
     transform.scale[0] = resolved[0];
     transform.scale[1] = resolved[1];
     Ok(())
+}
+
+/// Marks whether a layout fits its content on `axis`. An element that is not
+/// a layout has no content to fit, and is left alone.
+fn set_fit_content(world: &mut World, entity: EntityId, axis: usize, fits: bool) {
+    let Some(layout) = world
+        .get_mut(entity)
+        .and_then(|data| data.components.get_mut("sindri.ui.layout"))
+        .and_then(serde_json::Value::as_object_mut)
+    else {
+        return;
+    };
+    let pair = layout
+        .entry("fit_content".to_owned())
+        .or_insert_with(|| serde_json::json!([false, false]));
+    if let Some(array) = pair.as_array_mut() {
+        array.resize(2, false.into());
+        array[axis] = fits.into();
+    }
 }
 
 fn dimension(
@@ -188,6 +279,11 @@ fn apply_property(
     value: &str,
     viewport: Viewport,
 ) -> Result<(), ApplyError> {
+    if box_model::apply(world, entity, id, property, value, viewport)?
+        || flex::apply(world, entity, id, property, value, viewport)?
+    {
+        return Ok(());
+    }
     match property {
         "width" | "height" => {
             let axis = usize::from(property == "height");
@@ -216,60 +312,6 @@ fn apply_property(
                     );
                 }
             }
-        }
-        "direction" => {
-            if !matches!(value.trim(), "row" | "column") {
-                return Err(invalid(id, property, value));
-            }
-            set_component_field(
-                world,
-                entity,
-                "sindri.ui.layout",
-                "direction",
-                value.trim().into(),
-            );
-        }
-        "justify-content" => {
-            let stored = match value.trim() {
-                "start" => "start",
-                "center" => "center",
-                "end" => "end",
-                "space-between" | "space_between" => "space_between",
-                _ => return Err(invalid(id, property, value)),
-            };
-            set_component_field(world, entity, "sindri.ui.layout", "justify", stored.into());
-        }
-        "align-items" => {
-            let stored = match value.trim() {
-                "start" => "start",
-                "center" => "center",
-                "end" => "end",
-                _ => return Err(invalid(id, property, value)),
-            };
-            set_component_field(world, entity, "sindri.ui.layout", "align", stored.into());
-        }
-        "gap" => {
-            let resolved = length(value, viewport).ok_or_else(|| invalid(id, property, value))?;
-            set_component_field(
-                world,
-                entity,
-                "sindri.ui.layout",
-                "spacing",
-                resolved.into(),
-            );
-        }
-        "padding" => {
-            let scale = world
-                .get(entity)
-                .and_then(|data| data.transform_3d)
-                .unwrap_or_default()
-                .scale_2d();
-            let basis = scale[0].abs().min(scale[1].abs());
-            let resolved = Length::parse(value)
-                .and_then(|length| length.resolve(viewport, Some(basis)))
-                .filter(|value| *value >= 0.0)
-                .ok_or_else(|| invalid(id, property, value))?;
-            set_resolved_padding(world, entity, resolved);
         }
         "font-size" | "line-height" | "letter-spacing" => {
             let resolved = length(value, viewport).ok_or_else(|| invalid(id, property, value))?;
@@ -300,6 +342,7 @@ fn apply_property(
                 serde_json::json!(resolved),
             );
         }
+        "box-shadow" => shadow::apply(world, entity, id, value, viewport)?,
         "border-color" => {
             let resolved = color(value).ok_or_else(|| invalid(id, property, value))?;
             set_component_field(
@@ -363,7 +406,7 @@ fn apply_property(
     Ok(())
 }
 
-fn set_component_field(
+pub(crate) fn set_component_field(
     world: &mut World,
     entity: EntityId,
     type_name: &str,
@@ -380,30 +423,6 @@ fn set_component_field(
         return;
     };
     object.insert(field.to_owned(), value);
-}
-
-fn set_resolved_padding(world: &mut World, entity: EntityId, padding: f32) {
-    let Some(data) = world.get_mut(entity) else {
-        return;
-    };
-    let payload = data
-        .components
-        .entry("weave.style".to_owned())
-        .or_insert_with(|| serde_json::json!({}));
-    let Some(object) = payload.as_object_mut() else {
-        return;
-    };
-    object.insert(RESOLVED_PADDING_FIELD.to_owned(), padding.into());
-}
-
-fn resolved_padding(world: &World, entity: EntityId) -> Option<f32> {
-    world
-        .get(entity)?
-        .components
-        .get("weave.style")?
-        .get(RESOLVED_PADDING_FIELD)?
-        .as_f64()
-        .map(|value| value as f32)
 }
 
 fn size_fraction(world: &World, entity: EntityId, value: &str, viewport: Viewport) -> Option<f32> {
@@ -424,7 +443,7 @@ fn size_fraction(world: &World, entity: EntityId, value: &str, viewport: Viewpor
     (shorter > f32::EPSILON).then_some((absolute / shorter).max(0.0))
 }
 
-fn color(value: &str) -> Option<[f32; 4]> {
+pub(crate) fn color(value: &str) -> Option<[f32; 4]> {
     match value.trim() {
         "transparent" => return Some([0.0; 4]),
         "black" => return Some([0.0, 0.0, 0.0, 1.0]),
@@ -475,7 +494,7 @@ const fn hex_digit(byte: u8) -> Option<u8> {
     }
 }
 
-fn length(value: &str, viewport: Viewport) -> Option<f32> {
+pub(crate) fn length(value: &str, viewport: Viewport) -> Option<f32> {
     Length::parse(value)?.resolve(viewport, None)
 }
 
@@ -494,7 +513,7 @@ fn anchor(value: &str) -> Option<&'static str> {
     }
 }
 
-fn invalid(entity: &str, property: &str, value: &str) -> ApplyError {
+pub(crate) fn invalid(entity: &str, property: &str, value: &str) -> ApplyError {
     ApplyError::InvalidValue {
         entity: entity.to_owned(),
         property: property.to_owned(),

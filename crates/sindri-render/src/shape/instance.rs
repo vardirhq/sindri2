@@ -118,6 +118,20 @@ impl ShapeInstance {
         self
     }
 
+    /// Softens the edge of the fill over `width` either side of the outline,
+    /// as a fraction of the shape's shorter side: a blurred shadow.
+    ///
+    /// Carried in the first authored-point slot, which only a polygon reads,
+    /// so a polygon keeps a sharp edge and the instance stays within WebGPU's
+    /// vertex attribute budget.
+    #[must_use]
+    pub const fn feathered(mut self, width: f32) -> Self {
+        if self.geometry[0] < 1.5 || self.geometry[0] > 2.5 {
+            self.points[0][0] = width;
+        }
+        self
+    }
+
     /// Breaks the outline into `count` evenly spaced dashes, each covering
     /// `duty` of its share of the way round.
     ///

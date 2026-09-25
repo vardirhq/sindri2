@@ -315,10 +315,26 @@ not a source of secrets: a handful of outputs reveals the state.
 ### Weave presentation styling
 
 Weave resolves responsive presentation into a disposable clone of an authored
-world. ID, class, and component-type selectors style ordinary transforms, UI
-layouts, shapes, text, and layout behavior; CSS-like specificity and source
-order decide conflicts. Portrait, landscape, minimum-width, and maximum-width
-rules react to the viewport without changing the scene. Percentage sizing,
+world. Its selectors are CSS's: element names (`text`, `button`, with the long
+`sindri.ui.text` still accepted), IDs, classes, `*`, compounds such as
+`button.primary:hover`, descendant and child combinators, and lists, with CSS
+specificity and source order deciding conflicts. The cascade is CSS's too:
+text properties inherit from the containing entity, `inherit`, `initial` and
+`unset` do what they do in CSS, and custom properties (`--accent`) inherit and
+substitute through `var()` with fallbacks, so a theme's tokens live in one
+place. Media queries test orientation and minimum or maximum width and height,
+combined with `and`, commas and nesting. `:disabled` and `:checked` follow the
+entity's own component data everywhere. Every running host (the editor's
+Play, native games, browser exports) styles through a
+`sindri_weave::Presenter`: a game's world is settled with the stylesheet's
+rules at start and on resize, and each frame only what the pointer's states
+and running transitions change is laid over it, in place, for the draw, and
+taken off again. So `:hover` (which, as in CSS, also matches the hovered
+element's containers) and `:active` follow the pointer, a script's own
+writes are not styled back, and hit-testing uses what was drawn.
+CSS `transition` eases colours, lengths and numbers between states with named
+or `cubic-bezier` easings, delays and `all`. The language workspace now has its own CI
+workflow. `docs/ui-direction.md` is the plan beyond this. Percentage sizing,
 min/max constraints, padding, gaps, wrapping, alignment, and text wrapping cover
 the responsive composition used by the shipped examples.
 
@@ -337,9 +353,18 @@ presentation after a broken save, and reports composition failures with their
 source path, line, and column. Stylesheet source editing and named viewport
 presets still live outside the editor.
 
-This is not a general CSS implementation. Compound selectors, pseudo-states,
-variables, intrinsic content sizing, accessibility mapping, transitions, and
-flexible growth remain absent.
+Weave's `margin` and `padding` (one to four values, per-side longhands, CSS
+percentages) write that box, and `box-shadow` writes the shape's shadow.
+
+Layouts are CSS flexbox, in the engine: `sindri.ui.layout` wraps and fits
+its content, and each child's `sindri.ui.box` grows, shrinks, takes a
+basis, orders and aligns itself within min/max limits. Layout decides sizes
+as well as places, and drawing, hit-testing and the editor's picking use
+them. Weave's `flex`, its longhands, `flex-wrap`, `order`, `align-self`,
+`width: auto` and the rest write the same data.
+
+This is not a general CSS implementation yet. `@keyframes`, borders per side,
+sizing from measured text, grid, and accessibility mapping remain absent.
 
 ### Screen UI
 
@@ -387,7 +412,10 @@ its proof column as ❌ until Gather or Orbital Last Stand adopts it.
 
 `sindri.ui.layout` places a parent's active children in a row or column. Three
 buttons could be authored as three offsets; what cannot be authored is a menu
-closing up around an entry that was switched off.
+closing up around an entry that was switched off. `sindri.ui.box` gives any
+element CSS's padding and margin per side: a layout's children flow inside its
+padding and keep their own margins free, without collapsing, as in flexbox.
+A `sindri.ui.shape` can cast a soft `shadow` (colour, offset, blur, spread).
 
 The overlay is authored in normalized units — two tall, centred, running out to
 the aspect ratio — so one authored scene is responsive across a portrait phone

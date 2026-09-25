@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use weave::{Stylesheet, Viewport};
+use weave::Viewport;
 
 /// A length with its authored unit preserved until the viewport is known.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -81,38 +81,26 @@ pub(super) struct ComputedStyle {
 }
 
 impl ComputedStyle {
+    /// The declarations the cascade settled on, ready for the bridge to
+    /// apply: custom properties are left behind, having done their work.
     #[must_use]
-    pub(super) fn resolve(
-        stylesheet: &Stylesheet,
-        id: &str,
-        classes: &[&str],
-        component_types: &[&str],
-        viewport: Viewport,
-    ) -> Self {
-        let mut winners: BTreeMap<String, (u8, usize, String)> = BTreeMap::new();
-        for (source_order, rule) in
-            stylesheet.rules.iter().enumerate().filter(|(_, rule)| {
-                rule.applies_with_classes(id, classes, component_types, viewport)
-            })
-        {
-            let specificity = rule.selector.specificity();
-            for (property, value) in &rule.declarations {
-                let replace =
-                    winners
-                        .get(property)
-                        .is_none_or(|(current_specificity, current_order, _)| {
-                            (specificity, source_order) >= (*current_specificity, *current_order)
-                        });
-                if replace {
-                    winners.insert(property.clone(), (specificity, source_order, value.clone()));
-                }
-            }
-        }
+    #[cfg(test)]
+    pub(super) fn from_computed(computed: &weave::Computed) -> Self {
+        Self::from_declarations(
+            computed
+                .declarations()
+                .map(|(property, value)| (property.to_owned(), value.to_owned()))
+                .collect(),
+        )
+    }
 
+    /// Declarations to apply, after any transition has eased them.
+    #[must_use]
+    pub(super) fn from_declarations(declarations: BTreeMap<String, String>) -> Self {
         Self {
-            declarations: winners
+            declarations: declarations
                 .into_iter()
-                .map(|(property, (_, _, value))| {
+                .map(|(property, value)| {
                     let computed = ComputedDeclaration::new(&property, value);
                     (property, computed)
                 })
@@ -215,53 +203,47 @@ mod tests {
         assert_eq!(Length::parse("inf"), None);
     }
 
-    #[test]
-    fn specificity_and_source_order_are_settled_once() {
-        let stylesheet = parse(
-            r#"
-                sindri.ui.button { width: 100px; height: 40px; }
-                .action { width: 200px; }
-                .action { height: 48px; }
-                #save { width: 300px; }
-            "#,
-        )
-        .expect("stylesheet parses");
+    /// One element with an ID and nothing else, to cascade against.
+    struct Lone;
 
-        let style = ComputedStyle::resolve(
-            &stylesheet,
-            "save",
-            &["action"],
-            &["sindri.ui.button"],
-            DESKTOP,
-        );
+    impl weave::Tree for Lone {
+        fn element(&self, _: usize) -> weave::Element<'_> {
+            weave::Element {
+                id: "panel",
+                classes: &[],
+                names: &[],
+                states: weave::States::NONE,
+            }
+        }
 
-        assert_eq!(style.get("width"), Some("300px"));
-        assert_eq!(style.get("height"), Some("48px"));
-        assert_eq!(style.length("width"), Some(Ok(Length::Pixels(300.0))));
+        fn parent(&self, _: usize) -> Option<usize> {
+            None
+        }
+    }
+
+    fn style(sheet: &str) -> ComputedStyle {
+        let sheet = parse(sheet).expect("stylesheet parses");
+        ComputedStyle::from_computed(&weave::cascade(&sheet, &Lone, 0, DESKTOP, None))
     }
 
     #[test]
     fn invalid_known_lengths_are_kept_for_diagnostics() {
-        let stylesheet = parse("#panel { width: nope; }").expect("stylesheet parses");
-        let style = ComputedStyle::resolve(&stylesheet, "panel", &[], &[], DESKTOP);
-
+        let style = style("#panel { width: nope; }");
         assert_eq!(style.get("width"), Some("nope"));
         assert_eq!(style.length("width"), Some(Err("nope")));
     }
 
     #[test]
     fn inactive_media_rules_never_enter_the_computed_style() {
-        let stylesheet = parse(
+        let style = style(
             r#"
                 #panel { width: 600px; }
                 @media (orientation: portrait) {
                     #panel { width: 90vw; }
                 }
             "#,
-        )
-        .expect("stylesheet parses");
-
-        let style = ComputedStyle::resolve(&stylesheet, "panel", &[], &[], DESKTOP);
+        );
         assert_eq!(style.get("width"), Some("600px"));
+        assert_eq!(style.length("width"), Some(Ok(Length::Pixels(600.0))));
     }
 }

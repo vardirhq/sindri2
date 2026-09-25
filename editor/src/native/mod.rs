@@ -63,6 +63,7 @@ mod palette_view;
 mod pointer;
 mod prefab_panel;
 mod prefab_pointer;
+mod presentation;
 mod preview_view;
 mod profile_view;
 mod project_open;

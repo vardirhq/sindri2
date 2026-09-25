@@ -75,34 +75,75 @@ selector {
 ```
 
 A declaration ends with a semicolon. A rule may contain multiple declarations.
-The supported selector forms are:
+Selectors are written as in CSS:
 
-| Form | Example | Matches | Specificity |
-| --- | --- | --- | ---: |
-| Entity ID | `#hud-score` | Stable scene entity ID | 2 |
-| Weave class | `.hud-value` | Entry in `weave.style.classes` | 1 |
-| Component | `sindri.ui.text` | Entity containing that component | 0 |
+| Form | Example | Matches |
+| --- | --- | --- |
+| Element | `text`, `button`, `shape`, `slider` | An entity with that UI component |
+| Entity ID | `#hud-score` | The stable scene entity ID |
+| Class | `.hud-value` | An entry in `weave.style.classes` |
+| Universal | `*` | Any entity |
+| State | `:hover`, `:active` (or `:pressed`), `:focus`, `:disabled`, `:checked` | An entity in that state |
+| Compound | `button.primary:hover` | All of its parts at once |
+| Descendant | `.menu text` | The right-hand entity anywhere inside the left |
+| Child | `.menu > button` | The right-hand entity directly inside the left |
+| List | `.title, .subtitle` | Either |
 
-Selectors currently target one entity at a time. Compound selectors,
-descendant selectors, selector lists, combinators, attributes, and pseudo-classes
-are not implemented.
+An element name is a UI component's short name: `text` for `sindri.ui.text`,
+`image`, `shape`, `button`, `slider`, `layout`, and likewise `sprite` for
+`sindri.sprite`. The full name still works, so `sindri.ui.text { … }` means
+what it always did.
+
+`:disabled` and `:checked` come from the entity's own data: a component with
+`"disabled": true` makes its entity `:disabled`. `:hover`, `:active` and
+`:focus` come from input, which a host passes in when it resolves
+presentation (`PresentationWorld::resolve_with_states`).
 
 ## Cascade
 
-For each property independently:
+For each property independently, as in CSS:
 
-1. A matching rule with greater specificity wins.
+1. A matching rule with greater specificity wins. Specificity counts IDs, then
+   classes and states, then element names: `#play` beats
+   `.menu .row button.primary:hover`, which beats `button:hover`, which beats
+   `button`.
 2. At equal specificity, the declaration appearing later in the stylesheet wins.
 3. A declaration inside an active media rule participates in the same cascade.
-4. There is no inheritance.
-
-A class can therefore establish a reusable baseline while an ID makes a local
-adjustment:
+4. Text properties inherit: `color`, `font-size`, `font-weight`, `font-style`,
+   `line-height`, `letter-spacing`, `text-align`, `text-transform` and
+   `text-wrap`. Colour a panel and every label inside it takes that colour
+   unless it says otherwise. Box properties such as `width` do not inherit.
+5. `inherit` takes the parent's value for any property; `initial` returns a
+   property to the entity's authored value; `unset` inherits a text property
+   and resets any other.
 
 ```css
-.hud-value { color: #cbd5e1; }
-#hud-hp-text { color: #f8fafc; }
+.hud { color: #cbd5e1; font-size: 18px; }   /* every label in the HUD */
+.hud .warning { color: #f87171; }            /* except warnings */
+#hud-hp-text { color: #f8fafc; }             /* and this one */
 ```
+
+### Custom properties
+
+A property whose name starts with `--` is a variable: it inherits like text
+does, and `var(--name)` stands for its value wherever a value is written. A
+fallback follows a comma. Put a theme's tokens on the outermost element and use
+them anywhere inside it:
+
+```css
+.screen {
+    --accent: #f97316;
+    --panel: #111827;
+    --radius: 12px;
+}
+.card { background: var(--panel); border-radius: var(--radius); }
+.card:hover { border-color: var(--accent); }
+.badge { background: var(--badge, var(--accent)); }
+```
+
+A `var()` naming nothing, with no fallback, makes its declaration invalid, and
+the property keeps the entity's authored value, as in CSS. Variables that
+refer to each other in a circle are treated the same way.
 
 ## Lengths
 
@@ -132,17 +173,48 @@ covering the outer border.
 | `min-width`, `max-width` | length | Horizontal size constraint |
 | `min-height`, `max-height` | length | Vertical size constraint |
 | `x`, `y` | length | Authored transform position override |
-| `padding` | length | Uniform content inset |
+| `padding`, `padding-top`, `-right`, `-bottom`, `-left` | length, one to four as in CSS | Room inside the element's edge; layout children start inside it |
+| `margin`, `margin-top`, `-right`, `-bottom`, `-left` | length, one to four as in CSS | Room a layout keeps free around the element |
 | `anchor` | Sindri anchor name | Anchor for text, image, and shape |
-| `direction` | `row`, `column` | Main layout axis |
-| `gap` | length | Empty space between adjacent child edges |
-| `justify-content` | `start`, `center`, `end`, `space-between` | Main-axis distribution |
-| `align-items` | `start`, `center`, `end` | Cross-axis alignment |
+| `direction`, `flex-direction` | `row`, `column` | Main layout axis |
+| `gap` | length | Empty space between adjacent child edges, and between wrapped lines |
+| `justify-content` | `start`, `center`, `end`, `space-between`, `space-around`, `space-evenly` | Main-axis distribution |
+| `align-items` | `start`, `center`, `end`, `stretch` | Cross-axis alignment |
+| `flex-wrap` | `nowrap`, `wrap` | Whether children that do not fit start a new line |
+| `flex` | `none`, `auto`, or `<grow> [<shrink>] [<basis>]` | Shorthand for the three below, as in CSS |
+| `flex-grow`, `flex-shrink` | number, 0 or more | Share of a line's spare room or shortfall |
+| `flex-basis` | length, or `auto` | Size along the line before growing or shrinking |
+| `order` | integer | Position in the layout, lowest first |
+| `align-self` | `auto`, `start`, `center`, `end`, `stretch` | One item's cross-axis alignment |
+| `width`, `height` | `auto` | On a layout: size to its children, padding and gaps |
 
 Layout is hierarchical. A child must be parented beneath the layout entity in
 the scene; visual overlap does not establish layout membership. Explicit child
 boxes are important because text metrics alone do not currently provide
 intrinsic layout sizing.
+
+Layout is CSS flexbox. Children are put in `order`, broken into lines when
+the layout wraps, and each line's spare room is shared by `flex-grow` or its
+shortfall taken back by `flex-shrink` (weighted by size, and one by default,
+as in CSS), within `min-`/`max-` limits; then the line is justified and each
+child aligned across it. Wrapped lines share the layout's leftover height, as
+CSS's default `align-content` does. What the layout decides is what is drawn
+and what is clicked. `flex-start` and `flex-end` are accepted for `start` and
+`end`. Two differences from a browser: limits are applied in one pass rather
+than by re-sharing what a clamped child could not take, and a child that is
+not itself a layout has no automatic minimum, because text is not measured
+yet. A layout's automatic minimum is its children and padding, so a badge
+does not shrink into its own label.
+
+`padding` and `margin` take one to four values in CSS order (all; vertical
+and horizontal; top, horizontal and bottom; top, right, bottom and left), and
+the language expands them into their per-side longhands where they are
+written, so a later `padding-top` overrides one side and keeps the rest. A
+percentage on any side is of the containing element's content width, as in
+CSS. Both are written to the element's `sindri.ui.box`, which the engine's
+layout reads, so an authored scene gets the same box model without Weave.
+As in flexbox, margins do not collapse: neighbours' margins and the `gap` add
+up. Negative margins are accepted and currently count as none.
 
 `gap` measures edge-to-edge space, not distance between child centres.
 `space-between` places the first and last child at the content edges and
@@ -156,8 +228,15 @@ distributes remaining space between the interior gaps.
 | `border-color` | color |
 | `border-width` | length |
 | `border-radius` | length |
+| `box-shadow` | `<x> <y> [<blur> [<spread>]] [<color>]`, or `none` |
 
-These declarations target `sindri.ui.shape`. A button can carry both
+These declarations target `sindri.ui.shape`.
+
+`box-shadow` draws the shape's silhouette behind it, grown by the spread,
+moved by the offset (positive `y` is down, as in CSS) and blurred over the
+blur radius, with corners rounded to match. With no colour it is black at
+half opacity. One shadow per element: a comma-separated list and `inset` are
+refused rather than half drawn. A button can carry both
 `sindri.ui.button` and `sindri.ui.shape`, allowing its hit target and visual
 box to remain the same entity.
 
@@ -201,11 +280,20 @@ Supported conditions are:
 
 - `orientation: portrait`
 - `orientation: landscape`
-- `max-width: <length>`
-- `min-width: <length>`
+- `max-width: <length>`, `min-width: <length>`
+- `max-height: <length>`, `min-height: <length>`
 
-Conditions cannot currently be combined. Put shared declarations in a normal
-rule and override only what changes inside the media rule.
+Combine them as in CSS: `and` requires every condition, a comma accepts any
+of the alternatives, and a `@media` block nested in another applies only
+where both do.
+
+```css
+@media (min-width: 900px) and (orientation: landscape) { … }
+@media (max-height: 500px), (max-width: 400px) { … }
+```
+
+Put shared declarations in a normal rule and override only what changes inside
+the media rule.
 
 ## Runtime behavior
 
@@ -227,6 +315,43 @@ Ui.set_fill("hud-hp", health_ratio)
 ```
 
 Presentation changes do not require those bindings to change.
+
+## Transitions
+
+`transition` eases a property from the value it is showing to a new one when
+the rule that sets it changes, as in CSS:
+
+```css
+button { background: #334155; transition: background 150ms ease-out; }
+button:hover { background: #475569; }
+button:active { background: #1e293b; transition: background 50ms linear; }
+```
+
+The shorthand takes the property (or `all`), a duration, an optional easing
+and an optional delay, and a comma-separated list for several properties.
+Durations are `s` or `ms`. Easings are `linear`, `ease`, `ease-in`,
+`ease-out`, `ease-in-out` and `cubic-bezier(x1, y1, x2, y2)`. Colours, lengths
+and plain numbers ease; other values change at once. As in CSS, the
+transition that applies is the one on the rule being changed *to*, and an
+interrupted transition starts again from the value it had reached.
+
+## Pointer states in the running game
+
+`:hover` and `:active` follow the pointer in the editor's Play, native games
+and browser exports. `:hover` matches the element under the pointer and every
+container it is inside, and `:active` matches the pressed element while the
+pointer stays on it (and a slider for as long as it is dragged), as in CSS.
+Hit-testing uses what was drawn, so a button a media query moved or resized
+is clicked where it is drawn. `:disabled` and `:checked` come from the
+entity's own data.
+
+A running game has two layers, as a page in a browser does. The stylesheet's
+rules are settled into the game's world when it starts and whenever the
+screen changes shape, so scripts read styled values, and a value a script
+then writes stays written, as an inline style beats a stylesheet. Each frame
+only what pointer states and running transitions change is laid over that for
+the draw, and taken off again before the scripts run; with nothing hovered
+and nothing easing, a frame does no styling work at all.
 
 ## Authoring guidance
 
@@ -255,14 +380,18 @@ entity, property, and value. Unknown properties are currently ignored.
 
 The following CSS concepts are not implemented:
 
-- intrinsic `auto` sizing
-- margins or per-side padding
-- flex grow and shrink, including cross-axis stretch
-- grid, wrapping layout, scrolling, and clipping regions
-- variables, calculations, or custom properties
-- selector composition and inheritance
-- hover, pressed, focus, disabled, or other pseudo-states
-- transitions and animation
+- sizing from measured text (`width: auto` on a text element, or text as
+  the minimum a flex item shrinks to)
+- borders per side, negative margins, and more than one or an `inset` shadow
+- `align-content` other than its default, `row-gap`/`column-gap`, and
+  reversed directions
+- grid, scrolling, and clipping regions
+- calculations (`calc()`)
+- attribute selectors, sibling combinators, and structural pseudo-classes
+  such as `:first-child` or `:not()`
+- `:focus` in the running game: nothing takes focus until keyboard and
+  gamepad navigation land
+- `@keyframes` animation
 - accessibility mapping
 - integrated stylesheet source editing and named viewport preset controls
 
@@ -274,7 +403,8 @@ Sindri UI layer when a real game proves it is needed.
 
 When an element is misplaced:
 
-1. Confirm the selector matches the intended entity ID, class, or component.
+1. Confirm the selector matches the intended entity ID, class, or element,
+   and that every compound in a descendant selector has an ancestor to match.
 2. Confirm the entity is parented under the expected layout entity.
 3. Check whether a more specific or later rule overrides the property.
 4. Give the child an explicit `width` and `height`.

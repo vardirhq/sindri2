@@ -50,7 +50,9 @@ pub use tile_volume::{
 };
 pub use tilemap::{TileDraw, TileProjection, TilemapComponent, TilemapError};
 pub use ui::{UiAnchor, UiFill, UiFillEdge, UiImageComponent, UiTextComponent};
-pub use ui_shape::{ShapeComponent, ShapeGeometry, UiShapeBlend, UiShapeComponent, UiShapeKind};
+pub use ui_shape::{
+    ShapeComponent, ShapeGeometry, UiShapeBlend, UiShapeComponent, UiShapeKind, UiShapeShadow,
+};
 pub use ui_text_options::{
     UiTextAutoSize, UiTextCase, UiTextLineAlign, UiTextOutline, UiTextShadow, UiTextWrap,
 };

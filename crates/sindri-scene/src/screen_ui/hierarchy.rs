@@ -35,7 +35,8 @@ use std::collections::BTreeMap;
 use glam::{Quat, Vec2};
 use sindri_core::{ComponentRegistryError, ComponentSchemaRegistry, EntityId, Transform3D, World};
 
-use super::{UiButtonComponent, UiLayoutComponent};
+use super::UiButtonComponent;
+use super::layout_pass::{Laid, lay_out};
 use crate::{UiAnchor, UiImageComponent, UiShapeComponent, UiTextComponent};
 
 /// How deep a parent chain is followed.
@@ -55,6 +56,9 @@ pub struct UiPlaced {
     pub rotation: Quat,
     /// The anchor `offset` is measured from: the outermost one in the chain.
     pub anchor: UiAnchor,
+    /// The size a parent's layout gave the element, where one grew, shrank,
+    /// stretched or fitted it; `None` keeps the element's own size.
+    pub size: Option<Vec2>,
 }
 
 impl UiPlaced {
@@ -65,7 +69,14 @@ impl UiPlaced {
             offset: Vec2::ZERO,
             rotation: Quat::IDENTITY,
             anchor,
+            size: None,
         }
+    }
+
+    /// The element's size: what its layout made it, or `own` if nothing did.
+    #[must_use]
+    pub fn size_or(self, own: [f32; 2]) -> [f32; 2] {
+        self.size.map_or(own, |size| size.to_array())
     }
 
     /// This placement with a child's own offset and turn applied inside it.
@@ -80,6 +91,7 @@ impl UiPlaced {
             offset: self.offset + turned.truncate(),
             rotation: self.rotation * rotation,
             anchor: self.anchor,
+            size: None,
         }
     }
 }
@@ -101,10 +113,11 @@ impl UiHierarchy {
         components: &ComponentSchemaRegistry,
     ) -> Result<Self, ComponentRegistryError> {
         let anchors = declared_anchors(world, components)?;
-        let layouts = layout_offsets(world, components)?;
+        let laid = lay_out(world, components)?;
         let mut placed = BTreeMap::new();
         for entity in anchors.keys().copied() {
-            let resolved = resolve(world, &anchors, &layouts, entity);
+            let mut resolved = resolve(world, &anchors, &laid, entity);
+            resolved.size = laid.sizes.get(&entity).copied().map(Vec2::from_array);
             placed.insert(entity, resolved);
         }
         Ok(Self { placed })
@@ -133,7 +146,7 @@ impl UiHierarchy {
 fn resolve(
     world: &World,
     anchors: &BTreeMap<EntityId, UiAnchor>,
-    layouts: &BTreeMap<EntityId, Vec2>,
+    laid: &Laid,
     entity: EntityId,
 ) -> UiPlaced {
     // Up first, collecting the chain, because the anchor belongs to its far end
@@ -162,7 +175,7 @@ fn resolve(
             .get(link)
             .and_then(|data| data.transform_3d)
             .unwrap_or_default();
-        let layout = layouts.get(&link).copied().unwrap_or(Vec2::ZERO);
+        let layout = laid.offsets.get(&link).copied().unwrap_or(Vec2::ZERO);
         placed = placed.with_child(
             Vec2::from_array(transform.position_2d()) + layout,
             rotation_of(transform),
@@ -215,46 +228,6 @@ fn declared_anchors(
         anchors.entry(entity).or_insert(UiAnchor::Center);
     }
     Ok(anchors)
-}
-
-/// What each laid-out child owes to its parent's layout.
-///
-/// Only active children count, which is what makes a menu close up around a
-/// hidden entry instead of leaving a hole where it was. Layouts resolve the
-/// whole sibling set together so edge spacing can account for actual box sizes
-/// rather than pretending every child is a point at its centre.
-fn layout_offsets(
-    world: &World,
-    components: &ComponentSchemaRegistry,
-) -> Result<BTreeMap<EntityId, Vec2>, ComponentRegistryError> {
-    let mut offsets = BTreeMap::new();
-    for (parent, layout) in components.query::<UiLayoutComponent>(world)? {
-        let Some(data) = world.get(parent) else {
-            continue;
-        };
-        let parent_size = data.transform_3d.unwrap_or_default().scale_2d();
-        let shown: Vec<EntityId> = data
-            .children
-            .iter()
-            .copied()
-            .filter(|child| world.is_active(*child))
-            .collect();
-        let child_sizes: Vec<[f32; 2]> = shown
-            .iter()
-            .map(|child| {
-                world
-                    .get(*child)
-                    .and_then(|data| data.transform_3d)
-                    .unwrap_or_default()
-                    .scale_2d()
-            })
-            .collect();
-        let resolved = layout.offsets_in_box(parent_size, &child_sizes);
-        for (child, offset) in shown.into_iter().zip(resolved) {
-            offsets.insert(child, Vec2::from_array(offset));
-        }
-    }
-    Ok(offsets)
 }
 
 #[cfg(test)]
@@ -502,5 +475,76 @@ mod tests {
         );
         assert_eq!(hud.anchor, UiAnchor::TopLeft);
         assert!(hud.rotation.abs_diff_eq(Quat::IDENTITY, 1.0e-6));
+    }
+
+    /// A layout's children start inside its padding and keep their margins,
+    /// as they would in a browser.
+    #[test]
+    fn a_layout_places_children_inside_its_padding_and_around_their_margins() {
+        let (world, extractor) = world(&format!(
+            r#"{{ "id": "panel", "name": "panel",
+                  "transform_3d": {{ "scale": [4.0, 2.0, 1.0] }},
+                  "components": {{ {IMAGE},
+                      "sindri.ui.layout": {{ "direction": "row", "spacing": 0.0,
+                                             "justify": "start", "align": "start" }},
+                      "sindri.ui.box": {{ "padding": [0.2, 0.0, 0.0, 0.5] }} }} }},
+               {{ "id": "first", "name": "first", "parent": "panel",
+                  "transform_3d": {{ "scale": [1.0, 0.5, 1.0] }},
+                  "components": {{ {IMAGE} }} }},
+               {{ "id": "second", "name": "second", "parent": "panel",
+                  "transform_3d": {{ "scale": [1.0, 0.5, 1.0] }},
+                  "components": {{ {IMAGE},
+                      "sindri.ui.box": {{ "margin": [0.1, 0.0, 0.0, 0.25] }} }} }}"#
+        ));
+        let first = placement(&world, &extractor, "first");
+        // Left edge at the padding: -2 + 0.5; top edge at 1 - 0.2.
+        assert!(
+            (first.offset - Vec2::new(-1.5 + 0.5, 0.8 - 0.25)).length() < 1.0e-5,
+            "{first:?}"
+        );
+        let second = placement(&world, &extractor, "second");
+        // The first's right edge is at -0.5; then a quarter of margin and
+        // half its width. A tenth lower than the first, for its top margin.
+        assert!(
+            (second.offset - Vec2::new(-0.5 + 0.25 + 0.5, 0.8 - 0.1 - 0.25)).length() < 1.0e-5,
+            "{second:?}"
+        );
+    }
+
+    /// A child that grows is drawn at the size it grew to, inside a parent
+    /// sized to its content on the other axis.
+    #[test]
+    fn a_grown_child_is_placed_at_its_grown_size_in_a_fitted_parent() {
+        let (world, extractor) = world(&format!(
+            r#"{{ "id": "bar", "name": "bar",
+                  "transform_3d": {{ "scale": [4.0, 9.0, 1.0] }},
+                  "components": {{ {IMAGE},
+                      "sindri.ui.layout": {{ "direction": "row", "spacing": 0.0,
+                                             "fit_content": [false, true] }},
+                      "sindri.ui.box": {{ "padding": [0.1, 0.0, 0.1, 0.0] }} }} }},
+               {{ "id": "fill", "name": "fill", "parent": "bar",
+                  "transform_3d": {{ "scale": [1.0, 0.5, 1.0] }},
+                  "components": {{ {IMAGE}, "sindri.ui.box": {{ "grow": 1.0 }} }} }},
+               {{ "id": "end", "name": "end", "parent": "bar",
+                  "transform_3d": {{ "scale": [1.0, 0.5, 1.0] }},
+                  "components": {{ {IMAGE} }} }}"#
+        ));
+        let bar = placement(&world, &extractor, "bar");
+        // Fitted down to its content: half a unit and its padding.
+        let fitted = bar.size_or([0.0; 2]);
+        assert!(
+            (fitted[0] - 4.0).abs() < 1.0e-5 && (fitted[1] - 0.7).abs() < 1.0e-5,
+            "{bar:?}"
+        );
+        let fill = placement(&world, &extractor, "fill");
+        let grown = fill.size_or([0.0; 2]);
+        assert!(
+            (grown[0] - 3.0).abs() < 1.0e-5 && (grown[1] - 0.5).abs() < 1.0e-5,
+            "{fill:?}"
+        );
+        assert!(
+            (fill.offset - Vec2::new(-0.5, 0.0)).length() < 1.0e-5,
+            "{fill:?}"
+        );
     }
 }

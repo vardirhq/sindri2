@@ -1,91 +1,48 @@
+//! Weave: styling Sindri's screen UI the way a web page is styled.
+//!
+//! A stylesheet is rules; a rule is a selector, the viewports it applies to,
+//! and declarations. The selector syntax, the cascade and inheritance are
+//! CSS's, so what someone knows about styling a page carries over. What a
+//! property *means* is the host's business: Weave decides which declarations
+//! win for an element, and the host (`sindri-weave`) turns them into Sindri
+//! UI data.
+
 use std::collections::BTreeMap;
 use thiserror::Error;
 
+mod cascade;
 mod composition;
+mod media;
+mod selector;
+pub mod shorthand;
 
+pub use cascade::{Computed, INHERITED, cascade};
 pub use composition::{ComposeError, compose, compose_all, imports, resolve_import};
+pub use media::{MediaCondition, MediaQuery};
+pub use selector::{Combinator, Compound, Element, Selector, Specificity, States, Tree};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Stylesheet {
     pub rules: Vec<Rule>,
 }
 
+/// One selector and what it declares.
+///
+/// A rule written with a selector list, `h1, h2 { … }`, becomes one rule per
+/// selector, each with its own specificity, as CSS scores them.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Rule {
     pub selector: Selector,
-    pub condition: Option<MediaCondition>,
+    /// The `@media` queries the rule sits inside. All must match: a query
+    /// nested in another applies only where both do.
+    pub conditions: Vec<MediaQuery>,
     pub declarations: BTreeMap<String, String>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Selector {
-    Id(String),
-    Class(String),
-    Type(String),
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum MediaCondition {
-    MaxWidth(f32),
-    MinWidth(f32),
-    Portrait,
-    Landscape,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Viewport {
     pub width: f32,
     pub height: f32,
-}
-
-impl Selector {
-    /// CSS-like weight used when more than one matching rule writes a property.
-    #[must_use]
-    pub const fn specificity(&self) -> u8 {
-        match self {
-            Self::Type(_) => 0,
-            Self::Class(_) => 1,
-            Self::Id(_) => 2,
-        }
-    }
-}
-
-impl MediaCondition {
-    #[must_use]
-    pub fn matches(self, viewport: Viewport) -> bool {
-        match self {
-            Self::MaxWidth(width) => viewport.width <= width,
-            Self::MinWidth(width) => viewport.width >= width,
-            Self::Portrait => viewport.height >= viewport.width,
-            Self::Landscape => viewport.width > viewport.height,
-        }
-    }
-}
-
-impl Rule {
-    #[must_use]
-    pub fn applies(&self, id: &str, component_types: &[&str], viewport: Viewport) -> bool {
-        self.applies_with_classes(id, &[], component_types, viewport)
-    }
-
-    #[must_use]
-    pub fn applies_with_classes(
-        &self,
-        id: &str,
-        classes: &[&str],
-        component_types: &[&str],
-        viewport: Viewport,
-    ) -> bool {
-        let selector_matches = match &self.selector {
-            Selector::Id(expected) => expected == id,
-            Selector::Class(expected) => classes.iter().any(|class| *class == expected),
-            Selector::Type(expected) => component_types.iter().any(|kind| *kind == expected),
-        };
-        selector_matches
-            && self
-                .condition
-                .is_none_or(|condition| condition.matches(viewport))
-    }
 }
 
 #[derive(Debug, Error, PartialEq)]
@@ -100,10 +57,16 @@ pub enum ParseError {
     UnsupportedMedia(String),
     #[error("media width is not a finite number: `{0}`")]
     InvalidMediaWidth(String),
+    #[error("`{0}` is not a selector Weave understands")]
+    InvalidSelector(String),
+    #[error(
+        "`:{0}` is not a state Weave knows; it knows :hover, :active (or :pressed), :focus, :disabled and :checked"
+    )]
+    UnsupportedPseudoClass(String),
 }
 
 pub fn parse(source: &str) -> Result<Stylesheet, ParseError> {
-    parse_rules(strip_comments(source), None)
+    parse_rules(strip_comments(source), &[])
 }
 
 fn strip_comments(source: &str) -> String {
@@ -125,10 +88,7 @@ fn strip_comments(source: &str) -> String {
     out
 }
 
-fn parse_rules(
-    source: String,
-    inherited: Option<MediaCondition>,
-) -> Result<Stylesheet, ParseError> {
+fn parse_rules(source: String, inherited: &[MediaQuery]) -> Result<Stylesheet, ParseError> {
     let mut stylesheet = Stylesheet::default();
     let mut rest = source.as_str();
     while !rest.trim_start().is_empty() {
@@ -139,7 +99,9 @@ fn parse_rules(
                 .ok_or_else(|| ParseError::MissingBlock("@media".into()))?;
             let query = after_media[..open].trim();
             let (body, tail) = take_block(&after_media[open + 1..])?;
-            let nested = parse_rules(body.to_owned(), Some(parse_media(query)?))?;
+            let mut conditions = inherited.to_vec();
+            conditions.push(media::parse_query(query)?);
+            let nested = parse_rules(body.to_owned(), &conditions)?;
             stylesheet.rules.extend(nested.rules);
             rest = tail;
             continue;
@@ -149,13 +111,6 @@ fn parse_rules(
             .ok_or_else(|| ParseError::MissingBlock(rest.trim().into()))?;
         let selector_text = rest[..open].trim();
         let (body, tail) = take_block(&rest[open + 1..])?;
-        let selector = if let Some(id) = selector_text.strip_prefix('#') {
-            Selector::Id(id.trim().to_owned())
-        } else if let Some(class) = selector_text.strip_prefix('.') {
-            Selector::Class(class.trim().to_owned())
-        } else {
-            Selector::Type(selector_text.to_owned())
-        };
         let mut declarations = BTreeMap::new();
         for raw in body
             .split(';')
@@ -165,13 +120,22 @@ fn parse_rules(
             let Some((name, value)) = raw.split_once(':') else {
                 return Err(ParseError::MissingColon(raw.to_owned()));
             };
-            declarations.insert(name.trim().to_owned(), value.trim().to_owned());
+            let (name, value) = (name.trim(), value.trim());
+            if let Some(longhands) = shorthand::expand(name, value) {
+                for (longhand, side) in longhands {
+                    declarations.insert(longhand.to_owned(), side);
+                }
+            } else {
+                declarations.insert(name.to_owned(), value.to_owned());
+            }
         }
-        stylesheet.rules.push(Rule {
-            selector,
-            condition: inherited,
-            declarations,
-        });
+        for selector in selector::parse_list(selector_text)? {
+            stylesheet.rules.push(Rule {
+                selector,
+                conditions: inherited.to_vec(),
+                declarations: declarations.clone(),
+            });
+        }
         rest = tail;
     }
     Ok(stylesheet)
@@ -194,95 +158,33 @@ fn take_block(source: &str) -> Result<(&str, &str), ParseError> {
     Err(ParseError::MissingClose)
 }
 
-fn parse_media(query: &str) -> Result<MediaCondition, ParseError> {
-    let query = query.trim();
-    if query == "(orientation: portrait)" {
-        return Ok(MediaCondition::Portrait);
-    }
-    if query == "(orientation: landscape)" {
-        return Ok(MediaCondition::Landscape);
-    }
-    for (prefix, make) in [
-        (
-            "(max-width:",
-            MediaCondition::MaxWidth as fn(f32) -> MediaCondition,
-        ),
-        (
-            "(min-width:",
-            MediaCondition::MinWidth as fn(f32) -> MediaCondition,
-        ),
-    ] {
-        if let Some(value) = query
-            .strip_prefix(prefix)
-            .and_then(|rest| rest.strip_suffix(')'))
-        {
-            let value = value
-                .trim()
-                .strip_suffix("px")
-                .unwrap_or(value.trim())
-                .trim();
-            let width: f32 = value
-                .parse()
-                .map_err(|_| ParseError::InvalidMediaWidth(value.to_owned()))?;
-            if !width.is_finite() {
-                return Err(ParseError::InvalidMediaWidth(value.to_owned()));
-            }
-            return Ok(make(width));
-        }
-    }
-    Err(ParseError::UnsupportedMedia(query.to_owned()))
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{MediaCondition, Selector, Viewport, parse};
+    use super::{Selector, Viewport, parse};
 
     #[test]
-    fn class_rules_match_declared_classes() {
-        let sheet = parse(".menu-button { width: 280px; }").expect("valid Weave");
-        assert_eq!(
-            sheet.rules[0].selector,
-            Selector::Class("menu-button".into())
-        );
-        assert_eq!(sheet.rules[0].selector.specificity(), 1);
-        assert!(sheet.rules[0].applies_with_classes(
-            "play",
-            &["menu-button", "primary"],
-            &["sindri.ui.button"],
-            Viewport {
-                width: 1280.0,
-                height: 720.0,
-            }
-        ));
-        assert!(!sheet.rules[0].applies_with_classes(
-            "quit",
-            &["secondary"],
-            &["sindri.ui.button"],
-            Viewport {
-                width: 1280.0,
-                height: 720.0,
-            }
-        ));
+    fn a_selector_list_is_one_rule_per_selector() {
+        let sheet = parse(".primary, #play { width: 280px; }").expect("valid Weave");
+        assert_eq!(sheet.rules.len(), 2);
+        assert_eq!(sheet.rules[0].selector, Selector::class("primary"));
+        assert_eq!(sheet.rules[1].selector, Selector::id("play"));
+        assert_eq!(sheet.rules[1].declarations["width"], "280px");
     }
 
     #[test]
-    fn parses_responsive_rules() {
-        let sheet =
-            parse("#menu { width: 420px; } @media (max-width: 700px) { #menu { width: 90vw; } }")
-                .expect("valid Weave");
-        assert_eq!(sheet.rules.len(), 2);
-        assert_eq!(sheet.rules[0].selector, Selector::Id("menu".into()));
-        assert_eq!(
-            sheet.rules[1].condition,
-            Some(MediaCondition::MaxWidth(700.0))
-        );
-        assert!(sheet.rules[1].applies(
-            "menu",
-            &[],
-            Viewport {
-                width: 390.0,
-                height: 844.0
-            }
-        ));
+    fn nested_media_applies_where_both_queries_do() {
+        let sheet = parse(
+            "@media (max-width: 700px) { @media (orientation: portrait) { #menu { width: 90vw; } } }",
+        )
+        .expect("valid Weave");
+        let rule = &sheet.rules[0];
+        let applies = |width, height| {
+            rule.conditions
+                .iter()
+                .all(|query| query.matches(Viewport { width, height }))
+        };
+        assert!(applies(390.0, 844.0));
+        assert!(!applies(690.0, 400.0), "narrow but landscape");
+        assert!(!applies(1440.0, 2000.0), "portrait but wide");
     }
 }

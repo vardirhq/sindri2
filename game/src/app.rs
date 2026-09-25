@@ -19,8 +19,7 @@ use sindri_scene::SceneExtractor;
 use sindri_scene::{CameraView, SceneRuntime, TextureBindings, TileSetBindings};
 
 use crate::assets::{
-    bind_audio, bind_fonts, bind_textures, bind_tile_sets, extractor, presented_world, scenes,
-    stylesheets, world,
+    bind_audio, bind_fonts, bind_textures, bind_tile_sets, extractor, scenes, stylesheets, world,
 };
 use crate::error::CausewayError;
 use crate::session::{CausewayAudio, Session, causeway_audio_backend};
@@ -39,10 +38,32 @@ pub(crate) struct CausewayApp {
     text: TextRenderer,
     glyphs: GlyphRenderer,
     shapes: ShapeRenderer,
-    stylesheets: Vec<weave::Stylesheet>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(clippy::cast_precision_loss)]
+fn weave_viewport(context: &AppContext<'_>) -> weave::Viewport {
+    weave::Viewport {
+        width: context.width() as f32,
+        height: context.height() as f32,
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl CausewayApp {
+    /// Styles the running world for the window's new shape.
+    fn settle_styles(&mut self, context: &AppContext<'_>) -> Result<(), CausewayError> {
+        let mut world = std::mem::take(self.engine.world_mut());
+        let settled = self
+            .engine
+            .game_mut()
+            .settle_styles(&mut world, weave_viewport(context));
+        *self.engine.world_mut() = world;
+        settled
+    }
+}
+
 impl DesktopApp for CausewayApp {
     type Error = CausewayError;
 
@@ -62,7 +83,11 @@ impl DesktopApp for CausewayApp {
             std::path::Path::new("causeway-save.json"),
         )));
         let (opened, loaded) = world()?;
-        let session = session.with_scenes(scenes()?, loaded);
+        let mut session = session
+            .with_scenes(scenes()?, loaded)
+            .with_styles(stylesheets()?);
+        let mut opened = opened;
+        session.settle_styles(&mut opened, weave_viewport(context))?;
         let mut engine = EngineHost::new_with_audio(session, FixedStepConfig::default(), audio)?;
         *engine.world_mut() = opened;
         engine.start()?;
@@ -81,7 +106,6 @@ impl DesktopApp for CausewayApp {
             glyphs: GlyphRenderer::new(context.device(), context.format()),
             shapes: ShapeRenderer::new(context.device(), context.format()),
             text,
-            stylesheets: stylesheets()?,
         })
     }
 
@@ -103,7 +127,7 @@ impl DesktopApp for CausewayApp {
         // The screen UI is laid out against this, so a window that changes
         // shape moves the HUD with it rather than a frame later.
         self.engine.set_viewport(context.width(), context.height());
-        Ok(())
+        self.settle_styles(context)
     }
 
     #[allow(clippy::cast_precision_loss)]
@@ -112,24 +136,31 @@ impl DesktopApp for CausewayApp {
         context: &AppContext<'_>,
         view: &wgpu::TextureView,
     ) -> Result<(), Self::Error> {
-        let presented = presented_world(
-            self.engine.world(),
-            &self.stylesheets,
-            weave::Viewport {
-                width: context.width() as f32,
-                height: context.height() as f32,
-            },
-        )?;
-        let prepared = self.scene.extract_animated(
-            &presented,
-            Viewport::new(context.width(), context.height()),
-            CameraView::default(),
-            &self.bindings,
-            SceneRuntime::default()
-                .with_animations(self.engine.game().animations())
-                .with_effects(self.engine.game().effects())
-                .with_tile_sets(&self.tile_sets),
-        )?;
+        // Styled where it stands for this draw and put back straight after;
+        // taken out of the host for the while so the session can style it.
+        let mut world = std::mem::take(self.engine.world_mut());
+        let styled = self
+            .engine
+            .game_mut()
+            .style(&mut world, weave_viewport(context));
+        let prepared = styled.and_then(|undo| {
+            let prepared = self.scene.extract_animated(
+                &world,
+                Viewport::new(context.width(), context.height()),
+                CameraView::default(),
+                &self.bindings,
+                SceneRuntime::default()
+                    .with_animations(self.engine.game().animations())
+                    .with_effects(self.engine.game().effects())
+                    .with_tile_sets(&self.tile_sets),
+            );
+            if let Some(undo) = undo {
+                undo.undo(&mut world);
+            }
+            prepared.map_err(CausewayError::from)
+        });
+        *self.engine.world_mut() = world;
+        let prepared = prepared?;
         let mut encoder =
             context
                 .device()

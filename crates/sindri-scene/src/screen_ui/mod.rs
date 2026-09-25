@@ -3,8 +3,11 @@
 //! Runtime state beside the world, derived from what a scene authors and never
 //! serialized. A host updates it once a frame before scripts run.
 
+mod box_model;
+mod flex;
 mod hierarchy;
 mod layout;
+mod layout_pass;
 mod rect;
 mod slider;
 
@@ -17,8 +20,9 @@ use sindri_core::{
     SceneComponent, World,
 };
 
+pub use box_model::{UiAlignSelf, UiBoxComponent, UiSides};
 pub use hierarchy::{UiHierarchy, UiPlaced};
-pub use layout::{UiAlign, UiDirection, UiJustify, UiLayoutComponent};
+pub use layout::{UiAlign, UiDirection, UiJustify, UiLayoutBox, UiLayoutChild, UiLayoutComponent};
 pub use rect::{SafeArea, ScreenExtent, ScreenRect};
 pub use slider::{UiSliderComponent, UiSliderOrientation};
 
@@ -68,6 +72,61 @@ impl ScreenUi {
         self.rects = Self::place(world, components, extent)?;
         self.read_presses(world, extent, presses);
         Ok(())
+    }
+
+    /// Hit-tests `presented`, what is actually on screen, while writing
+    /// what the pointer does (a slider dragged) into `world`.
+    ///
+    /// For a host whose screen UI is styled: a stylesheet can move and resize
+    /// elements, and a click belongs to where an element is drawn, not where
+    /// the scene first put it. `presented` must be a styled copy of `world`,
+    /// with the same entities.
+    pub fn update_presented(
+        &mut self,
+        presented: &World,
+        world: &mut World,
+        components: &ComponentSchemaRegistry,
+        extent: ScreenExtent,
+        presses: &Presses,
+    ) -> Result<(), ComponentRegistryError> {
+        self.viewport_half = extent.half();
+        self.rects = Self::place(presented, components, extent)?;
+        self.read_presses(world, extent, presses);
+        Ok(())
+    }
+
+    /// Lays the screen out from `drawn`, the world as it was drawn, for
+    /// [`Self::read`] to hit-test against until the next draw.
+    ///
+    /// For a host that styles its world only while drawing it: the steps in
+    /// between hit-test the geometry that was on screen, without styling the
+    /// world again for every one of them.
+    pub fn lay_out(
+        &mut self,
+        drawn: &World,
+        components: &ComponentSchemaRegistry,
+        extent: ScreenExtent,
+    ) -> Result<(), ComponentRegistryError> {
+        self.viewport_half = extent.half();
+        self.rects = Self::place(drawn, components, extent)?;
+        Ok(())
+    }
+
+    /// Reads the presses against the layout [`Self::lay_out`] last made,
+    /// writing what they did to `world`.
+    pub fn read(&mut self, world: &mut World, extent: ScreenExtent, presses: &Presses) {
+        self.viewport_half = extent.half();
+        self.read_presses(world, extent, presses);
+    }
+
+    /// The element held down under the pointer, or being dragged: what a
+    /// stylesheet's `:active` means.
+    #[must_use]
+    pub fn active(&self) -> Option<EntityId> {
+        self.slider_drag.map(|(dragged, _)| dragged).or_else(|| {
+            self.pressing
+                .filter(|pressing| self.hovered == Some(*pressing))
+        })
     }
 
     #[must_use]
@@ -134,7 +193,7 @@ impl ScreenUi {
             };
             let placed = hierarchy.placement_or(entity, anchor);
             let origin = extent.anchor_origin(placed.anchor.unit_offset());
-            let size = data.transform_3d.unwrap_or_default().scale_2d();
+            let size = placed.size_or(data.transform_3d.unwrap_or_default().scale_2d());
             placements.insert(
                 entity,
                 Element {

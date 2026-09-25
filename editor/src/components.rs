@@ -165,6 +165,11 @@ const KNOWN: &[Known] = &[
         icon: icons::LAYOUT,
     },
     Known {
+        type_name: "sindri.ui.box",
+        family: Family::Ui,
+        icon: icons::LAYOUT,
+    },
+    Known {
         type_name: "sindri.effect.burst",
         family: Family::Rendering,
         icon: icons::EFFECT,

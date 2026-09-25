@@ -11,7 +11,6 @@ use sindri_render::{
     encode_lit_frame, encode_prepared_frame,
 };
 use sindri_scene::{CameraView, EnvironmentComponent, SceneRuntime, UiCanvas};
-use weave::Viewport as WeaveViewport;
 
 use super::block_pointer::TileVolumeHover;
 use super::camera::{EditorCamera, camera_for};
@@ -471,54 +470,6 @@ impl EditorApp {
                 || response.dragged_by(egui::PointerButton::Primary))
         {
             self.apply_tile_brush(hover);
-        }
-    }
-
-    /// Resolves the authored world through the project's Weave presentation.
-    ///
-    /// Kept outside `render_view` because resolving presentation is one concern
-    /// of its own and because failures need the same console/render-error path
-    /// whichever viewport asked for them.
-    fn resolve_presentation(&mut self, editing: bool, rect: Rect) -> Option<sindri_core::World> {
-        if self.styles.is_empty() {
-            return None;
-        }
-        match self
-            .styles
-            .resolve(&self.world, self.presentation_viewport(editing, rect))
-        {
-            Ok(world) => Some(world),
-            Err(error) => {
-                let failure = format!("Weave: {error}");
-                self.console.fail(&failure, None);
-                if self.render_error.is_none() {
-                    self.render_error = Some(failure);
-                }
-                None
-            }
-        }
-    }
-
-    /// The logical screen dimensions Weave resolves against.
-    ///
-    /// A named device uses its real logical size, not the number of editor
-    /// points its preview happened to fit into. In Free mode the Game view is
-    /// the screen. The Scene view follows that Game rectangle when one has been
-    /// drawn, so both views choose the same media queries while shown together.
-    fn presentation_viewport(&self, editing: bool, rect: Rect) -> WeaveViewport {
-        let (width, height) = self.game_device.size.unwrap_or_else(|| {
-            if editing {
-                self.game_view_rect
-                    .map_or((rect.width(), rect.height()), |game| {
-                        (game.width(), game.height())
-                    })
-            } else {
-                (rect.width(), rect.height())
-            }
-        });
-        WeaveViewport {
-            width: width.max(1.0),
-            height: height.max(1.0),
         }
     }
 

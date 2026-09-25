@@ -19,10 +19,10 @@ use sindri_render::{
     encode_prepared_frame,
 };
 use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings, TileSetBindings};
-use weave::{Stylesheet, Viewport as WeaveViewport};
+use weave::Viewport as WeaveViewport;
 
 use self::loader::{BrowserProjectAssets, BrowserProjectLoader};
-use crate::assets::{extractor, presented_world};
+use crate::assets::extractor;
 use crate::error::CausewayError;
 use crate::session::Session;
 
@@ -46,7 +46,6 @@ pub(super) struct BrowserCausewayApp {
     page_visible: bool,
     platform_suspended: bool,
     paused_for_page: bool,
-    stylesheets: Vec<Stylesheet>,
 }
 
 impl BrowserCausewayApp {
@@ -56,15 +55,6 @@ impl BrowserCausewayApp {
             width: self.layout_viewport[0] as f32,
             height: self.layout_viewport[1] as f32,
         }
-    }
-
-    fn apply_styles(&mut self) -> Result<(), CausewayError> {
-        let viewport = self.weave_viewport();
-        let Some(engine) = &mut self.engine else {
-            return Ok(());
-        };
-        *engine.world_mut() = presented_world(engine.world(), &self.stylesheets, viewport)?;
-        Ok(())
     }
 
     fn install(
@@ -128,7 +118,6 @@ impl BrowserCausewayApp {
         // The same ground the native host builds. The scene carries an empty
         // grid on purpose, so without this the browser opens onto nothing.
         crate::assets::fill_the_world(&mut world)?;
-        world = presented_world(&world, &project.stylesheets, self.weave_viewport())?;
 
         let mut session = Session::with_sources(self.scene.components().clone(), project.scripts)
             .with_prefabs(project.prefabs)
@@ -137,17 +126,18 @@ impl BrowserCausewayApp {
             // Cloned rather than moved: the host keeps its own copy for
             // extraction, and a floor the renderer can draw and the scripts
             // cannot reach would be the worst of both.
-            .with_tile_sets(self.tile_sets.clone());
+            .with_tile_sets(self.tile_sets.clone())
+            .with_styles(project.stylesheets);
         session.keep_saves_in(Box::new(sindri_platform::BrowserSaves::under(
             "sindri.causeway.save",
         )));
 
+        session.settle_styles(&mut world, self.weave_viewport())?;
         let mut engine =
             EngineHost::new_with_audio(session, sindri_core::FixedStepConfig::default(), audio)?;
         *engine.world_mut() = world;
         engine.start()?;
         engine.set_viewport(self.viewport[0], self.viewport[1]);
-        self.stylesheets = project.stylesheets;
         self.engine = Some(engine);
         self.sync_page_lifecycle()?;
         log::info!(
@@ -231,7 +221,6 @@ impl DesktopApp for BrowserCausewayApp {
             page_visible: true,
             platform_suspended: false,
             paused_for_page: false,
-            stylesheets: Vec::new(),
         })
     }
 
@@ -276,10 +265,17 @@ impl DesktopApp for BrowserCausewayApp {
             .resize(context.device(), context.width(), context.height());
         self.viewport = [context.width(), context.height()];
         self.layout_viewport = [context.logical_width(), context.logical_height()];
+        let viewport = self.weave_viewport();
         if let Some(engine) = self.engine.as_mut() {
             engine.set_viewport(context.width(), context.height());
+            // Restyled for the new shape, as a browser re-evaluates its media
+            // queries; taken out of the host for the while.
+            let mut world = std::mem::take(engine.world_mut());
+            let settled = engine.game_mut().settle_styles(&mut world, viewport);
+            *engine.world_mut() = world;
+            settled?;
         }
-        self.apply_styles()
+        Ok(())
     }
 
     fn suspend(&mut self) -> Result<(), Self::Error> {
@@ -308,21 +304,34 @@ impl DesktopApp for BrowserCausewayApp {
             self.install(context, project)?;
         }
 
-        let Some(engine) = &self.engine else {
+        let viewport = self.weave_viewport();
+        let Some(engine) = &mut self.engine else {
             self.clear_loading(context, view);
             return Ok(());
         };
 
-        let prepared = self.scene.extract_animated(
-            engine.world(),
-            Viewport::new(context.width(), context.height()),
-            CameraView::default(),
-            &self.bindings,
-            SceneRuntime::default()
-                .with_animations(engine.game().animations())
-                .with_effects(engine.game().effects())
-                .with_tile_sets(&self.tile_sets),
-        )?;
+        // Styled where it stands for this draw and put back straight after;
+        // taken out of the host for the while so the session can style it.
+        let mut world = std::mem::take(engine.world_mut());
+        let styled = engine.game_mut().style(&mut world, viewport);
+        let prepared = styled.and_then(|undo| {
+            let prepared = self.scene.extract_animated(
+                &world,
+                Viewport::new(context.width(), context.height()),
+                CameraView::default(),
+                &self.bindings,
+                SceneRuntime::default()
+                    .with_animations(engine.game().animations())
+                    .with_effects(engine.game().effects())
+                    .with_tile_sets(&self.tile_sets),
+            );
+            if let Some(undo) = undo {
+                undo.undo(&mut world);
+            }
+            prepared.map_err(CausewayError::from)
+        });
+        *engine.world_mut() = world;
+        let prepared = prepared?;
         let mut encoder =
             context
                 .device()

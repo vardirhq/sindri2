@@ -22,6 +22,7 @@ use sindri_scene::{
 use crate::assets::sources;
 use crate::error::CausewayError;
 use crate::streaming::TerrainStream;
+use crate::styling::Styles;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) type CausewayAudio = NativeAudioBackend;
@@ -58,6 +59,9 @@ pub struct Session {
     physics: ScenePhysics2d,
     /// Where the screen elements are and what the pointer is doing to them.
     screen_ui: ScreenUi,
+    /// The game's stylesheets, applied for each draw and each hit-test.
+    /// `None` for a game that styles nothing.
+    styles: Option<Styles>,
     /// The run's random stream.
     ///
     /// A fixed seed, because the engine has no entropy to offer and will not
@@ -133,6 +137,7 @@ impl Session {
             animations: SpriteAnimations::new(),
             physics: ScenePhysics2d::top_down().expect("zero gravity is finite"),
             screen_ui: ScreenUi::default(),
+            styles: None,
             random: sindri_core::Rng::default(),
             saves: sindri_core::SaveStore::default(),
             effects: sindri_scene::Effects2d::default(),
@@ -303,12 +308,22 @@ impl Session {
         )?;
         // No safe area yet: reading a device's insets is the browser host's to
         // report, and it does not yet. The scene needs no change when it does.
-        self.screen_ui.update(
-            world,
-            &self.components,
-            ScreenExtent::new(viewport.0, viewport.1),
-            input.presses(),
-        )?;
+        // Hit-tested against what was drawn, styled, when the host presents
+        // through a stylesheet; a click belongs to where an element is shown.
+        let extent = ScreenExtent::new(viewport.0, viewport.1);
+        match &mut self.styles {
+            // Against the layout the last draw left, styled: styling the world
+            // again for every fixed step would cost a cascade a step, and a
+            // slow frame runs many steps.
+            Some(styles) => {
+                styles.advance(delta_seconds);
+                self.screen_ui.read(world, extent, input.presses());
+            }
+            None => {
+                self.screen_ui
+                    .update(world, &self.components, extent, input.presses())?;
+            }
+        }
         // Before the scripts, so a fleck thrown this frame is drawn where it
         // was thrown rather than one frame along.
         self.effects
@@ -449,6 +464,63 @@ impl Session {
             }
         }
         Ok(())
+    }
+
+    /// The game's stylesheets. A game with none is drawn and clicked as
+    /// authored.
+    #[must_use]
+    pub fn with_styles(mut self, stylesheets: Vec<weave::Stylesheet>) -> Self {
+        self.styles = Styles::new(stylesheets);
+        self
+    }
+
+    /// Styles `world` with the game's stylesheets for `viewport`. The host
+    /// does this when the game starts and whenever the screen changes shape;
+    /// the scripts then run on the styled world. Nothing for a game with no
+    /// stylesheets.
+    pub fn settle_styles(
+        &mut self,
+        world: &mut World,
+        viewport: weave::Viewport,
+    ) -> Result<(), CausewayError> {
+        let Some(styles) = &mut self.styles else {
+            return Ok(());
+        };
+        styles.settle(world, viewport)?;
+        self.screen_ui.lay_out(
+            world,
+            &self.components,
+            ScreenExtent::new(viewport.width, viewport.height),
+        )?;
+        Ok(())
+    }
+
+    /// Lays the pointer's states over the settled `world` for a draw at
+    /// `viewport`, which clicks are hit-tested against from then on. The
+    /// host must undo it once drawn, before the next step; `None` when the
+    /// game has no stylesheets.
+    pub fn style(
+        &mut self,
+        world: &mut World,
+        viewport: weave::Viewport,
+    ) -> Result<Option<sindri_weave::Undo>, CausewayError> {
+        let Some(styles) = &mut self.styles else {
+            return Ok(None);
+        };
+        styles.set_viewport(viewport);
+        let undo = styles.style(world, &self.screen_ui)?;
+        // Laid out while styled, so the steps until the next draw hit-test
+        // what is on screen.
+        let laid = self.screen_ui.lay_out(
+            world,
+            &self.components,
+            ScreenExtent::new(viewport.width, viewport.height),
+        );
+        if let Err(error) = laid {
+            undo.undo(world);
+            return Err(error.into());
+        }
+        Ok(Some(undo))
     }
 
     #[must_use]

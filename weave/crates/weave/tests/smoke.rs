@@ -13,7 +13,7 @@ fn mobile_rule_matches_small_viewport() {
         sheet
             .rules
             .iter()
-            .filter(|rule| rule.applies("menu", &[], mobile))
+            .filter(|rule| rule.conditions.iter().all(|query| query.matches(mobile)))
             .count(),
         2
     );

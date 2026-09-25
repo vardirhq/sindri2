@@ -150,6 +150,71 @@ pub struct UiShapeComponent {
     /// The explicit override on draw order within the overlay.
     #[serde(default)]
     pub layer: i32,
+    /// A soft copy of the shape drawn behind it: CSS's `box-shadow`.
+    #[serde(default)]
+    pub shadow: UiShapeShadow,
+}
+
+/// A shadow cast by an overlay shape, in overlay units.
+///
+/// The shape's own silhouette, grown by `spread`, moved by `offset` and
+/// blurred over `blur`, in `color`. Transparent by default, which draws none.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+pub struct UiShapeShadow {
+    #[serde(default = "transparent")]
+    pub color: [f32; 4],
+    /// How far the shadow is moved. Up is positive, so a shadow falling below
+    /// the shape reads negative.
+    #[serde(default)]
+    pub offset: [f32; 2],
+    /// How wide the soft edge is.
+    #[serde(default)]
+    pub blur: f32,
+    /// How much larger than the shape the shadow is, on every side.
+    #[serde(default)]
+    pub spread: f32,
+}
+
+impl Default for UiShapeShadow {
+    fn default() -> Self {
+        Self {
+            color: transparent(),
+            offset: [0.0, 0.0],
+            blur: 0.0,
+            spread: 0.0,
+        }
+    }
+}
+
+impl UiShapeShadow {
+    /// Whether there is anything to draw.
+    #[must_use]
+    pub fn is_drawn(self) -> bool {
+        self.color[3] > 0.0
+    }
+
+    /// The shadow of `geometry` for a shape of `size`: its silhouette alone,
+    /// filled and feathered. `None` when there is none to draw.
+    ///
+    /// Returned with the size the shadow is drawn at, which the caller turns
+    /// into a model; the feather is a fraction of that size's shorter side,
+    /// which is what the renderer measures it in.
+    #[must_use]
+    pub fn instance_size(self, size: [f32; 2]) -> Option<[f32; 2]> {
+        if !self.is_drawn() {
+            return None;
+        }
+        let spread = if self.spread.is_finite() {
+            self.spread
+        } else {
+            0.0
+        };
+        let grown = [
+            (size[0].abs() + 2.0 * spread).max(0.0),
+            (size[1].abs() + 2.0 * spread).max(0.0),
+        ];
+        (grown[0] > 0.0 && grown[1] > 0.0).then_some(grown)
+    }
 }
 
 /// A shape drawn in the world, placed by its entity's transform.

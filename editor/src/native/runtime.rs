@@ -277,12 +277,25 @@ impl EditorApp {
         // anchored elements in without being edited.
         let (view_width, view_height) = view_size.unwrap_or((0.0, 0.0));
         let input_state = self.input.state();
-        if let Err(error) = self.screen_ui.update(
-            &mut self.world,
-            components,
-            sindri_scene::ScreenExtent::new(view_width, view_height),
-            input_state.presses(),
-        ) {
+        // Hit-tested against what the Game view drew, styled, when the
+        // project presents through Weave: a click belongs to where an element
+        // is shown.
+        self.styles.advance(delta);
+        let extent = sindri_scene::ScreenExtent::new(view_width, view_height);
+        let updated = match self.styles.live() {
+            Some(presented) => self.screen_ui.update_presented(
+                presented,
+                &mut self.world,
+                components,
+                extent,
+                input_state.presses(),
+            ),
+            None => {
+                self.screen_ui
+                    .update(&mut self.world, components, extent, input_state.presses())
+            }
+        };
+        if let Err(error) = updated {
             self.console.error(format!("Screen UI: {error}"));
         }
         let (physics, events) = self.physics.for_scripts();

@@ -82,7 +82,12 @@ fn vs_main(vertex: VertexInput, instance: InstanceInput) -> VertexOutput {
     // Grown by whatever the stroke needs plus a little for the fade, so the
     // shape is still exactly the size it was authored at and everything drawn
     // around its edge has somewhere to go.
-    let bleed = instance.geometry.z * 0.5 + EDGE_BLEED;
+    // A feathered edge fades out beyond the outline and needs that much more.
+    var feather = 0.0;
+    if i32(instance.geometry.x + 0.5) != KIND_POLYGON {
+        feather = max(instance.points_0.x, 0.0);
+    }
+    let bleed = instance.geometry.z * 0.5 + feather + EDGE_BLEED;
     let corner = vertex.position.xy * (1.0 + bleed * 2.0);
 
     var out: VertexOutput;
@@ -284,9 +289,16 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let turn = outline_turn(p);
     let turn_width = fwidth(turn);
 
+    // A feather widens the fill's edge from a pixel to a blur. Chosen after
+    // the derivatives, so it cannot move them out of uniform control flow.
+    var edge_soft = soft;
+    if kind != KIND_POLYGON {
+        edge_soft = max(soft, in.points_0.x);
+    }
+
     var color = vec4<f32>(0.0, 0.0, 0.0, 0.0);
     if closed {
-        let inside = 1.0 - smoothstep(-soft, soft, distance);
+        let inside = 1.0 - smoothstep(-edge_soft, edge_soft, distance);
         color = vec4<f32>(in.fill.rgb, in.fill.a * inside);
     }
 

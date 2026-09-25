@@ -199,7 +199,9 @@ fn locate_parse_error(source: &str, start: usize, error: &ParseError) -> (usize,
         ParseError::MissingBlock(value)
         | ParseError::MissingColon(value)
         | ParseError::UnsupportedMedia(value)
-        | ParseError::InvalidMediaWidth(value) => Some(value.as_str()),
+        | ParseError::InvalidMediaWidth(value)
+        | ParseError::InvalidSelector(value)
+        | ParseError::UnsupportedPseudoClass(value) => Some(value.as_str()),
         ParseError::MissingClose => None,
     };
     let offset = needle
@@ -259,7 +261,7 @@ mod tests {
     use std::collections::BTreeMap;
 
     use super::{ComposeError, compose, compose_all, imports, resolve_import};
-    use crate::{Selector, Viewport};
+    use crate::Selector;
 
     #[test]
     fn imports_are_composed_before_local_rules() {
@@ -276,18 +278,10 @@ mod tests {
 
         let sheet = compose("ui.weave", &sources).expect("styles compose");
         assert_eq!(sheet.rules.len(), 2);
-        assert_eq!(sheet.rules[0].selector, Selector::Class("button".into()));
+        assert_eq!(sheet.rules[0].selector, Selector::class("button"));
         assert_eq!(sheet.rules[0].declarations["width"], "200px");
         assert_eq!(sheet.rules[1].declarations["width"], "300px");
-        assert!(sheet.rules[1].applies_with_classes(
-            "play",
-            &["button"],
-            &["sindri.ui.button"],
-            Viewport {
-                width: 1280.0,
-                height: 720.0,
-            }
-        ));
+        assert_eq!(sheet.rules[1].selector, Selector::class("button"));
     }
 
     #[test]
