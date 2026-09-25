@@ -7,6 +7,7 @@
 script Match {
     @export let player: Prefab;
     @export let powerup: Prefab;
+    @export let title: Prefab;
     @export let countdown_time: f32 = 3.5;
     @export let power_min: f32 = 5.0;
     @export let power_max: f32 = 15.0;
@@ -41,7 +42,7 @@ script Match {
         Game.set("menu_done", 0.0);
         Game.set("versus_bot", 0.0);
         this.next_power = this.power_min;
-        World.spawn("prefabs/title.prefab.json");
+        World.spawn(this.title);
     }
 
     fn update(dt: f32) {
