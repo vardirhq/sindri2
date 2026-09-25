@@ -6,8 +6,15 @@ original pixel art, sounds and tuning.
 
 It is the **local-multiplayer genre showcase**: where playing together on one
 screen is proven. Gamepads, read by player slot, were added to Sindri for it.
+Scorchball is now moving beyond faithful prototype parity into a small complete
+game; its responsive Weave title screen is the first piece of that shell.
 
 ## Playing it
+
+The title screen offers **Play vs Bot** and **Local Multiplayer**. A mouse/touch
+can choose either button; A (South), Start, or Select on a pad enters the local
+lobby directly. Play vs Bot remembers the choice until the first human joins,
+then places one bot on the opposing side automatically.
 
 - **Join:** press A (South) or Start on your pad. The first pad to press is
   player 1 (Blue, defending the left goal), the next is player 2 (Red,
@@ -21,8 +28,8 @@ screen is proven. Gamepads, read by player slot, were added to Sindri for it.
   from someone else. The right bumper kicks it where the right stick points,
   or the way you face with the stick at rest.
 - **Leave:** unplug the pad.
-- **Play against a bot:** Select (Back/View) in the lobby adds a bot to the
-  side with fewer players, one bot a side. It readies itself.
+- **Quick bot:** Select (Back/View) in the lobby still adds a bot to the side
+  with fewer players, one bot a side. It readies itself.
 
 A bot looks at the pitch about four times a second and acts on what it saw,
 so it reacts a little late and its shots are a little off, as a person's
@@ -54,22 +61,28 @@ Walk into it for what the sign shows; left alone it goes after ten seconds.
 There is no game code. The game is `assets/`:
 
 - `scorchball.scene.json`: the pitch, goals, scoreboard, ball and on-screen text.
-- `prefabs/`: a player, the marker over their head, and a power-up's shadow and its signpost.
+- `ui.weave`: the responsive title presentation, including hover/active states
+  and a compact narrow-screen composition.
+- `prefabs/title.prefab.json`: title structure and real UI button hit targets.
+- `prefabs/`: players, the marker over their heads, power-ups, and the title UI.
+- `scripts/title.decay`: title choices and transition into the lobby.
 - `scripts/match.decay`: joining and leaving, ready-up, the countdown, the score,
-  power-up spawns and the wind.
+  power-up spawns, bot-mode handoff and the wind.
 - `scripts/player.decay`: walking, skins, readying, kicking, growing and
   burning, and the bot's brain.
 - `scripts/ball.decay`: possession, kicks, fire, goals and out of bounds.
 - `scripts/powerup.decay`: a signpost falling, landing, and what it gives.
 
 It uses, with no Rust of its own: pads read by **player slot** (`Gamepad`),
-**prefabs** spawned when a pad joins, **sprite animation** for the two
-characters' four-way walks, **2D physics** so players bump into each other,
-**signals** between scripts, **flecks** for fire, **camera shake** on a goal,
-**sounds**, and **screen text**.
+**prefabs**, **Weave** responsive UI, pointer-aware **UI buttons**, **sprite
+animation** for the two characters' four-way walks, **2D physics** so players
+bump into each other, **signals** between scripts, **flecks** for fire,
+**camera shake** on a goal, **sounds**, and **screen text**.
 
 ## Changed from the Unity version
 
+- A real title screen now leads into local or bot play instead of dropping
+  straight into the prototype lobby.
 - Up to four players rather than two; odd slots play for Blue, even for Red.
 - Possession, pickups and the Enlarger's reach are decided by distance rather
   than colliders, because a Sindri collider does not scale with its entity.
@@ -89,8 +102,8 @@ characters' four-way walks, **2D physics** so players bump into each other,
 `tests/a_match_is_played.rs` plays with pads it presses itself: two join on
 their own sides, ready up and kick off; Blue takes the ball, dribbles and
 scores; a sign cannot be taken until it lands; unplugging a pad takes its
-player off; every power does what it says;
-and a Fireball sets an opponent running wild until it burns out.
+player off; every power does what it says; and a Fireball sets an opponent
+running wild until it burns out.
 `tests/a_bot_plays.rs` adds a bot with Select, which readies itself and scores
 on a player who stands still, and has two bots play until one scores. `src/lib.rs`
 is the harness that plays it without a window, built from the same public
