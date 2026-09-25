@@ -10,13 +10,16 @@ script Title {
     }
 
     fn update(dt: f32) {
-        if Ui.is_pressed(this.local_button) {
-            Game.set("versus_bot", 0.0);
+        if Ui.is_pressed(this.bot_button) {
+            Game.set("versus_bot", 1.0);
             begin();
             return;
         }
-        if Ui.is_pressed(this.bot_button) {
-            Game.set("versus_bot", 1.0);
+        if Ui.is_pressed(this.local_button)
+            || Gamepad.just_pressed(0.0, "south")
+            || Gamepad.just_pressed(0.0, "start")
+            || Gamepad.just_pressed(0.0, "select") {
+            Game.set("versus_bot", 0.0);
             begin();
         }
     }
