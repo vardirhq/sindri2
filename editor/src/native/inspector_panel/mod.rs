@@ -14,6 +14,7 @@ pub(super) mod blocks;
 pub(super) mod draft;
 pub(super) mod field;
 pub(super) mod header;
+mod held;
 mod keys;
 pub(super) mod list;
 pub(super) mod rows;
@@ -36,6 +37,7 @@ use self::header::{
     Identity, IdentityEdit, ParentChoice, active_row, inspector_identity, inspector_parent,
     transform_3d_section,
 };
+pub(super) use self::held::HeldInspectorEdits;
 use self::scene::{SceneSummary, scene_section};
 use self::section::components_sections;
 use self::section::grid::grid_choices;
@@ -246,10 +248,10 @@ impl EditorApp {
     /// Holds the ID being typed, and writes it once the edit is finished.
     fn settle_identity(&mut self, entity: EntityId, text: String, edit: IdentityEdit) {
         if edit.finished {
-            self.id_edit = None;
+            self.edits.id = None;
             self.commit_identity(entity, &text);
         } else if edit.changed {
-            self.id_edit = Some((entity, text));
+            self.edits.id = Some((entity, text));
         }
     }
 
@@ -468,6 +470,17 @@ impl EditorApp {
         }
     }
 
+    /// Brings the thumbnails the inspector draws up to date.
+    fn refresh_thumbnails(&mut self, components: &BTreeMap<String, Value>) {
+        let mut references = drawable_textures(&self.project, self.textures.bindings());
+        references.extend(blocks::named_set_sprites(
+            components,
+            self.textures.tile_sets(),
+        ));
+        self.thumbnails
+            .refresh(&self.render_state, &self.textures, &references);
+    }
+
     /// Everything one entity has, drawn from a draft and committed as commands.
     ///
     /// Drawn disabled while the scene is playing. Every control here becomes a
@@ -484,8 +497,7 @@ impl EditorApp {
         let original = draft.clone();
         let icon = entity_icon(data);
         let space = declared_space(&data.components);
-        let original_components = data.components.clone();
-        let mut components = original_components.clone();
+        let stored = data.components.clone();
         let parent = data.parent;
         let disabled = data.disabled;
         // Off because a parent is off is a different fact from off in its own
@@ -497,19 +509,15 @@ impl EditorApp {
         let mut removed = None;
         let mut added = None;
         let authoring = self.authoring_enabled();
-        let mut references = drawable_textures(&self.project, self.textures.bindings());
-        references.extend(blocks::named_set_sprites(
-            &components,
-            self.textures.tile_sets(),
-        ));
-        self.thumbnails
-            .refresh(&self.render_state, &self.textures, &references);
+        let mut held = self.held_components(entity, stored);
+        let mut components = held.shown.clone();
+        self.refresh_thumbnails(&components);
         let styles = self.styles_view(ui.ctx(), entity);
         let context = self.panel_context(&components);
         let addable = self.addable_components(&components, context.defaults());
         // The text the ID field is showing: whatever is being typed if this
         // entity's ID is mid-edit, and what the world holds otherwise.
-        let mut identity = match &self.id_edit {
+        let mut identity = match &self.edits.id {
             Some((held, text)) if *held == entity => text.clone(),
             _ => draft.source_id.clone(),
         };
@@ -557,6 +565,7 @@ impl EditorApp {
                                 grids: &context.grids,
                             },
                             &mut tools,
+                            &mut held.apply,
                         );
                         added = add_component_button(ui, &addable);
                     });
@@ -568,7 +577,7 @@ impl EditorApp {
         self.write_style(style_edit);
         self.commit_draft(entity, &original, &draft);
         self.settle_identity(entity, identity, identity_edit);
-        self.commit_components(entity, &original_components, &components);
+        self.commit_held(ui.ctx(), entity, held, &components);
         if let Some(type_name) = removed {
             self.remove_component(entity, &type_name);
         }

@@ -131,6 +131,7 @@ impl EditorApp {
             self.draw_overlays(ui, corner);
         }
         self.resolve_drag(ui);
+        self.paint_applying(ui.ctx());
     }
 
     /// One docked slot: an `egui::Panel` on the side the slot names.

@@ -1,8 +1,9 @@
 {
-  "about": "Every component this engine build registers. `fields` is what the component has; `default_payload` is what a fresh one is, and is null for a type with no honest blank — one naming an asset the engine cannot invent. `addable` says whether a tool can add one without being given anything else. `meanings` says what a field is *for* where the shape alone cannot: which asset kind it names, which spellings it accepts, that it is a colour, an angle, a bounded number, a collision mask, or another entity. A path is dotted, and `[]` descends into a list, so `pieces[].friction` describes every piece. A choice that also carries `variants` decides the shape of what holds it: each spelling names the fields the object has when the tag says that word, and writing the word without them is a payload the engine refuses.",
+  "about": "Every component this engine build registers. `fields` is what the component has; `default_payload` is what a fresh one is, and is null for a type with no honest blank — one naming an asset the engine cannot invent. `addable` says whether a tool can add one without being given anything else. `meanings` says what a field is *for* where the shape alone cannot: which asset kind it names, which spellings it accepts, that it is a colour, an angle, a bounded number, a collision mask, or another entity. A path is dotted, and `[]` descends into a list, so `pieces[].friction` describes every piece. A choice that also carries `variants` decides the shape of what holds it: each spelling names the fields the object has when the tag says that word, and writing the word without them is a payload the engine refuses. `apply` says when a tool should apply an edit, by path, the empty path being the whole component and the closest path winning: `instant` as it is made (anything not listed), `settled` once the person stops typing or dragging, `manual` only when they ask, because applying it is a rebuild.",
   "components": [
     {
       "addable": false,
+      "apply": {},
       "default_payload": null,
       "display_name": "Sprite Animation",
       "fields": {
@@ -22,6 +23,7 @@
     },
     {
       "addable": false,
+      "apply": {},
       "default_payload": null,
       "display_name": "Audio Source",
       "fields": {
@@ -46,6 +48,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "far": 100.0,
         "near": 0.10000000149011612,
@@ -85,6 +88,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "confine": null,
         "follow": null,
@@ -114,6 +118,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "count": 12,
         "drag": 0.25,
@@ -163,6 +168,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "ambient_color": [
           1.0,
@@ -379,6 +385,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "max_step": 1.0,
         "walls": []
@@ -394,6 +401,7 @@
     },
     {
       "addable": false,
+      "apply": {},
       "default_payload": null,
       "display_name": "Grid Occupant",
       "fields": {
@@ -415,6 +423,7 @@
     },
     {
       "addable": false,
+      "apply": {},
       "default_payload": null,
       "display_name": "Grid Placement",
       "fields": {
@@ -440,6 +449,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "color": [
           1.0,
@@ -480,6 +490,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "layer": 0,
         "primitive": "cube",
@@ -504,6 +515,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "pieces": [
           {
@@ -599,6 +611,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "angular_damping": 0.0,
         "angular_velocity": 0.0,
@@ -657,6 +670,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "friction": 0.5,
         "layers": {
@@ -694,6 +708,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "gravity": [
           0.0,
@@ -713,6 +728,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "blend": "over",
         "corner_radius": 0.0,
@@ -794,6 +810,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "billboard": false,
         "color_transform": {
@@ -859,6 +876,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "tags": []
       },
@@ -872,6 +890,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "cell_height": 1.0,
         "cell_size": [
@@ -919,6 +938,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "cells": [],
         "layer": 0,
@@ -943,6 +963,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "columns": 1,
         "layer": 0,
@@ -1009,6 +1030,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "align_self": "auto",
         "basis": -1.0,
@@ -1105,6 +1127,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "label": ""
       },
@@ -1118,6 +1141,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "align_items": "stretch",
         "columns": [
@@ -1178,6 +1202,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "anchor": "center",
         "fill": {
@@ -1237,6 +1262,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "align": "center",
         "direction": "column",
@@ -1294,6 +1320,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "anchor": "center",
         "blend": "over",
@@ -1422,6 +1449,7 @@
     },
     {
       "addable": true,
+      "apply": {},
       "default_payload": {
         "disabled": false,
         "label": "",
@@ -1455,6 +1483,7 @@
     },
     {
       "addable": false,
+      "apply": {},
       "default_payload": null,
       "display_name": "UI Text",
       "fields": {
@@ -1569,6 +1598,9 @@
     },
     {
       "addable": true,
+      "apply": {
+        "": "manual"
+      },
       "default_payload": {
         "blocks": "builtin:blocks",
         "focus": [

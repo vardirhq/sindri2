@@ -172,13 +172,8 @@ struct EditorApp {
     /// state: an abandoned rename changes nothing.
     renaming: Option<EntityId>,
     rename_draft: String,
-    /// The stable ID being typed into the inspector, and whose it is.
-    ///
-    /// Held across frames because a stable ID is not written as it is typed:
-    /// renaming `orb-1` to `player` passes through `p`, `pl`, `pla`, each of
-    /// which would be a real identity written into the world and into every
-    /// component pointing at it.
-    id_edit: Option<(EntityId, String)>,
+    /// Inspector edits made but not yet written to the world.
+    edits: inspector_panel::HeldInspectorEdits,
     /// The scene's name being typed, for the same reason.
     scene_name_edit: Option<String>,
     /// The file the inspector is showing the contents of.
@@ -489,7 +484,7 @@ impl EditorApp {
             gizmo_followers: Vec::new(),
             renaming: None,
             rename_draft: String::new(),
-            id_edit: None,
+            edits: inspector_panel::HeldInspectorEdits::default(),
             scene_name_edit: None,
             preview: None,
             profile: None,

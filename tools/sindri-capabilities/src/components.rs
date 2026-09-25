@@ -36,6 +36,10 @@ pub(crate) fn describe() -> Result<Value, CapabilitiesError> {
                 "schema_version": metadata.schema_version,
                 "fields": registry.fields(type_name),
                 "meanings": meanings(registry, type_name),
+                "apply": registry
+                    .apply_modes(type_name)
+                    .map(|(path, mode)| (path.to_owned(), json!(mode.as_str())))
+                    .collect::<serde_json::Map<_, _>>(),
                 "default_payload": default_payload,
                 "addable": default_payload.is_some(),
             })
@@ -59,7 +63,10 @@ pub(crate) fn describe() -> Result<Value, CapabilitiesError> {
     every piece. A choice that also carries `variants` decides the shape of what \
     holds it: each spelling names the fields the object has when the tag says \
     that word, and writing the word without them is a payload the engine \
-    refuses.",
+    refuses. `apply` says when a tool should apply an edit, by path, the empty \
+    path being the whole component and the closest path winning: `instant` as \
+    it is made (anything not listed), `settled` once the person stops typing or \
+    dragging, `manual` only when they ask, because applying it is a rebuild.",
         "components": components,
     }))
 }
