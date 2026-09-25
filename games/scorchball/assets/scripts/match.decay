@@ -3,7 +3,7 @@
 // holds the wind.
 //
 // The phase is on the board for everyone: 0 is the lobby, 1 the countdown,
-// 2 play. The title screen runs before the lobby and chooses local or bot play.
+// 2 play. The title screen chooses local or bot play without owning gameplay.
 script Match {
     @export let player: Prefab;
     @export let powerup: Prefab;
@@ -45,14 +45,6 @@ script Match {
     }
 
     fn update(dt: f32) {
-        if Game.get("menu_done", 0.0) == 0.0 {
-            World.set_active(this.hint, false);
-            World.set_active(this.count_text, false);
-            World.set_active(this.kickoff_text, false);
-            World.set_active(this.goal_text, false);
-            return;
-        }
-
         players();
         let ready = World.take_signal("ready");
         if this.phase == 0.0 && ready >= 2.0 {
