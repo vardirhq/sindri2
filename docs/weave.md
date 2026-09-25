@@ -221,7 +221,7 @@ and named viewport presets are not integrated into the editor yet.
 
 Still smaller than browser CSS, and closing the gap is the plan in
 [`ui-direction.md`](ui-direction.md). It has no `@keyframes`, borders per side,
-grid, accessibility mapping,
+accessibility mapping,
 integrated stylesheet editor, or named viewport presets.
 The demo proves reusable classes, cascade behavior, responsive geometry,
 min/max constraints, uniform content padding, main/cross-axis alignment, font

@@ -100,6 +100,35 @@ mod tests {
         assert!((menu_width(&authored) - source_width).abs() <= f32::EPSILON);
     }
 
+    #[test]
+    fn the_feature_cards_are_a_grid_that_is_one_column_on_a_phone() {
+        let document = SceneDocument::from_json(SCENE).expect("scene parses");
+        let authored = World::from_scene(&document).expect("scene loads").world;
+        let stylesheet = parse(STYLE).expect("Weave parses");
+        let at = |width: f32, height: f32| {
+            PresentationWorld::resolve(&authored, &stylesheet, Viewport { width, height })
+                .expect("desktop and phone both resolve")
+        };
+        let (desktop, mobile) = (at(1280.0, 720.0), at(390.0, 844.0));
+        // The feature cards are a grid: three columns wide, one on a phone.
+        let columns = |world: &World| {
+            world
+                .entities()
+                .find(|(_, data)| {
+                    data.source_id
+                        .as_ref()
+                        .is_some_and(|source_id| source_id.as_str() == "features")
+                })
+                .and_then(|(_, data)| data.components.get("sindri.ui.grid"))
+                .and_then(|grid| grid.get("columns"))
+                .and_then(serde_json::Value::as_array)
+                .map(Vec::len)
+                .expect("the feature cards are a grid")
+        };
+        assert_eq!(columns(desktop.world()), 3);
+        assert_eq!(columns(mobile.world()), 1);
+    }
+
     fn string_field<'a>(world: &'a World, id: &str, component: &str, field: &str) -> &'a str {
         world
             .entities()
@@ -181,10 +210,6 @@ mod tests {
         );
         assert_eq!(
             string_field(mobile.world(), "actions", "sindri.ui.layout", "direction"),
-            "column"
-        );
-        assert_eq!(
-            string_field(mobile.world(), "features", "sindri.ui.layout", "direction"),
             "column"
         );
         assert_eq!(

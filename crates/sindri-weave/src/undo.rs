@@ -16,11 +16,12 @@ use sindri_core::{EntityId, Transform3D, World};
 
 /// The components styling writes to. Anything else on an element is left
 /// alone by Weave, and so is not saved.
-const WRITTEN: [&str; 6] = [
+const WRITTEN: [&str; 7] = [
     "sindri.ui.shape",
     "sindri.ui.text",
     "sindri.ui.image",
     "sindri.ui.layout",
+    "sindri.ui.grid",
     "sindri.ui.box",
     "weave.style",
 ];

@@ -92,6 +92,14 @@ pub struct UiBoxComponent {
     /// same for its children with its own `fit_content`.
     #[serde(default)]
     pub fit_content: [bool; 2],
+    /// In a grid: the column line it starts at, counted from one, and how
+    /// many columns it spans (zero reads as one). A start of zero is placed
+    /// automatically.
+    #[serde(default)]
+    pub grid_column: [u32; 2],
+    /// In a grid: the row line it starts at, and how many rows it spans.
+    #[serde(default)]
+    pub grid_row: [u32; 2],
 }
 
 const fn one() -> f32 {
@@ -115,6 +123,8 @@ impl Default for UiBoxComponent {
             min_size: [0.0; 2],
             max_size: [0.0; 2],
             fit_content: [false; 2],
+            grid_column: [0, 0],
+            grid_row: [0, 0],
         }
     }
 }

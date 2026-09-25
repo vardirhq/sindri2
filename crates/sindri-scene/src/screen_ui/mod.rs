@@ -5,6 +5,7 @@
 
 mod box_model;
 mod flex;
+mod grid;
 mod hierarchy;
 mod layout;
 mod layout_pass;
@@ -22,6 +23,7 @@ use sindri_core::{
 };
 
 pub use box_model::{UiAlignSelf, UiBoxComponent, UiSides};
+pub use grid::{UiGridComponent, UiTrack};
 pub use hierarchy::{UiHierarchy, UiPlaced};
 pub use layout::{UiAlign, UiDirection, UiJustify, UiLayoutBox, UiLayoutChild, UiLayoutComponent};
 pub use measure::{UiTextSizes, measure_ui_text};

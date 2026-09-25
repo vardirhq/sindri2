@@ -15,7 +15,43 @@ use std::collections::BTreeMap;
 use glam::Vec2;
 use sindri_core::{ComponentRegistryError, ComponentSchemaRegistry, EntityId, World};
 
-use super::{UiBoxComponent, UiLayoutChild, UiLayoutComponent, UiTextSizes};
+use super::layout::UiLayoutBox;
+use super::{UiBoxComponent, UiGridComponent, UiLayoutChild, UiLayoutComponent, UiTextSizes};
+
+/// A parent that places its children: a flex line, or a grid.
+#[derive(Clone, Debug)]
+enum Container {
+    Flex(UiLayoutComponent),
+    Grid(UiGridComponent),
+}
+
+impl Container {
+    fn fit_content(&self) -> [bool; 2] {
+        match self {
+            Self::Flex(flex) => flex.fit_content,
+            Self::Grid(grid) => grid.fit_content,
+        }
+    }
+
+    fn content_size(&self, padding: super::UiSides, children: &[UiLayoutChild]) -> [f32; 2] {
+        match self {
+            Self::Flex(flex) => flex.content_size(padding, children),
+            Self::Grid(grid) => super::grid::content_size(grid, padding, children),
+        }
+    }
+
+    fn resolve(
+        &self,
+        size: [f32; 2],
+        padding: super::UiSides,
+        children: &[UiLayoutChild],
+    ) -> Vec<UiLayoutBox> {
+        match self {
+            Self::Flex(flex) => flex.resolve_boxes(size, padding, children),
+            Self::Grid(grid) => super::grid::resolve(grid, size, padding, children),
+        }
+    }
+}
 
 /// How deep a parent chain is followed; see the hierarchy's own bound.
 const MAX_DEPTH: usize = 64;
@@ -37,8 +73,19 @@ pub(super) fn lay_out(
         .query::<UiBoxComponent>(world)?
         .into_iter()
         .collect();
-    let mut layouts = components.query::<UiLayoutComponent>(world)?;
-    let by_entity: BTreeMap<EntityId, UiLayoutComponent> = layouts.iter().copied().collect();
+    // An entity that is both keeps its flex layout, which it had first.
+    let mut by_entity: BTreeMap<EntityId, Container> = components
+        .query::<UiGridComponent>(world)?
+        .into_iter()
+        .map(|(entity, grid)| (entity, Container::Grid(grid)))
+        .collect();
+    for (entity, flex) in components.query::<UiLayoutComponent>(world)? {
+        by_entity.insert(entity, Container::Flex(flex));
+    }
+    let mut layouts: Vec<(EntityId, Container)> = by_entity
+        .iter()
+        .map(|(entity, container)| (*entity, container.clone()))
+        .collect();
     let scene = Context {
         world,
         boxes: &boxes,
@@ -68,7 +115,8 @@ pub(super) fn lay_out(
         laid.sizes.insert(*entity, size);
     }
     for (parent, layout) in &layouts {
-        if !layout.fit_content.iter().any(|fits| *fits) {
+        let fits = layout.fit_content();
+        if !fits.iter().any(|fits| *fits) {
             continue;
         }
         let own = boxes.get(parent).copied().unwrap_or_default();
@@ -76,7 +124,7 @@ pub(super) fn lay_out(
         let content = layout.content_size(own.padding, &children);
         let mut size = size_of(world, &laid.sizes, *parent);
         for axis in 0..2 {
-            if layout.fit_content[axis] {
+            if fits[axis] {
                 size[axis] = own.clamp(axis, content[axis]);
             }
         }
@@ -88,7 +136,7 @@ pub(super) fn lay_out(
         let shown = shown_children(world, *parent);
         let children = scene.children_of(&laid.sizes, *parent);
         let parent_size = size_of(world, &laid.sizes, *parent);
-        let resolved = layout.resolve_boxes(parent_size, padding, &children);
+        let resolved = layout.resolve(parent_size, padding, &children);
         for (child, placed) in shown.into_iter().zip(resolved) {
             laid.offsets.insert(child, Vec2::from_array(placed.offset));
             laid.sizes.insert(child, placed.size);
@@ -111,7 +159,7 @@ fn shown_children(world: &World, parent: EntityId) -> Vec<EntityId> {
 struct Context<'a> {
     world: &'a World,
     boxes: &'a BTreeMap<EntityId, UiBoxComponent>,
-    layouts: &'a BTreeMap<EntityId, UiLayoutComponent>,
+    layouts: &'a BTreeMap<EntityId, Container>,
     text: &'a UiTextSizes,
 }
 

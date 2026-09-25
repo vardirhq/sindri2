@@ -1016,6 +1016,14 @@
           false,
           false
         ],
+        "grid_column": [
+          0,
+          0
+        ],
+        "grid_row": [
+          0,
+          0
+        ],
         "grow": 0.0,
         "margin": [
           0.0,
@@ -1047,6 +1055,14 @@
         "fit_content": [
           false,
           false
+        ],
+        "grid_column": [
+          0,
+          0
+        ],
+        "grid_row": [
+          0,
+          0
         ],
         "grow": 0.0,
         "margin": [
@@ -1099,6 +1115,66 @@
       "meanings": {},
       "schema_version": 1,
       "type_name": "sindri.ui.button"
+    },
+    {
+      "addable": true,
+      "default_payload": {
+        "align_items": "stretch",
+        "columns": [
+          "1fr",
+          "1fr"
+        ],
+        "fit_content": [
+          false,
+          false
+        ],
+        "gap": [
+          0.05,
+          0.05
+        ],
+        "justify_items": "stretch",
+        "rows": []
+      },
+      "display_name": "UI Grid",
+      "fields": {
+        "align_items": "stretch",
+        "columns": [
+          "1fr",
+          "1fr"
+        ],
+        "fit_content": [
+          false,
+          false
+        ],
+        "gap": [
+          0.05,
+          0.05
+        ],
+        "justify_items": "stretch",
+        "rows": []
+      },
+      "meanings": {
+        "align_items": {
+          "kind": "choice",
+          "options": [
+            "start",
+            "center",
+            "end",
+            "stretch"
+          ]
+        },
+        "justify_items": {
+          "kind": "choice",
+          "options": [
+            "start",
+            "center",
+            "end",
+            "stretch"
+          ]
+        }
+      },
+      "schema_version": 1,
+      "type_name": "sindri.ui.grid"
     },
     {
       "addable": true,

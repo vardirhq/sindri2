@@ -369,8 +369,14 @@ sizes a button, and a label is the least a shrinking flex item keeps.
 Hosts measure through `sindri_scene::measure_ui_text` and pass the sizes to
 extraction and hit-testing.
 
+`sindri.ui.grid` lays children out in CSS grid's columns and rows: fixed,
+`auto` and `fr` tracks, explicit or automatic placement with spans, implicit
+tracks, gaps and cell alignment. Weave's `display: grid` and the
+`grid-template-*`, `grid-column`/`grid-row`, gap and alignment properties
+write it.
+
 This is not a general CSS implementation yet. `@keyframes`, borders per side,
-grid, and accessibility mapping remain absent.
+grid's `minmax()` and named areas, and accessibility mapping remain absent.
 
 ### Screen UI
 

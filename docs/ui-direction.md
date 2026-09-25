@@ -77,7 +77,11 @@ Each step is its own pull request. A step is checked here when it has landed.
      can size a button and be the minimum a flex item shrinks to.
    - [ ] Wrapped text's smallest width (its longest word) as a flex item's
      minimum, and text wrapping to the width a layout gave it.
-   - [ ] Grid layout.
+   - [x] Grid layout: fixed, `auto` and `fr` tracks with `repeat()`,
+     explicit and automatic placement with spans, implicit tracks, gaps, and
+     item alignment in the cell.
+   - [ ] Grid's `minmax()`, named lines and areas, `auto-fill`, dense
+     packing, and spanning items sizing the tracks they cross.
    - [ ] `calc()`, `:not()`, `:first-child` and the other structural
      pseudo-classes.
 2. **Devtools in the editor.** Pick any UI element to see its box model,

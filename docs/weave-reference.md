@@ -186,6 +186,11 @@ covering the outer border.
 | `flex-basis` | length, or `auto` | Size along the line before growing or shrinking |
 | `order` | integer | Position in the layout, lowest first |
 | `align-self` | `auto`, `start`, `center`, `end`, `stretch` | One item's cross-axis alignment |
+| `display` | `grid`, `flex` | Makes the element a grid or a flex line |
+| `grid-template-columns`, `grid-template-rows` | tracks: `1fr`, `auto`, lengths, `repeat(n, …)`, or `none` | The grid's columns and rows |
+| `gap`, `row-gap`, `column-gap` | length (`gap` takes a row and a column gap) | Space between grid tracks; a flex line takes the gap along it |
+| `justify-items` | `start`, `center`, `end`, `stretch` | Where grid items sit across their cells |
+| `grid-column`, `grid-row` | `2`, `span 2`, `2 / 4`, `2 / span 3`, `auto` | Where an item starts in a grid and how many tracks it spans |
 | `width`, `height` | `auto` | On a layout: size to its children, padding and gaps. On a text element: size to its measured words and padding |
 
 Layout is hierarchical. A child must be parented beneath the layout entity in
@@ -205,6 +210,18 @@ than by re-sharing what a clamped child could not take, and a child that is
 not itself a layout has no automatic minimum, because text is not measured
 yet. A layout's automatic minimum is its children and padding, so a badge
 does not shrink into its own label.
+
+A grid (`display: grid`, or a `sindri.ui.grid` component in the scene) places
+its children in columns and rows. Tracks are fixed lengths, `auto` (as big as
+the largest item alone in the track) or `fr` shares of the room those leave;
+an `fr` track is never smaller than what is in it, as CSS's `1fr` means
+`minmax(auto, 1fr)`. Items with a `grid-column` and `grid-row` are placed
+first, then items held to a row, then the rest flow into the next free cell
+row by row, and rows or columns past the template are added as `auto`
+tracks. Items fill their cells unless `justify-items`, `align-items` or an
+item's `align-self` says otherwise, and `width: auto` sizes a grid to its
+tracks. Not yet: `minmax()`, named lines and areas, `auto-fill`/`auto-fit`,
+dense packing, and spanning items sizing the tracks they cross.
 
 Text is measured by its font. A text element with `width: auto` or
 `height: auto` is sized to its words, measured by the same shaping that draws
@@ -402,7 +419,8 @@ The following CSS concepts are not implemented:
 - borders per side, negative margins, and more than one or an `inset` shadow
 - `align-content` other than its default, `row-gap`/`column-gap`, and
   reversed directions
-- grid, scrolling, and clipping regions
+- grid's `minmax()`, named lines and areas, `auto-fill`, and dense packing
+- scrolling and clipping regions
 - calculations (`calc()`)
 - attribute selectors, sibling combinators, and structural pseudo-classes
   such as `:first-child` or `:not()`

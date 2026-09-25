@@ -13,7 +13,7 @@ use sindri_core::{EntityId, World};
 use weave::Viewport;
 
 use crate::computed::Length;
-use crate::{ApplyError, box_model, invalid, length, set_component_field};
+use crate::{ApplyError, box_model, invalid, set_component_field};
 
 const LAYOUT: &str = "sindri.ui.layout";
 
@@ -52,6 +52,7 @@ pub(crate) fn apply(
         "align-items" => {
             let stored = alignment(trimmed).ok_or_else(refuse)?;
             set_component_field(world, entity, LAYOUT, "align", stored.into());
+            crate::grid::align_items(world, entity, stored);
         }
         "flex-wrap" => {
             let wraps = match trimmed {
@@ -60,10 +61,6 @@ pub(crate) fn apply(
                 _ => return Err(refuse()),
             };
             set_component_field(world, entity, LAYOUT, "wrap", wraps.into());
-        }
-        "gap" => {
-            let resolved = length(value, viewport).ok_or_else(refuse)?;
-            set_component_field(world, entity, LAYOUT, "spacing", resolved.into());
         }
         "flex-grow" | "flex-shrink" => {
             let factor = trimmed
