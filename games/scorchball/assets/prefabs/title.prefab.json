@@ -92,7 +92,7 @@
       "parent": "title-menu",
       "components": {
         "weave.style": { "classes": ["title-footnote"] },
-        "sindri.ui.text": { "text": "1-4 PLAYERS  •  GAMEPADS RECOMMENDED", "font": "fonts/Inter.ttf", "font_size": 0.02, "bounds": [0.7, 0.05], "anchor": "center", "layer": 203, "bold": true }
+        "sindri.ui.text": { "text": "1-4 PLAYERS  /  GAMEPADS RECOMMENDED", "font": "fonts/Inter.ttf", "font_size": 0.02, "bounds": [0.7, 0.05], "anchor": "center", "layer": 203, "bold": true }
       }
     },
     {
@@ -120,7 +120,7 @@
       "parent": "title-art",
       "components": {
         "weave.style": { "classes": ["title-chaos"] },
-        "sindri.ui.text": { "text": "🔥  BIG PLAYERS\n💨  WIND\n⚽  FIREBALL\n💥  PUSH BOOST", "font": "fonts/Inter.ttf", "font_size": 0.03, "bounds": [0.5, 0.3], "anchor": "center", "layer": 204, "bold": true }
+        "sindri.ui.text": { "text": "BIG PLAYERS\nWIND\nFIREBALL\nPUSH BOOST", "font": "fonts/Inter.ttf", "font_size": 0.03, "bounds": [0.5, 0.3], "anchor": "center", "layer": 204, "bold": true }
       }
     }
   ]
