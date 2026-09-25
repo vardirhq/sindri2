@@ -174,6 +174,8 @@ script Ball {
         if slot == 2.0 { clip = "p2"; }
         if slot == 3.0 { clip = "p3"; }
         if slot == 4.0 { clip = "p4"; }
+        if slot == 11.0 { clip = "p1"; }
+        if slot == 12.0 { clip = "p2"; }
         let zone = this.zone;
         if zone == null {
             return;
