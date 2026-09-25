@@ -141,7 +141,6 @@
 
     .title-menu {
         width: 86vw;
-        max-width: none;
         align-items: center;
     }
 
@@ -163,7 +162,6 @@
 
     .title-art {
         width: 78vw;
-        max-width: none;
         height: 24vh;
         min-height: 150px;
         padding: 18px;
