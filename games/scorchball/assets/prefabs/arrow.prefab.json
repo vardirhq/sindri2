@@ -1,0 +1,70 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Arrow"
+  },
+  "entities": [
+    {
+      "id": "arrow",
+      "name": "Arrow",
+      "transform_3d": {
+        "position": [
+          0,
+          0,
+          1.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/arrows.png#p1",
+          "layer": 7
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "p1": {
+              "frames": [
+                "p1"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "p2": {
+              "frames": [
+                "p2"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "p3": {
+              "frames": [
+                "p3"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "p4": {
+              "frames": [
+                "p4"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            }
+          },
+          "playing": "p1",
+          "speed": 1.0
+        }
+      }
+    }
+  ]
+}

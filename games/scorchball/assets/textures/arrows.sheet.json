@@ -1,0 +1,14 @@
+{
+  "format_version": 1,
+  "anchor": "center",
+  "grid": {
+    "columns": 4,
+    "rows": 1,
+    "names": [
+      "p1",
+      "p2",
+      "p3",
+      "p4"
+    ]
+  }
+}

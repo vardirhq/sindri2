@@ -1,0 +1,106 @@
+// A power-up: a signpost that drops out of the sky and sticks in the grass.
+// Its shadow marks where it will land, growing as it falls. Once it has
+// landed, whoever walks into it gets what the sign shows; left alone it goes
+// after a while.
+//
+// 1 Enlarger: the player grows, and reaches the ball from further away.
+// 2 Push Boost: the player's kicks go much further.
+// 3 Wind: the pitch tilts towards the other team's goal.
+// 4 Fireball: the ball catches fire, and sets alight any opponent it touches.
+//
+// This entity is the shadow, on the ground where the sign lands. The sign is
+// a child, taken away with it, but placed by this script every frame: a child
+// is not carried by its parent's transform.
+script PowerUp {
+    @export let kind: f32 = 1.0;
+    @export let sign: Prefab;
+    @export let drop_height: f32 = 12.0;
+    @export let gravity: f32 = 30.0;
+    @export let life: f32 = 10.0;
+    @export let reach: f32 = 1.2;
+
+    var height: f32 = 12.0;
+    var falling: f32 = 0.0;
+    var landed: f32 = -1.0;
+    var shown: Entity = null;
+
+    fn start() {
+        this.height = this.drop_height;
+        let shown = World.spawn_child(this.sign, this.entity);
+        var clip: String = "enlarger";
+        if this.kind == 2.0 { clip = "push"; }
+        if this.kind == 3.0 { clip = "wind"; }
+        if this.kind == 4.0 { clip = "fireball"; }
+        Animation.play(shown, clip);
+        this.shown = shown;
+        place();
+    }
+
+    fn update(dt: f32) {
+        if this.landed < 0.0 {
+            fall(dt);
+            return;
+        }
+        this.landed += dt;
+        if this.landed > this.life {
+            World.despawn(this.entity);
+            return;
+        }
+        for player in World.with_tag("player") {
+            let dx = player.transform.position.x - this.transform.position.x;
+            let dy = player.transform.position.y - 1.1 * player.transform.scale.y / 3.2 - this.transform.position.y;
+            if sqrt(dx * dx + dy * dy) < this.reach && World.exists(this.entity) {
+                give(player);
+                World.despawn(this.entity);
+                return;
+            }
+        }
+    }
+
+    fn fall(dt: f32) {
+        this.falling += this.gravity * dt;
+        this.height -= this.falling * dt;
+        if this.height <= 0.0 {
+            this.height = 0.0;
+            this.landed = 0.0;
+            Audio.play("audio/hit.wav", 0.7);
+            Camera.add_trauma(0.15);
+        }
+        place();
+    }
+
+    // The sign above its shadow, and the shadow as wide as the sign is near.
+    fn place() {
+        let near = 1.0 - this.height / this.drop_height;
+        var clip: String = "s5";
+        if near < 0.2 { clip = "s0"; } else if near < 0.4 { clip = "s1"; } else if near < 0.6 { clip = "s2"; } else if near < 0.8 { clip = "s3"; } else if near < 1.0 { clip = "s4"; }
+        if Animation.clip(this.entity) != clip {
+            Animation.play(this.entity, clip);
+        }
+        let shown = this.shown;
+        if shown != null {
+            shown.transform.position.x = this.transform.position.x;
+            shown.transform.position.y = this.transform.position.y + 0.68 + this.height;
+            shown.transform.position.z = 1.0 - this.transform.position.y * 0.01;
+        }
+    }
+
+    fn give(player: Entity) {
+        Audio.play("audio/run.wav", 0.8);
+        let slot = World.property_number(player, "slot", 1.0);
+        var team: f32 = 2.0;
+        if slot % 2.0 == 1.0 { team = 1.0; }
+        if this.kind == 1.0 {
+            World.send_signal(player, "grow", 1.0);
+        } else if this.kind == 2.0 {
+            World.send_signal(player, "boost", 1.0);
+        } else if this.kind == 3.0 {
+            // Blue attack the right goal, so their wind blows right.
+            var blow: f32 = -1.0;
+            if team == 1.0 { blow = 1.0; }
+            World.send_signal(World.find("Match"), "wind", blow);
+        } else {
+            World.send_signal(World.find("Ball"), "fire", team);
+        }
+    }
+}

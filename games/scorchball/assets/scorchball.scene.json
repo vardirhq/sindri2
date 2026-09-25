@@ -1,0 +1,749 @@
+{
+  "format_version": 10,
+  "metadata": {
+    "name": "Scorchball"
+  },
+  "entities": [
+    {
+      "id": "camera",
+      "name": "Camera",
+      "transform_3d": {
+        "position": [
+          0,
+          0.8,
+          10
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": {
+        "sindri.camera": {
+          "projection": "orthographic",
+          "vertical_size": 24.0,
+          "near": 0.1,
+          "far": 100.0,
+          "fit": "height"
+        },
+        "sindri.camera.behavior": {
+          "shake": {
+            "trauma": 0.0,
+            "strength": 0.25,
+            "decay": 2.5,
+            "frequency": 40.0,
+            "phase": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "environment",
+      "name": "Environment",
+      "components": {
+        "sindri.environment": {
+          "background": [
+            0.16,
+            0.3,
+            0.14,
+            1.0
+          ],
+          "shadows": {
+            "enabled": false,
+            "map_size": 1024,
+            "distance": 48.0,
+            "bias": 0.002
+          }
+        }
+      }
+    },
+    {
+      "id": "physics",
+      "name": "Physics",
+      "components": {
+        "sindri.physics2d.world": {
+          "gravity": [
+            0.0,
+            0.0
+          ]
+        }
+      }
+    },
+    {
+      "id": "pitch",
+      "name": "Pitch",
+      "transform_3d": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          32,
+          14.4,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/pitch.png",
+          "layer": 0
+        }
+      }
+    },
+    {
+      "id": "goal-left",
+      "name": "Goal Left",
+      "transform_3d": {
+        "position": [
+          -15.5,
+          0,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.6,
+          4.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/goal_left.png",
+          "layer": 2
+        }
+      }
+    },
+    {
+      "id": "goal-right",
+      "name": "Goal Right",
+      "transform_3d": {
+        "position": [
+          15.5,
+          0,
+          0.2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.6,
+          4.8,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/goal_right.png",
+          "layer": 2
+        }
+      }
+    },
+    {
+      "id": "scoreboard",
+      "name": "Scoreboard",
+      "transform_3d": {
+        "position": [
+          0,
+          8.1,
+          2
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          11.85,
+          1.5,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/scoreboard.png",
+          "layer": 8
+        }
+      }
+    },
+    {
+      "id": "blue-score",
+      "name": "Blue Score",
+      "transform_3d": {
+        "position": [
+          -2.92,
+          8.1,
+          2.1
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.6,
+          0.525,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/digits.png#d0",
+          "layer": 9
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "d0": {
+              "frames": [
+                "d0"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d1": {
+              "frames": [
+                "d1"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d2": {
+              "frames": [
+                "d2"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d3": {
+              "frames": [
+                "d3"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d4": {
+              "frames": [
+                "d4"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d5": {
+              "frames": [
+                "d5"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d6": {
+              "frames": [
+                "d6"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d7": {
+              "frames": [
+                "d7"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d8": {
+              "frames": [
+                "d8"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d9": {
+              "frames": [
+                "d9"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            }
+          },
+          "playing": "d0",
+          "speed": 1.0
+        }
+      }
+    },
+    {
+      "id": "red-score",
+      "name": "Red Score",
+      "transform_3d": {
+        "position": [
+          2.92,
+          8.1,
+          2.1
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.6,
+          0.525,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/digits.png#d0",
+          "layer": 9
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "d0": {
+              "frames": [
+                "d0"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d1": {
+              "frames": [
+                "d1"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d2": {
+              "frames": [
+                "d2"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d3": {
+              "frames": [
+                "d3"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d4": {
+              "frames": [
+                "d4"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d5": {
+              "frames": [
+                "d5"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d6": {
+              "frames": [
+                "d6"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d7": {
+              "frames": [
+                "d7"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d8": {
+              "frames": [
+                "d8"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "d9": {
+              "frames": [
+                "d9"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            }
+          },
+          "playing": "d0",
+          "speed": 1.0
+        }
+      }
+    },
+    {
+      "id": "ball",
+      "name": "Ball",
+      "transform_3d": {
+        "position": [
+          0,
+          0,
+          0.9
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1.6,
+          1.6,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/ball.png",
+          "layer": 6
+        },
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 6,
+          "speed": 2.6,
+          "spread": 0.8,
+          "lifetime": 0.45,
+          "size": 0.28,
+          "tint": [
+            1.0,
+            0.55,
+            0.12,
+            1.0
+          ],
+          "fade": true,
+          "drag": 1.4,
+          "layer": 8
+        },
+        "sindri.tags": {
+          "tags": [
+            "ball"
+          ]
+        },
+        "sindri.script": {
+          "source": "scripts/ball.decay",
+          "script": "Ball",
+          "properties": {}
+        }
+      }
+    },
+    {
+      "id": "ball-ring",
+      "name": "Ball Ring",
+      "transform_3d": {
+        "position": [
+          0,
+          0,
+          0.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          3.2,
+          3.2,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/zones.png#none",
+          "layer": 1
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "none": {
+              "frames": [
+                "none"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "p1": {
+              "frames": [
+                "p1"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "p2": {
+              "frames": [
+                "p2"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "p3": {
+              "frames": [
+                "p3"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "p4": {
+              "frames": [
+                "p4"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            }
+          },
+          "playing": "none",
+          "speed": 1.0
+        }
+      }
+    },
+    {
+      "id": "match",
+      "name": "Match",
+      "components": {
+        "sindri.script": {
+          "source": "scripts/match.decay",
+          "script": "Match",
+          "properties": {
+            "player": "prefabs/player.prefab.json",
+            "powerup": "prefabs/powerup.prefab.json"
+          }
+        }
+      }
+    },
+    {
+      "id": "hint",
+      "name": "Hint",
+      "transform_3d": {
+        "position": [
+          0,
+          -0.03,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "top",
+          "color": [
+            1,
+            0.95,
+            0.7,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.036,
+          "line_height": 0.043199999999999995,
+          "layer": 100,
+          "text": "Press A to join  \u00b7  D-pad: change player  \u00b7  Y: ready",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0,
+              0,
+              0,
+              0.55
+            ],
+            "softness": 0.002
+          },
+          "bold": true
+        }
+      }
+    },
+    {
+      "id": "countdown",
+      "name": "Countdown",
+      "transform_3d": {
+        "position": [
+          0,
+          0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.16,
+          "line_height": 0.192,
+          "layer": 100,
+          "text": "{}",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0,
+              0,
+              0,
+              0.55
+            ],
+            "softness": 0.002
+          },
+          "bold": true
+        }
+      },
+      "disabled": true
+    },
+    {
+      "id": "kickoff",
+      "name": "Kickoff",
+      "transform_3d": {
+        "position": [
+          0,
+          0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            0.85,
+            0.3,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.12,
+          "line_height": 0.144,
+          "layer": 100,
+          "text": "Kickoff!",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0,
+              0,
+              0,
+              0.55
+            ],
+            "softness": 0.002
+          },
+          "bold": true
+        }
+      },
+      "disabled": true
+    },
+    {
+      "id": "goal",
+      "name": "Goal",
+      "transform_3d": {
+        "position": [
+          0,
+          0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": {
+        "sindri.ui.text": {
+          "anchor": "center",
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "font": "fonts/Inter.ttf",
+          "font_size": 0.14,
+          "line_height": 0.168,
+          "layer": 100,
+          "text": "GOAL!",
+          "shadow": {
+            "offset": [
+              0.0,
+              -0.004
+            ],
+            "color": [
+              0,
+              0,
+              0,
+              0.55
+            ],
+            "softness": 0.002
+          },
+          "bold": true
+        }
+      },
+      "disabled": true
+    }
+  ]
+}

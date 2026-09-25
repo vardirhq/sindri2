@@ -77,6 +77,12 @@ painted, solid level, a hero who runs and jumps, coins and a flag, in
 collision, scene gravity, collider authoring, camera follow and the 2D Scene
 view, and it finds gaps by being a platformer rather than a recreation.
 
+**Scorchball is the local-multiplayer genre showcase.** A top-down couch
+football game for two to four pads, in `games/scorchball`. It is where playing
+together on one screen is proven: pads read by player slot, joining and
+leaving mid-game, and players made from prefabs, and it finds gaps by being a
+game several people play at once.
+
 So: a capability the engine already had is not complete until a game uses it;
 a capability found by recreating a known game is proven in Orbital Last Stand;
 a capability found by making Causeway or a genre showcase good is added for

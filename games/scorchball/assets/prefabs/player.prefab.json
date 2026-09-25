@@ -1,0 +1,313 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Player"
+  },
+  "entities": [
+    {
+      "id": "player",
+      "name": "Player",
+      "transform_3d": {
+        "position": [
+          0,
+          0,
+          1
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          5.6,
+          5.6,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/players.png#ginger-idle-rd",
+          "layer": 5
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "ginger-idle-rd": {
+              "frames": [
+                "ginger-idle-rd"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "ginger-walk-rd": {
+              "frames": [
+                "ginger-walk-rd-0",
+                "ginger-walk-rd-1",
+                "ginger-walk-rd-2",
+                "ginger-walk-rd-3",
+                "ginger-walk-rd-4",
+                "ginger-walk-rd-5",
+                "ginger-walk-rd-6",
+                "ginger-walk-rd-7",
+                "ginger-walk-rd-8",
+                "ginger-walk-rd-9",
+                "ginger-walk-rd-10",
+                "ginger-walk-rd-11"
+              ],
+              "seconds_per_frame": 0.05,
+              "looping": true
+            },
+            "ginger-idle-ld": {
+              "frames": [
+                "ginger-idle-ld"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "ginger-walk-ld": {
+              "frames": [
+                "ginger-walk-ld-0",
+                "ginger-walk-ld-1",
+                "ginger-walk-ld-2",
+                "ginger-walk-ld-3",
+                "ginger-walk-ld-4",
+                "ginger-walk-ld-5",
+                "ginger-walk-ld-6",
+                "ginger-walk-ld-7",
+                "ginger-walk-ld-8",
+                "ginger-walk-ld-9",
+                "ginger-walk-ld-10",
+                "ginger-walk-ld-11"
+              ],
+              "seconds_per_frame": 0.05,
+              "looping": true
+            },
+            "ginger-idle-lu": {
+              "frames": [
+                "ginger-idle-lu"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "ginger-walk-lu": {
+              "frames": [
+                "ginger-walk-lu-0",
+                "ginger-walk-lu-1",
+                "ginger-walk-lu-2",
+                "ginger-walk-lu-3",
+                "ginger-walk-lu-4",
+                "ginger-walk-lu-5",
+                "ginger-walk-lu-6",
+                "ginger-walk-lu-7",
+                "ginger-walk-lu-8",
+                "ginger-walk-lu-9",
+                "ginger-walk-lu-10",
+                "ginger-walk-lu-11"
+              ],
+              "seconds_per_frame": 0.05,
+              "looping": true
+            },
+            "ginger-idle-ru": {
+              "frames": [
+                "ginger-idle-ru"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "ginger-walk-ru": {
+              "frames": [
+                "ginger-walk-ru-0",
+                "ginger-walk-ru-1",
+                "ginger-walk-ru-2",
+                "ginger-walk-ru-3",
+                "ginger-walk-ru-4",
+                "ginger-walk-ru-5",
+                "ginger-walk-ru-6",
+                "ginger-walk-ru-7",
+                "ginger-walk-ru-8",
+                "ginger-walk-ru-9",
+                "ginger-walk-ru-10",
+                "ginger-walk-ru-11"
+              ],
+              "seconds_per_frame": 0.05,
+              "looping": true
+            },
+            "yellow-idle-rd": {
+              "frames": [
+                "yellow-idle-rd"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "yellow-walk-rd": {
+              "frames": [
+                "yellow-walk-rd-0",
+                "yellow-walk-rd-1",
+                "yellow-walk-rd-2",
+                "yellow-walk-rd-3",
+                "yellow-walk-rd-4",
+                "yellow-walk-rd-5",
+                "yellow-walk-rd-6",
+                "yellow-walk-rd-7",
+                "yellow-walk-rd-8",
+                "yellow-walk-rd-9",
+                "yellow-walk-rd-10",
+                "yellow-walk-rd-11"
+              ],
+              "seconds_per_frame": 0.05,
+              "looping": true
+            },
+            "yellow-idle-ld": {
+              "frames": [
+                "yellow-idle-ld"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "yellow-walk-ld": {
+              "frames": [
+                "yellow-walk-ld-0",
+                "yellow-walk-ld-1",
+                "yellow-walk-ld-2",
+                "yellow-walk-ld-3",
+                "yellow-walk-ld-4",
+                "yellow-walk-ld-5",
+                "yellow-walk-ld-6",
+                "yellow-walk-ld-7",
+                "yellow-walk-ld-8",
+                "yellow-walk-ld-9",
+                "yellow-walk-ld-10",
+                "yellow-walk-ld-11"
+              ],
+              "seconds_per_frame": 0.05,
+              "looping": true
+            },
+            "yellow-idle-lu": {
+              "frames": [
+                "yellow-idle-lu"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "yellow-walk-lu": {
+              "frames": [
+                "yellow-walk-lu-0",
+                "yellow-walk-lu-1",
+                "yellow-walk-lu-2",
+                "yellow-walk-lu-3",
+                "yellow-walk-lu-4",
+                "yellow-walk-lu-5",
+                "yellow-walk-lu-6",
+                "yellow-walk-lu-7",
+                "yellow-walk-lu-8",
+                "yellow-walk-lu-9",
+                "yellow-walk-lu-10",
+                "yellow-walk-lu-11"
+              ],
+              "seconds_per_frame": 0.05,
+              "looping": true
+            },
+            "yellow-idle-ru": {
+              "frames": [
+                "yellow-idle-ru"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "yellow-walk-ru": {
+              "frames": [
+                "yellow-walk-ru-0",
+                "yellow-walk-ru-1",
+                "yellow-walk-ru-2",
+                "yellow-walk-ru-3",
+                "yellow-walk-ru-4",
+                "yellow-walk-ru-5",
+                "yellow-walk-ru-6",
+                "yellow-walk-ru-7",
+                "yellow-walk-ru-8",
+                "yellow-walk-ru-9",
+                "yellow-walk-ru-10",
+                "yellow-walk-ru-11"
+              ],
+              "seconds_per_frame": 0.05,
+              "looping": true
+            }
+          },
+          "playing": "ginger-idle-rd",
+          "speed": 1.0
+        },
+        "sindri.physics2d.rigid_body": {
+          "kind": "dynamic",
+          "pose": {
+            "position": [
+              0,
+              0
+            ],
+            "rotation": 0
+          },
+          "linear_velocity": [
+            0,
+            0
+          ],
+          "angular_velocity": 0,
+          "gravity_scale": 0.0,
+          "linear_damping": 0,
+          "angular_damping": 0,
+          "lock_rotation": true
+        },
+        "sindri.physics2d.collider": {
+          "pieces": [
+            {
+              "shape": {
+                "shape": "circle",
+                "radius": 0.45
+              },
+              "offset": [
+                0.0,
+                -0.9
+              ],
+              "rotation": 0.0,
+              "sensor": false,
+              "layers": {
+                "memberships": 4294967295,
+                "filter": 4294967295
+              },
+              "friction": 0.0,
+              "restitution": 0.2
+            }
+          ]
+        },
+        "sindri.effect.burst": {
+          "texture": "textures/fleck.png",
+          "count": 6,
+          "speed": 2.6,
+          "spread": 0.8,
+          "lifetime": 0.45,
+          "size": 0.28,
+          "tint": [
+            1.0,
+            0.55,
+            0.12,
+            1.0
+          ],
+          "fade": true,
+          "drag": 1.4,
+          "layer": 8
+        },
+        "sindri.tags": {
+          "tags": [
+            "player"
+          ]
+        },
+        "sindri.script": {
+          "source": "scripts/player.decay",
+          "script": "Player",
+          "properties": {
+            "slot": 1.0,
+            "arrow": "prefabs/arrow.prefab.json"
+          }
+        }
+      }
+    }
+  ]
+}

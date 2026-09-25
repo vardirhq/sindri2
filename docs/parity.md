@@ -119,6 +119,7 @@ is why it earns a section rather than a footnote.
 | Feature | Engine | Editor | Decay | Proof | vs. baseline | Gap that matters |
 | --- | :-: | :-: | :-: | :-: | --- | --- |
 | Entities and hierarchy | ✅ | ✅ | ✅ | ✅ | **Par** | Undo entries for script writes |
+| **Child transforms follow their parent** | ❌ | ❌ | ❌ | ❌ | **Absent** | A child is removed with its parent but drawn from its own transform alone, so a marker over a player's head or a falling signpost over its shadow is placed by script every frame. Scorchball does exactly that |
 | Tags and queries | ✅ | ✅ | ✅ | ✅ | **Par** | Query by more than one tag |
 | Prefabs | ✅ | 🟡 | ✅ | ✅ | **Behind** | The editor reads a prefab and instantiates it into the open scene as one undoable step, minting a stable identity per entity — which the runtime's spawn deliberately does not, because a prefab's identities are the prefab's and two instances would collide on all of them. Nothing makes a prefab from a selection; editing a prefab does not update its instances; and a prefab chosen in the browser is placed by clicking a cell in the Scene view, which names that grid and that cell and keeps the prefab's own footprint. The picking and the click path have no automated coverage — the instantiation under them does |
 | Reusable data profiles | ✅ | ✅ | ✅ | ✅ | **Ahead** | Unity has no native equivalent; ScriptableObject is close but needs code per asset. Optional schemas when a second catalog proves the shape |
@@ -269,7 +270,7 @@ Sindri's strongest domain relative to the baseline.
 | Unified pointer, bounded fingers | ✅ | ✅ | ✅ | ✅ | **Par** | — |
 | Touch stick built from a finger | ✅ | — | ✅ | ✅ | **Ahead** | A considered solution to a problem most engines leave to the game |
 | **Action mapping (named actions, rebindable)** | 🟡 | ❌ | ❌ | ❌ | **Behind** | Exists and is stranded. This becomes the input system rather than growing beside it |
-| **Gamepad, by player slot** | ✅ | 🟡 | ✅ | ❌ | **Behind** | Pads on desktop and in the browser, read by player slot: a face button or Start joins, unplugging leaves, one join per frame. Play in the editor reads pads, not yet exercised with a real one in CI. No game uses them yet, and there is no rumble or per-player action map |
+| **Gamepad, by player slot** | ✅ | 🟡 | ✅ | ✅ | **Behind** | Pads on desktop and in the browser, read by player slot: a face button or Start joins, unplugging leaves, one join per frame. Scorchball is played by up to four pads and its tests press them. Play in the editor reads pads, not yet exercised with a real one in CI. No rumble or per-player action map |
 | **Scroll wheel** | 🟡 | — | ❌ | ❌ | **Behind** | Bound in the action layer, never surfaced |
 | **Rebinding UI** | ❌ | ❌ | ❌ | ❌ | **Absent** | Rewired sells on this |
 

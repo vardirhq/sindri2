@@ -1,0 +1,194 @@
+// The ball: whoever touches it has it, the right bumper kicks it, and it
+// scores by crossing a goal mouth.
+//
+// Held, it sits at the holder's feet on the side they face. Loose, it rolls
+// and slows. Touching a held ball steals it, as it always did. On fire it
+// cannot be held: it bounces off whoever touches it, and sets alight anyone
+// on the other team from the player who lit it.
+//
+// Possession is decided by distance rather than by a collider, so an enlarged
+// player reaches further without a body of a different size.
+script Ball {
+    @export let friction: f32 = 2.2;
+    @export let reach: f32 = 0.9;
+    @export let goal_line: f32 = 14.9;
+    @export let mouth: f32 = 2.1;
+    @export let fire_time: f32 = 20.0;
+
+    var vx: f32 = 0.0;
+    var vy: f32 = 0.0;
+    var holder: Entity = null;
+    var holder_right: bool = true;
+    var kicker: Entity = null;
+    var kicked_ago: f32 = 1.0;
+    var fire_left: f32 = 0.0;
+    var fire_team: f32 = 0.0;
+    var fire_clock: f32 = 0.0;
+    var zone: Entity = null;
+    var referee: Entity = null;
+
+    fn start() {
+        this.zone = World.find("Ball Ring");
+        this.referee = World.find("Match");
+        Game.set("holder", 0.0);
+    }
+
+    fn update(dt: f32) {
+        take_signals();
+        if Game.get("phase", 0.0) < 2.0 {
+            // Waiting at the centre spot for kickoff.
+            reset();
+            return;
+        }
+        this.kicked_ago += dt;
+        touches();
+        if this.holder != null && World.exists(this.holder) {
+            dribble();
+        } else {
+            this.holder = null;
+            roll(dt);
+        }
+        burn(dt);
+        scored();
+        mark();
+    }
+
+    fn take_signals() {
+        let kicked = World.take_signal("kick");
+        let kx = World.take_signal("kick_x");
+        let ky = World.take_signal("kick_y");
+        if kicked > 0.0 {
+            this.vx = kx / kicked;
+            this.vy = ky / kicked;
+            this.kicker = this.holder;
+            this.kicked_ago = 0.0;
+            this.holder = null;
+        }
+        let lit = World.take_signal("fire");
+        if lit > 0.0 {
+            this.fire_left = this.fire_time;
+            this.fire_team = lit;
+            this.holder = null;
+        }
+    }
+
+    fn touches() {
+        for player in World.with_tag("player") {
+            let scale = player.transform.scale.x / 3.2;
+            let dx = this.transform.position.x - player.transform.position.x;
+            let dy = this.transform.position.y - (player.transform.position.y - 1.1 * scale);
+            let distance = sqrt(dx * dx + dy * dy);
+            // The one who just kicked it does not take it straight back.
+            let fresh = player == this.kicker && this.kicked_ago < 0.3;
+            if distance < this.reach * scale && player != this.holder && !fresh {
+                if this.fire_left > 0.0 {
+                    bounce(player, dx, dy, distance);
+                } else {
+                    this.holder = player;
+                    this.vx = 0.0;
+                    this.vy = 0.0;
+                    Audio.play("audio/run.wav", 0.5);
+                }
+            }
+        }
+    }
+
+    fn bounce(player: Entity, dx: f32, dy: f32, distance: f32) {
+        let length = max(0.01, distance);
+        this.vx = dx / length * 12.0;
+        this.vy = dy / length * 12.0;
+        this.kicker = player;
+        this.kicked_ago = 0.0;
+        if team(player) != this.fire_team {
+            World.send_signal(player, "burn", 1.0);
+        }
+    }
+
+    fn dribble() {
+        let holder = this.holder;
+        let scale = holder.transform.scale.x / 3.2;
+        let moving = Physics.velocity_x(holder);
+        if moving > 1.0 { this.holder_right = true; }
+        if moving < -1.0 { this.holder_right = false; }
+        var side: f32 = -0.5;
+        if this.holder_right { side = 0.5; }
+        this.transform.position.x = holder.transform.position.x + side * scale;
+        this.transform.position.y = holder.transform.position.y - 1.1 * scale;
+        Game.set("holder", World.property_number(holder, "slot", 0.0));
+    }
+
+    fn roll(dt: f32) {
+        Game.set("holder", 0.0);
+        this.vx += Game.get("wind", 0.0) * dt;
+        let keep = max(0.0, 1.0 - this.friction * dt);
+        this.vx = this.vx * keep;
+        this.vy = this.vy * keep;
+        this.transform.position.x += this.vx * dt;
+        this.transform.position.y += this.vy * dt;
+    }
+
+    fn burn(dt: f32) {
+        if this.fire_left <= 0.0 {
+            return;
+        }
+        this.fire_left -= dt;
+        this.fire_clock -= dt;
+        if this.fire_clock <= 0.0 {
+            this.fire_clock = 0.06;
+            Effects.burst(this.entity);
+        }
+    }
+
+    // Across a goal line between the posts is a goal for the side attacking
+    // that end; anywhere else off the pitch is out, and the ball comes back to
+    // the centre spot.
+    fn scored() {
+        let x = this.transform.position.x;
+        let y = this.transform.position.y;
+        if abs(y) < this.mouth && x > this.goal_line {
+            World.send_signal(this.referee, "goal_blue", 1.0);
+            reset();
+        } else if abs(y) < this.mouth && x < -this.goal_line {
+            World.send_signal(this.referee, "goal_red", 1.0);
+            reset();
+        } else if abs(x) > this.goal_line + 0.6 || y > 6.4 || y < -6.6 {
+            reset();
+        }
+    }
+
+    fn reset() {
+        this.transform.position.x = 0.0;
+        this.transform.position.y = 0.0;
+        this.vx = 0.0;
+        this.vy = 0.0;
+        this.holder = null;
+        Game.set("holder", 0.0);
+        mark();
+    }
+
+    // The ring under the ball says whose it is.
+    fn mark() {
+        let slot = Game.get("holder", 0.0);
+        var clip: String = "none";
+        if slot == 1.0 { clip = "p1"; }
+        if slot == 2.0 { clip = "p2"; }
+        if slot == 3.0 { clip = "p3"; }
+        if slot == 4.0 { clip = "p4"; }
+        let zone = this.zone;
+        if zone == null {
+            return;
+        }
+        if Animation.clip(zone) != clip {
+            Animation.play(zone, clip);
+        }
+        zone.transform.position.x = this.transform.position.x;
+        zone.transform.position.y = this.transform.position.y;
+    }
+
+    fn team(player: Entity) -> f32 {
+        if World.property_number(player, "slot", 1.0) % 2.0 == 1.0 {
+            return 1.0;
+        }
+        return 2.0;
+    }
+}

@@ -1637,6 +1637,51 @@ the README.
 
 ---
 
+## Scorchball
+
+`games/scorchball` is the local-multiplayer genre showcase: a couch football
+game for two to four pads, ported from an earlier Unity project with its
+original art, sounds and tuning. Gamepads were the capability it needed and
+were added for it as a general one (see Input). It has no
+Rust of its own: a scene, four prefabs and four Decay scripts are the game, and
+it exports to the site.
+
+**Players are made when a pad joins.** The match reads `Gamepad.joined()`,
+spawns a player prefab, and authors its slot with `World.set_property`; odd
+slots play for Blue and even for Red. Unplugging a pad takes its player off
+through `Gamepad.left()`. Each player readies with North, picks one of two
+characters with the d-pad, walks with the left stick and kicks with the right
+bumper, aimed with the right stick, all read through its own slot.
+
+**Scripts talk by signal.** A player sends `kick_x`, `kick_y` and `kick` to the
+ball and `ready` to the match; a power-up, a signpost that drops from the sky
+onto its growing shadow, sends `grow`, `boost`, `wind` or
+`fire` to whoever it concerns; the ball sends `burn` to an opponent it touches
+while alight, and `goal_blue` or `goal_red` to the match. Possession, pickups
+and reach are distance checks, because a collider does not scale with its
+entity and the Enlarger makes a player bigger.
+
+**It found two gaps.** A child is not drawn relative to its parent, so the
+marker over a player's head, a falling signpost and the ring under
+the ball are placed by script each frame (a parity row now says so). And the
+test harness did not lay out screen text, so a misspelled text anchor passed
+every test and was first refused by the editor; the harness now lays it out
+each step.
+
+**It is checked, not just run.** `games/scorchball/tests/` presses pads: two
+join on their own sides, ready up and kick off; Blue takes the ball, dribbles
+past Red and scores; a sign cannot be taken until it lands; unplugging a pad
+takes its player off; Blue collects signs until it has had all four powers and each does what it says; and a
+Fireball sets an opponent running wild until it burns out.
+
+### Not yet
+
+- No music: the original tracks' terms are unchecked, and MP3 is an exception
+  the dependency policy would rather not grow.
+- No match end, pause or restart without Stop.
+- Played with real pads by nobody yet: CI has none, and neither did the
+  session that ported it.
+
 ## The platformer
 
 `games/platformer` is the first genre showcase: a side-view level painted as a

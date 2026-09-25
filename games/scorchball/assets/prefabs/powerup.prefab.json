@@ -1,0 +1,97 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Power-up"
+  },
+  "entities": [
+    {
+      "id": "powerup",
+      "name": "Power-up",
+      "transform_3d": {
+        "position": [
+          0,
+          0,
+          0.4
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          0.15,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/shadows.png#s0",
+          "layer": 2
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "s0": {
+              "frames": [
+                "s0"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "s1": {
+              "frames": [
+                "s1"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "s2": {
+              "frames": [
+                "s2"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "s3": {
+              "frames": [
+                "s3"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "s4": {
+              "frames": [
+                "s4"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "s5": {
+              "frames": [
+                "s5"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            }
+          },
+          "playing": "s0",
+          "speed": 1.0
+        },
+        "sindri.tags": {
+          "tags": [
+            "powerup"
+          ]
+        },
+        "sindri.script": {
+          "source": "scripts/powerup.decay",
+          "script": "PowerUp",
+          "properties": {
+            "kind": 1.0,
+            "sign": "prefabs/sign.prefab.json"
+          }
+        }
+      }
+    }
+  ]
+}

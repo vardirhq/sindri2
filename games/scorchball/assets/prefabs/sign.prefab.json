@@ -1,0 +1,77 @@
+{
+  "format_version": 1,
+  "metadata": {
+    "name": "Sign"
+  },
+  "entities": [
+    {
+      "id": "sign",
+      "name": "Sign",
+      "transform_3d": {
+        "position": [
+          0,
+          12,
+          0.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          0.8,
+          1.6,
+          1
+        ]
+      },
+      "components": {
+        "sindri.sprite": {
+          "texture": "textures/signs.png#none",
+          "layer": 4
+        },
+        "sindri.animation.sprite": {
+          "clips": {
+            "none": {
+              "frames": [
+                "none"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "enlarger": {
+              "frames": [
+                "enlarger"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "push": {
+              "frames": [
+                "push"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "wind": {
+              "frames": [
+                "wind"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "fireball": {
+              "frames": [
+                "fireball"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            }
+          },
+          "playing": "none",
+          "speed": 1.0
+        }
+      }
+    }
+  ]
+}
