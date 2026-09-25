@@ -73,8 +73,10 @@ Each step is its own pull request. A step is checked here when it has landed.
      `space-around` and `space-evenly`, min/max limits, and layouts that
      size to their content with `width: auto`. Layout decides sizes as well
      as places, and what is drawn and clicked uses them.
-   - [ ] Intrinsic sizing from text: a label measured by its font, so text
+   - [x] Intrinsic sizing from text: a label measured by its font, so text
      can size a button and be the minimum a flex item shrinks to.
+   - [ ] Wrapped text's smallest width (its longest word) as a flex item's
+     minimum, and text wrapping to the width a layout gave it.
    - [ ] Grid layout.
    - [ ] `calc()`, `:not()`, `:first-child` and the other structural
      pseudo-classes.

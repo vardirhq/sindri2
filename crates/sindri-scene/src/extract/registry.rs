@@ -275,7 +275,8 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "order": 0,
             "align_self": "auto",
             "min_size": [0.0, 0.0],
-            "max_size": [0.0, 0.0]
+            "max_size": [0.0, 0.0],
+            "fit_content": [false, false]
         }),
     )?;
     // A visible burst, because one that threw nothing would look like a

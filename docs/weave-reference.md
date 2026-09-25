@@ -186,7 +186,7 @@ covering the outer border.
 | `flex-basis` | length, or `auto` | Size along the line before growing or shrinking |
 | `order` | integer | Position in the layout, lowest first |
 | `align-self` | `auto`, `start`, `center`, `end`, `stretch` | One item's cross-axis alignment |
-| `width`, `height` | `auto` | On a layout: size to its children, padding and gaps |
+| `width`, `height` | `auto` | On a layout: size to its children, padding and gaps. On a text element: size to its measured words and padding |
 
 Layout is hierarchical. A child must be parented beneath the layout entity in
 the scene; visual overlap does not establish layout membership. Explicit child
@@ -205,6 +205,23 @@ than by re-sharing what a clamped child could not take, and a child that is
 not itself a layout has no automatic minimum, because text is not measured
 yet. A layout's automatic minimum is its children and padding, so a badge
 does not shrink into its own label.
+
+Text is measured by its font. A text element with `width: auto` or
+`height: auto` is sized to its words, measured by the same shaping that draws
+them (with no width limit when the width fits, so a label is one line), plus
+its padding. That size is also its minimum when a layout shrinks it. So a
+button that fits its content grows with its label:
+
+```css
+.badge { width: auto; height: auto; padding: 12px 18px; }
+.badge-label { width: auto; height: auto; }
+```
+
+Measuring needs the font, so it is the host's to do: the game, the browser
+export, the editor's views and the showcase's capture all measure each draw
+(`sindri_scene::measure_ui_text`) and hand the sizes to layout, drawing and
+hit-testing. A wrapping text's minimum is still its whole measured width, not
+its longest word.
 
 `padding` and `margin` take one to four values in CSS order (all; vertical
 and horizontal; top, horizontal and bottom; top, right, bottom and left), and
@@ -380,8 +397,8 @@ entity, property, and value. Unknown properties are currently ignored.
 
 The following CSS concepts are not implemented:
 
-- sizing from measured text (`width: auto` on a text element, or text as
-  the minimum a flex item shrinks to)
+- a wrapping text's longest word as its minimum, and text wrapping to the
+  width a layout gave it
 - borders per side, negative margins, and more than one or an `inset` shadow
 - `align-content` other than its default, `row-gap`/`column-gap`, and
   reversed directions

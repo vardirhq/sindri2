@@ -16,7 +16,7 @@ use sindri_render::{
 };
 use sindri_scene::SceneExtractor;
 #[cfg(not(target_arch = "wasm32"))]
-use sindri_scene::{CameraView, SceneRuntime, TextureBindings, TileSetBindings};
+use sindri_scene::{CameraView, SceneRuntime, TextureBindings, TileSetBindings, measure_ui_text};
 
 use crate::assets::{
     bind_audio, bind_fonts, bind_textures, bind_tile_sets, extractor, scenes, stylesheets, world,
@@ -144,20 +144,30 @@ impl DesktopApp for CausewayApp {
             .game_mut()
             .style(&mut world, weave_viewport(context));
         let prepared = styled.and_then(|undo| {
-            let prepared = self.scene.extract_animated(
-                &world,
-                Viewport::new(context.width(), context.height()),
-                CameraView::default(),
-                &self.bindings,
-                SceneRuntime::default()
-                    .with_animations(self.engine.game().animations())
-                    .with_effects(self.engine.game().effects())
-                    .with_tile_sets(&self.tile_sets),
-            );
+            // Measured as styled, since a stylesheet sets the font size.
+            let prepared = measure_ui_text(&world, self.scene.components(), &mut self.text)
+                .map_err(CausewayError::from)
+                .and_then(|sizes| {
+                    let prepared = self.scene.extract_animated(
+                        &world,
+                        Viewport::new(context.width(), context.height()),
+                        CameraView::default(),
+                        &self.bindings,
+                        SceneRuntime::default()
+                            .with_animations(self.engine.game().animations())
+                            .with_effects(self.engine.game().effects())
+                            .with_tile_sets(&self.tile_sets)
+                            .with_text_sizes(&sizes),
+                    )?;
+                    self.engine
+                        .game_mut()
+                        .record_drawn(&world, weave_viewport(context), sizes)?;
+                    Ok(prepared)
+                });
             if let Some(undo) = undo {
                 undo.undo(&mut world);
             }
-            prepared.map_err(CausewayError::from)
+            prepared
         });
         *self.engine.world_mut() = world;
         let prepared = prepared?;

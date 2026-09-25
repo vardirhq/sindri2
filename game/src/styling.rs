@@ -12,6 +12,9 @@ use sindri_scene::ScreenUi;
 use sindri_weave::{Presenter, Undo};
 use weave::{Stylesheet, Viewport};
 
+use sindri_scene::{ScreenExtent, UiTextSizes};
+
+use crate::Session;
 use crate::error::CausewayError;
 
 /// A game's stylesheets and the presenter that runs their transitions.
@@ -70,5 +73,77 @@ impl Styles {
         self.presenter
             .present_over(world, &self.stylesheets, self.viewport, &states)
             .map_err(|error| CausewayError::Weave(error.to_string()))
+    }
+}
+
+/// The session's side of styling: settling, laying pointer states over a
+/// draw, and recording what was drawn for the clicks until the next one.
+impl Session {
+    /// The game's stylesheets. A game with none is drawn and clicked as
+    /// authored.
+    #[must_use]
+    pub fn with_styles(mut self, stylesheets: Vec<weave::Stylesheet>) -> Self {
+        self.styles = Styles::new(stylesheets);
+        self
+    }
+
+    /// Styles `world` with the game's stylesheets for `viewport`. The host
+    /// does this when the game starts and whenever the screen changes shape;
+    /// the scripts then run on the styled world. Nothing for a game with no
+    /// stylesheets.
+    pub fn settle_styles(
+        &mut self,
+        world: &mut World,
+        viewport: weave::Viewport,
+    ) -> Result<(), CausewayError> {
+        let Some(styles) = &mut self.styles else {
+            return Ok(());
+        };
+        styles.settle(world, viewport)?;
+        self.screen_ui.lay_out(
+            world,
+            &self.components,
+            ScreenExtent::new(viewport.width, viewport.height),
+            &self.text_sizes,
+        )?;
+        Ok(())
+    }
+
+    /// Tells the session what the host just drew: `world` as drawn, at
+    /// `viewport`, with its text measured. Clicks are hit-tested against this
+    /// until the next draw, so an element sized by its words is clicked at
+    /// the size it is drawn.
+    pub fn record_drawn(
+        &mut self,
+        world: &World,
+        viewport: weave::Viewport,
+        text_sizes: UiTextSizes,
+    ) -> Result<(), CausewayError> {
+        self.text_sizes = text_sizes;
+        if self.styles.is_some() {
+            self.screen_ui.lay_out(
+                world,
+                &self.components,
+                ScreenExtent::new(viewport.width, viewport.height),
+                &self.text_sizes,
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Lays the pointer's states over the settled `world` for a draw at
+    /// `viewport`, which clicks are hit-tested against from then on. The
+    /// host must undo it once drawn, before the next step; `None` when the
+    /// game has no stylesheets.
+    pub fn style(
+        &mut self,
+        world: &mut World,
+        viewport: weave::Viewport,
+    ) -> Result<Option<sindri_weave::Undo>, CausewayError> {
+        let Some(styles) = &mut self.styles else {
+            return Ok(None);
+        };
+        styles.set_viewport(viewport);
+        styles.style(world, &self.screen_ui).map(Some)
     }
 }

@@ -8,6 +8,7 @@ mod flex;
 mod hierarchy;
 mod layout;
 mod layout_pass;
+mod measure;
 mod rect;
 mod slider;
 
@@ -23,6 +24,7 @@ use sindri_core::{
 pub use box_model::{UiAlignSelf, UiBoxComponent, UiSides};
 pub use hierarchy::{UiHierarchy, UiPlaced};
 pub use layout::{UiAlign, UiDirection, UiJustify, UiLayoutBox, UiLayoutChild, UiLayoutComponent};
+pub use measure::{UiTextSizes, measure_ui_text};
 pub use rect::{SafeArea, ScreenExtent, ScreenRect};
 pub use slider::{UiSliderComponent, UiSliderOrientation};
 
@@ -69,7 +71,7 @@ impl ScreenUi {
         presses: &Presses,
     ) -> Result<(), ComponentRegistryError> {
         self.viewport_half = extent.half();
-        self.rects = Self::place(world, components, extent)?;
+        self.rects = Self::place(world, components, extent, &UiTextSizes::new())?;
         self.read_presses(world, extent, presses);
         Ok(())
     }
@@ -90,7 +92,7 @@ impl ScreenUi {
         presses: &Presses,
     ) -> Result<(), ComponentRegistryError> {
         self.viewport_half = extent.half();
-        self.rects = Self::place(presented, components, extent)?;
+        self.rects = Self::place(presented, components, extent, &UiTextSizes::new())?;
         self.read_presses(world, extent, presses);
         Ok(())
     }
@@ -106,9 +108,10 @@ impl ScreenUi {
         drawn: &World,
         components: &ComponentSchemaRegistry,
         extent: ScreenExtent,
+        text: &UiTextSizes,
     ) -> Result<(), ComponentRegistryError> {
         self.viewport_half = extent.half();
-        self.rects = Self::place(drawn, components, extent)?;
+        self.rects = Self::place(drawn, components, extent, text)?;
         Ok(())
     }
 
@@ -181,9 +184,10 @@ impl ScreenUi {
         world: &World,
         components: &ComponentSchemaRegistry,
         extent: ScreenExtent,
+        text: &UiTextSizes,
     ) -> Result<BTreeMap<EntityId, Element>, ComponentRegistryError> {
         let mut placements = BTreeMap::new();
-        let hierarchy = UiHierarchy::of(world, components)?;
+        let hierarchy = UiHierarchy::measured(world, components, text)?;
         for (entity, anchor, layer, pressable) in Self::elements(world, components)? {
             if !world.is_active(entity) {
                 continue;

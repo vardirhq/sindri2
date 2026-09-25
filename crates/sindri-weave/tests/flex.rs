@@ -124,3 +124,27 @@ fn nonsense_is_refused_with_the_property_named() {
         assert!(error.to_string().contains("invalid"), "{error}");
     }
 }
+
+#[test]
+fn auto_on_a_text_element_fits_its_words() {
+    let document = SceneDocument::from_json(
+        r#"{ "format_version": 10, "metadata": { "name": "t" },
+             "entities": [{ "id": "label", "name": "label", "components": {
+                 "sindri.ui.text": { "text": "Hi", "font": "f.ttf", "font_size": 0.05 } } }] }"#,
+    )
+    .expect("scene parses");
+    let source = World::from_scene(&document).expect("scene loads").world;
+    let world = PresentationWorld::resolve(
+        &source,
+        &parse("#label { width: auto; height: 20px; }").expect("Weave parses"),
+        Viewport {
+            width: 800.0,
+            height: 800.0,
+        },
+    )
+    .expect("styles resolve")
+    .world()
+    .clone();
+    let item = component(&world, "label", "sindri.ui.box");
+    assert_eq!(item["fit_content"], serde_json::json!([true, false]));
+}

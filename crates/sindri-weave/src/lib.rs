@@ -234,9 +234,19 @@ fn apply_sizing(
     Ok(())
 }
 
-/// Marks whether a layout fits its content on `axis`. An element that is not
-/// a layout has no content to fit, and is left alone.
+/// Marks whether an element fits its content on `axis`: a layout its
+/// children, a text element its measured words. Anything else has no content
+/// to fit, and is left alone.
 fn set_fit_content(world: &mut World, entity: EntityId, axis: usize, fits: bool) {
+    let has = |name: &str| {
+        world
+            .get(entity)
+            .is_some_and(|data| data.components.contains_key(name))
+    };
+    if !has("sindri.ui.layout") && has("sindri.ui.text") {
+        box_model::set_fit(world, entity, axis, fits);
+        return;
+    }
     let Some(layout) = world
         .get_mut(entity)
         .and_then(|data| data.components.get_mut("sindri.ui.layout"))

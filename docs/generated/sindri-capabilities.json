@@ -1012,6 +1012,10 @@
       "default_payload": {
         "align_self": "auto",
         "basis": -1.0,
+        "fit_content": [
+          false,
+          false
+        ],
         "grow": 0.0,
         "margin": [
           0.0,
@@ -1040,6 +1044,10 @@
       "fields": {
         "align_self": "auto",
         "basis": -1.0,
+        "fit_content": [
+          false,
+          false
+        ],
         "grow": 0.0,
         "margin": [
           0.0,
