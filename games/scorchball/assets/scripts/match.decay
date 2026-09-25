@@ -3,7 +3,7 @@
 // holds the wind.
 //
 // The phase is on the board for everyone: 0 is the lobby, 1 the countdown,
-// 2 play.
+// 2 play. The title screen runs before the lobby and chooses local or bot play.
 script Match {
     @export let player: Prefab;
     @export let powerup: Prefab;
@@ -38,10 +38,21 @@ script Match {
         Game.set("score_blue", 0.0);
         Game.set("score_red", 0.0);
         Game.set("wind", 0.0);
+        Game.set("menu_done", 0.0);
+        Game.set("versus_bot", 0.0);
         this.next_power = this.power_min;
+        World.spawn("prefabs/title.prefab.json");
     }
 
     fn update(dt: f32) {
+        if Game.get("menu_done", 0.0) == 0.0 {
+            World.set_active(this.hint, false);
+            World.set_active(this.count_text, false);
+            World.set_active(this.kickoff_text, false);
+            World.set_active(this.goal_text, false);
+            return;
+        }
+
         players();
         let ready = World.take_signal("ready");
         if this.phase == 0.0 && ready >= 2.0 {
@@ -77,14 +88,23 @@ script Match {
     }
 
     // A pad that joins gets a player on its side of the pitch; a pad that is
-    // unplugged takes its player with it.
+    // unplugged takes its player with it. In versus-bot mode the first human
+    // gets one opponent on the other side automatically.
     //
-    // Select in the lobby adds a bot to the side with fewer players, one bot
-    // a side.
+    // Select in the lobby still adds a bot to the side with fewer players, one
+    // bot a side, so local play keeps the original quick bot toggle too.
     fn players() {
         let joined = Gamepad.joined();
         if joined > 0.0 {
             place(joined, false);
+            if Game.get("versus_bot", 0.0) > 0.0 {
+                if joined % 2.0 == 1.0 {
+                    place(12.0, true);
+                } else {
+                    place(11.0, true);
+                }
+                Game.set("versus_bot", 0.0);
+            }
         }
         if this.phase == 0.0 && Gamepad.just_pressed(0.0, "select") {
             var blue: f32 = 0.0;
