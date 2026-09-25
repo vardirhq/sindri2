@@ -20,8 +20,9 @@ script AegisCoreFire {
             return;
         }
 
-        this.transform.position.x = boss.transform.position.x;
-        this.transform.position.y = boss.transform.position.y;
+        // A child of the boss, so its bursts come from where the boss is.
+        this.transform.position.x = 0.0;
+        this.transform.position.y = 0.0;
         if Game.get("aegis_core_exposed", 0.0) <= 0.0 { return; }
 
         this.clock -= dt;

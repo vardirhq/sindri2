@@ -65,8 +65,7 @@ impl WorldHost<'_> {
             // thing that threw the burst is usually about to be despawned.
             let position = self
                 .world
-                .get(entity)
-                .and_then(|data| data.transform_3d)
+                .world_transform(entity)
                 .unwrap_or_default()
                 .position_2d();
             [position[0], position[1]]

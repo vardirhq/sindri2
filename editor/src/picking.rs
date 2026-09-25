@@ -276,10 +276,7 @@ pub fn is_drawn(tint: [f32; 4]) -> bool {
 }
 
 fn transform_of(world: &World, entity: EntityId) -> Transform3D {
-    world
-        .get(entity)
-        .and_then(|data| data.transform_3d)
-        .unwrap_or_default()
+    world.world_transform(entity).unwrap_or_default()
 }
 
 fn transform_matrix(transform: Transform3D) -> Mat4 {

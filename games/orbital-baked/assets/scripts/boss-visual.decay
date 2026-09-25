@@ -27,12 +27,13 @@ script BossVisual {
         let pulse = 0.5 + 0.5 * sin(this.clock * (4.5 + phase * 1.7) + this.phase_offset);
 
         if this.kind == 3.0 {
-            update_orbit_node(boss, phase, fury, pulse);
+            update_orbit_node(phase, fury, pulse);
             return;
         }
 
-        this.transform.position.x = boss.transform.position.x;
-        this.transform.position.y = boss.transform.position.y;
+        // A child of the boss, so its place is relative to the boss: on it.
+        this.transform.position.x = 0.0;
+        this.transform.position.y = 0.0;
 
         if this.kind == 0.0 {
             let size = 1.28 + pulse * 0.10 + fury * 0.14;
@@ -62,12 +63,12 @@ script BossVisual {
         }
     }
 
-    fn update_orbit_node(boss: Entity, phase: f32, fury: f32, pulse: f32) {
+    fn update_orbit_node(phase: f32, fury: f32, pulse: f32) {
         let speed = 0.65 + phase * 0.46;
         let angle = this.phase_offset + this.clock * speed;
         let radius = 0.86 + fury * 0.22 + pulse * 0.06;
-        this.transform.position.x = boss.transform.position.x + cos(angle) * radius;
-        this.transform.position.y = boss.transform.position.y + sin(angle) * radius;
+        this.transform.position.x = cos(angle) * radius;
+        this.transform.position.y = sin(angle) * radius;
         this.transform.rotation_z = -angle * 1.8 + this.clock * (1.2 + phase * 0.65);
         let size = 0.10 + pulse * 0.055 + fury * 0.035;
         this.transform.scale.x = size;

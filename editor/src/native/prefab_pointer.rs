@@ -69,7 +69,7 @@ impl EditorApp {
             else {
                 continue;
             };
-            let transform = data.transform_3d.unwrap_or_default();
+            let transform = self.world.world_transform(entity).unwrap_or_default();
             let Some(coord) = tile_volume::surface_cell_at_viewport(
                 &grid,
                 transform,
@@ -89,11 +89,7 @@ impl EditorApp {
         }
 
         let (coord, id, grid, entity) = best?;
-        let transform = self
-            .world
-            .get(entity)
-            .and_then(|data| data.transform_3d)
-            .unwrap_or_default();
+        let transform = self.world.world_transform(entity).unwrap_or_default();
         let projected = tile_volume::cell_outline(&grid, transform, camera.view_projection, coord)?;
         let outline = projected.map(|point| {
             Pos2::new(

@@ -277,6 +277,7 @@ The host names this type but has not described its members.
 - `position`: `Vec3`
 - `rotation_z`: `f32`
 - `scale`: `Vec3`
+- `world_position`: `Vec3`
 
 ### `Ui`
 

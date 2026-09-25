@@ -8,12 +8,13 @@
 // 3 Wind: the pitch tilts towards the other team's goal.
 // 4 Fireball: the ball catches fire, and sets alight any opponent it touches.
 //
-// This entity is the shadow, on the ground where the sign lands. The sign is
-// a child, taken away with it, but placed by this script every frame: a child
-// is not carried by its parent's transform.
+// This entity is the spot on the ground where the sign lands. The shadow and
+// the sign are its children, so they stand where it stands and go with it; the
+// sign only has to be told how high above the spot it still is.
 script PowerUp {
     @export let kind: f32 = 1.0;
     @export let sign: Prefab;
+    @export let shadow: Prefab;
     @export let drop_height: f32 = 12.0;
     @export let gravity: f32 = 30.0;
     @export let life: f32 = 10.0;
@@ -23,9 +24,11 @@ script PowerUp {
     var falling: f32 = 0.0;
     var landed: f32 = -1.0;
     var shown: Entity = null;
+    var ground: Entity = null;
 
     fn start() {
         this.height = this.drop_height;
+        this.ground = World.spawn_child(this.shadow, this.entity);
         let shown = World.spawn_child(this.sign, this.entity);
         var clip: String = "enlarger";
         if this.kind == 2.0 { clip = "push"; }
@@ -69,19 +72,20 @@ script PowerUp {
         place();
     }
 
-    // The sign above its shadow, and the shadow as wide as the sign is near.
+    // The sign above the spot, and the shadow as wide as the sign is near.
     fn place() {
         let near = 1.0 - this.height / this.drop_height;
         var clip: String = "s5";
         if near < 0.2 { clip = "s0"; } else if near < 0.4 { clip = "s1"; } else if near < 0.6 { clip = "s2"; } else if near < 0.8 { clip = "s3"; } else if near < 1.0 { clip = "s4"; }
-        if Animation.clip(this.entity) != clip {
-            Animation.play(this.entity, clip);
+        let ground = this.ground;
+        if ground != null && Animation.clip(ground) != clip {
+            Animation.play(ground, clip);
         }
         let shown = this.shown;
         if shown != null {
-            shown.transform.position.x = this.transform.position.x;
-            shown.transform.position.y = this.transform.position.y + 0.68 + this.height;
-            shown.transform.position.z = 1.0 - this.transform.position.y * 0.01;
+            shown.transform.position.y = 0.68 + this.height;
+            // In front of whatever stands further up the pitch.
+            shown.transform.position.z = 0.6 - this.transform.position.y * 0.01;
         }
     }
 

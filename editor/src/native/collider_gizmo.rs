@@ -186,8 +186,7 @@ impl EditorApp {
 
     fn depth_of(&self, entity: EntityId) -> f32 {
         self.world
-            .get(entity)
-            .and_then(|data| data.transform_3d)
+            .world_transform(entity)
             .map_or(0.0, |transform| transform.position[2])
     }
 

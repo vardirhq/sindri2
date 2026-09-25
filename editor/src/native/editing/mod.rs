@@ -466,6 +466,24 @@ impl EditorApp {
                 continue;
             }
             buffer.push(WorldCommand::SetParent { entity, parent });
+            // A child's transform is local to its parent, so it is rewritten
+            // for the new one and the entity stays where it was on screen. UI
+            // is laid out in its parent's box instead, and keeps its own.
+            if !self.is_overlaid(entity)
+                && let Some(placed) = self.world.world_transform(entity)
+            {
+                let space = parent
+                    .and_then(|parent| {
+                        self.world
+                            .world_transform(parent)
+                            .or_else(|| Some(self.world.parent_space(parent)))
+                    })
+                    .unwrap_or_default();
+                buffer.push(WorldCommand::SetTransform3D {
+                    entity,
+                    transform: Some(placed.relative_to(space)),
+                });
+            }
             moved += 1;
             // The place it held was a place among its old siblings, and it
             // means nothing among its new ones. Forgotten rather than

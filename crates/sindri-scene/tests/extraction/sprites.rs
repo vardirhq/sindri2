@@ -483,3 +483,39 @@ fn an_ordinary_sprite_keeps_the_facing_the_scene_gave_it() {
         "an unturned sprite keeps facing +Z: {normal:?}"
     );
 }
+
+/// A child sprite is drawn where its parent puts it: moved, turned and grown
+/// with the parent, at its own offset from it.
+#[test]
+fn a_child_sprite_is_drawn_relative_to_its_parent() {
+    let world = world_from(&scene(
+        r#",
+        { "id": "ship", "transform_3d": {
+            "position": [10.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.7071068, 0.7071068],
+            "scale": [2.0, 2.0, 1.0] } },
+        { "id": "turret", "parent": "ship",
+          "transform_3d": { "position": [1.0, 0.0, 0.5] },
+          "components": { "sindri.sprite": { "texture": "b" } } }"#,
+    ));
+    let frame = SceneExtractor::new()
+        .unwrap()
+        .extract(
+            &world,
+            VIEWPORT,
+            CameraView::default(),
+            &TextureBindings::new(),
+        )
+        .expect("the scene extracts");
+    let FrameCommand::SpriteBatch { instances, .. } = &frame.passes()[0].command else {
+        panic!("expected a sprite batch");
+    };
+    // One unit along the ship's x, which has turned to face up, doubled.
+    let translation = instances[0].model().w_axis.truncate();
+    assert!(
+        close(translation.x, 10.0) && close(translation.y, 2.0) && close(translation.z, 0.5),
+        "the child sprite landed at {translation:?}"
+    );
+    let across = instances[0].model().x_axis.truncate().length();
+    assert!(close(across, 2.0), "it grew with its parent: {across}");
+}

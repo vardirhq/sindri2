@@ -1,17 +1,17 @@
 {
   "format_version": 1,
   "metadata": {
-    "name": "Arrow"
+    "name": "Shadow"
   },
   "entities": [
     {
-      "id": "arrow",
-      "name": "Arrow",
+      "id": "shadow",
+      "name": "Shadow",
       "transform_3d": {
         "position": [
           0,
-          0.48,
-          0.02
+          0,
+          0
         ],
         "rotation": [
           0,
@@ -20,48 +20,62 @@
           1
         ],
         "scale": [
-          0.25,
-          0.25,
+          0.8,
+          0.15,
           1
         ]
       },
       "components": {
         "sindri.sprite": {
-          "texture": "textures/arrows.png#p1",
-          "layer": 7
+          "texture": "textures/shadows.png#s0",
+          "layer": 2
         },
         "sindri.animation.sprite": {
           "clips": {
-            "p1": {
+            "s0": {
               "frames": [
-                "p1"
+                "s0"
               ],
               "seconds_per_frame": 0.1,
               "looping": false
             },
-            "p2": {
+            "s1": {
               "frames": [
-                "p2"
+                "s1"
               ],
               "seconds_per_frame": 0.1,
               "looping": false
             },
-            "p3": {
+            "s2": {
               "frames": [
-                "p3"
+                "s2"
               ],
               "seconds_per_frame": 0.1,
               "looping": false
             },
-            "p4": {
+            "s3": {
               "frames": [
-                "p4"
+                "s3"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "s4": {
+              "frames": [
+                "s4"
+              ],
+              "seconds_per_frame": 0.1,
+              "looping": false
+            },
+            "s5": {
+              "frames": [
+                "s5"
               ],
               "seconds_per_frame": 0.1,
               "looping": false
             }
           },
-          "playing": "p1",
+          "playing": "s0",
           "speed": 1.0
         }
       }

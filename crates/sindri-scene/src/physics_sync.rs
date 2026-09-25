@@ -284,18 +284,21 @@ impl ScenePhysics2d {
             let Ok(pose) = self.world.pose(*entity) else {
                 continue;
             };
-            let Some(data) = world.get_mut(*entity) else {
-                continue;
-            };
-            let Some(mut transform) = data.transform_3d else {
+            // Physics answers in the world; a child body stores its place
+            // relative to its parent, so the answer is carried back into it.
+            let Some(mut placed) = world.world_transform(*entity) else {
                 continue;
             };
             // X, Y and the rotation about Z. The Z position and the 3D scale are
             // the author's and are preserved, which is what `docs/2d-model.md`
             // means by one transform: a 2D entity keeps to a plane rather than
             // having a transform of its own kind.
-            transform.set_position_2d(pose.position);
-            transform.set_rotation_z_radians(pose.rotation);
+            placed.set_position_2d(pose.position);
+            placed.set_rotation_z_radians(pose.rotation);
+            let transform = world.local_for_world(*entity, placed);
+            let Some(data) = world.get_mut(*entity) else {
+                continue;
+            };
             // A Z-locked transform is one an author said stays on its layer,
             // and physics is a write path like any other.
             if !transform.z_lock_rejects(data.transform_3d) {
@@ -303,7 +306,7 @@ impl ScenePhysics2d {
             }
             // Whatever the transform holds now is what physics agrees with,
             // including a write the lock refused.
-            if let Some(held) = data.transform_3d {
+            if let Some(held) = world.world_transform(*entity) {
                 self.agreed.insert(
                     *entity,
                     PhysicsPose2d {
@@ -337,8 +340,7 @@ pub(crate) fn collider_pieces(
             .get::<TilemapComponent>(world, entity)?
             .ok_or(TilemapCollisionError::NoTilemap)?;
         let scale = world
-            .get(entity)
-            .and_then(|data| data.transform_3d)
+            .world_transform(entity)
             .map_or([1.0, 1.0], Transform3D::scale_2d);
         let tiles = collider.pieces(&tilemap, scale)?;
         if !tiles.is_empty() {
@@ -350,18 +352,16 @@ pub(crate) fn collider_pieces(
 
 /// Where an entity is, for physics to start from.
 ///
-/// The transform, because that is where a position is written down. A body
+/// The transform, because that is where a position is written down, composed
+/// through the parent chain because physics is in the world. A body
 /// component's pose is where physics writes its answer, and treating it as a
 /// second authored truth is how the two drift.
 pub(crate) fn pose_of(world: &World, entity: EntityId, body: Option<RigidBody2d>) -> PhysicsPose2d {
-    world
-        .get(entity)
-        .and_then(|data| data.transform_3d)
-        .map_or_else(
-            || body.map(|body| body.pose).unwrap_or_default(),
-            |transform: Transform3D| PhysicsPose2d {
-                position: transform.position_2d(),
-                rotation: transform.rotation_z_radians(),
-            },
-        )
+    world.world_transform(entity).map_or_else(
+        || body.map(|body| body.pose).unwrap_or_default(),
+        |transform: Transform3D| PhysicsPose2d {
+            position: transform.position_2d(),
+            rotation: transform.rotation_z_radians(),
+        },
+    )
 }

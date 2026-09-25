@@ -359,7 +359,7 @@ impl EditorApp {
             .filter_map(|(entity, data)| {
                 let payload = data.components.get(CameraComponent::TYPE_NAME)?;
                 let camera = serde_json::from_value::<CameraComponent>(payload.clone()).ok()?;
-                let transform = data.transform_3d.unwrap_or_default();
+                let transform = self.world.world_transform(entity).unwrap_or_default();
                 camera_visual(
                     entity,
                     transform,
@@ -452,8 +452,7 @@ impl EditorApp {
             .selection
             .all()
             .iter()
-            .filter_map(|entity| self.world.get(*entity))
-            .filter_map(|data| data.transform_3d)
+            .filter_map(|entity| self.world.world_transform(*entity))
             .map(|transform| Vec3::from_array(transform.position))
             .collect();
         let Some(position) = centre_of(&placed) else {
@@ -530,7 +529,7 @@ pub(super) fn flat_camera(
             let CameraComponent::Orthographic { vertical_size, .. } = camera else {
                 return None;
             };
-            let transform = world.get(entity)?.transform_3d?;
+            let transform = world.world_transform(entity)?;
             let facing = safe_rotation(transform) * Vec3::NEG_Z;
             (facing.dot(Vec3::NEG_Z) > 0.999)
                 .then(|| (Vec3::from_array(transform.position), vertical_size))

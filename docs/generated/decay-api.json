@@ -1321,6 +1321,11 @@
           "kind": "value",
           "name": "scale",
           "type": "Vec3"
+        },
+        {
+          "kind": "value",
+          "name": "world_position",
+          "type": "Vec3"
         }
       ],
       "name": "Transform"

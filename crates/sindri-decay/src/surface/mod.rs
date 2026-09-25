@@ -104,19 +104,28 @@ pub(crate) enum Seg {
 pub(crate) enum Vector {
     Position,
     Scale,
+    /// Where the entity is in the world, parents folded in. Written, it moves
+    /// the entity there by working out the local position that puts it there.
+    WorldPosition,
 }
 
 impl Vector {
+    /// Whether this reads and writes the world transform rather than the
+    /// stored, parent-relative one.
+    pub(crate) const fn is_world(self) -> bool {
+        matches!(self, Self::WorldPosition)
+    }
+
     pub(crate) const fn get(self, transform: &Transform3D) -> [f32; 3] {
         match self {
-            Self::Position => transform.position,
+            Self::Position | Self::WorldPosition => transform.position,
             Self::Scale => transform.scale,
         }
     }
 
     pub(crate) const fn set(self, transform: &mut Transform3D, value: [f32; 3]) {
         match self {
-            Self::Position => transform.position = value,
+            Self::Position | Self::WorldPosition => transform.position = value,
             Self::Scale => transform.scale = value,
         }
     }
@@ -222,8 +231,16 @@ fn leaf_in(root: &'static [(&'static str, Node)], parts: &[&str]) -> Option<Leaf
 impl Leaf {
     /// Reads the number this leaf names, or `None` when the entity has no such
     /// component or the payload does not hold one there.
-    pub(crate) fn read(self, transform: Option<&Transform3D>, components: &Json) -> Option<f64> {
+    pub(crate) fn read(
+        self,
+        transform: Option<&Transform3D>,
+        world: Option<&Transform3D>,
+        components: &Json,
+    ) -> Option<f64> {
         Some(match self {
+            Self::TransformAxis(vector, index) if vector.is_world() => {
+                f64::from(vector.get(world?)[index])
+            }
             Self::TransformAxis(vector, index) => f64::from(vector.get(transform?)[index]),
             Self::TransformScalar(scalar) => f64::from(scalar.get(transform?)),
             Self::Component { component, pointer } => {

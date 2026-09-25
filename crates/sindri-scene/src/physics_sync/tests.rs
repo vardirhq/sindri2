@@ -391,3 +391,43 @@ fn moving_a_body_by_its_transform_teleports_it() {
         "moved up, then fell a step's worth: {y}"
     );
 }
+
+/// A child body starts where its parent puts it, and physics' answer is
+/// written back as its place relative to that parent.
+#[test]
+fn a_child_body_lives_in_the_world_and_is_stored_under_its_parent() {
+    let mut world = World::default();
+    let parent = world.spawn(EntityData {
+        transform_3d: Some(Transform3D {
+            position: [10.0, 5.0, 0.0],
+            scale: [2.0, 2.0, 1.0],
+            ..Transform3D::default()
+        }),
+        ..EntityData::default()
+    });
+    let child = spawn(&mut world, [1.0, 0.0], Some("dynamic"), false);
+    world.set_parent(child, Some(parent)).expect("parents");
+    let mut physics = ScenePhysics2d::top_down().expect("a world");
+    physics.step(&mut world, &components(), STEP).expect("step");
+    let pose = physics.world().pose(child).expect("registered");
+    assert!((pose.position[0] - 12.0).abs() < 1.0e-4, "{pose:?}");
+    assert!((pose.position[1] - 5.0).abs() < 1.0e-4, "{pose:?}");
+
+    physics
+        .world_mut()
+        .set_linear_velocity(child, [0.0, 60.0])
+        .expect("a dynamic body takes a velocity");
+    for _ in 0..10 {
+        physics.step(&mut world, &components(), STEP).expect("step");
+    }
+    let placed = world.world_transform(child).expect("a transform");
+    let pose = physics.world().pose(child).expect("registered");
+    assert!((placed.position[1] - pose.position[1]).abs() < 1.0e-3);
+    // Stored at half the distance, under a parent twice the size.
+    let local = position(&world, child);
+    assert!((local[0] - 1.0).abs() < 1.0e-3, "{local:?}");
+    assert!(
+        (local[1] - (pose.position[1] - 5.0) / 2.0).abs() < 1.0e-3,
+        "{local:?}"
+    );
+}

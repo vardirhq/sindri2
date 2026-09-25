@@ -66,10 +66,7 @@ pub fn aim_at(
         else {
             continue;
         };
-        let transform = world
-            .get(entity)
-            .and_then(|data| data.transform_3d)
-            .unwrap_or_default();
+        let transform = world.world_transform(entity).unwrap_or_default();
         let Some((origin, direction)) = ray_at_viewport(transform, view_projection, viewport_point)
         else {
             continue;

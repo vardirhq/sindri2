@@ -150,7 +150,8 @@ pub fn sun_in(world: &World, light: LightComponent, entity: EntityId) -> Option<
         return None;
     }
     let LightKind::Directional = light.kind;
-    let transform = world.get(entity)?.transform_3d.unwrap_or_default();
+    world.get(entity)?;
+    let transform = world.world_transform(entity).unwrap_or_default();
     Some(Sun {
         entity,
         direction: light_direction(transform).to_array(),

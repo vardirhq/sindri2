@@ -176,10 +176,7 @@ impl SceneExtractor {
             if !sprite.color_transform.is_finite() {
                 return Err(SceneExtractError::InvalidColorTransform);
             }
-            let transform = world
-                .get(entity)
-                .and_then(|data| data.transform_3d)
-                .unwrap_or_default();
+            let transform = world.world_transform(entity).unwrap_or_default();
             let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;
             // The anchor moves the quad in its own space, so it scales and
             // rotates with the sprite: an anchor at the foot of a picture stays

@@ -19,10 +19,7 @@ impl SceneExtractor {
         frame: &mut ExtractedFrame,
     ) -> Result<(), SceneExtractError> {
         for (entity, mesh) in self.components.query::<MeshComponent>(world)? {
-            let transform = world
-                .get(entity)
-                .and_then(|data| data.transform_3d)
-                .unwrap_or_default();
+            let transform = world.world_transform(entity).unwrap_or_default();
             let model = transform_matrix(transform);
             let command = match mesh.primitive {
                 MeshPrimitive::Cube => FrameCommand::TexturedCube {

@@ -8,6 +8,7 @@
 mod hierarchy;
 mod prefab;
 mod scene;
+mod space;
 
 #[cfg(test)]
 mod tests;
