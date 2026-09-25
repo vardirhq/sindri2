@@ -42,7 +42,7 @@ impl EditorApp {
         let data = self.world.get(entity)?;
         let payload = data.components.get(tilemap::TYPE_NAME)?;
         let map = tilemap::component(payload).ok()?;
-        let transform = data.transform_3d.unwrap_or_default();
+        let transform = self.world.world_transform(entity).unwrap_or_default();
         let aspect = rect.width() / rect.height().max(1.0);
         let camera = self
             .scene
@@ -200,7 +200,7 @@ impl EditorApp {
 
     /// Whether this entity is laid out against the viewport rather than in the
     /// world, and so is drawn — and gizmoed — on the overlay.
-    fn is_overlaid(&self, entity: EntityId) -> bool {
+    pub(super) fn is_overlaid(&self, entity: EntityId) -> bool {
         self.world.get(entity).is_some_and(|data| {
             data.components.contains_key(UI_IMAGE_COMPONENT)
                 || data.components.contains_key(UI_TEXT_COMPONENT)
@@ -307,7 +307,7 @@ impl EditorApp {
         camera: CameraView,
     ) -> Option<(ViewCamera, Anchoring, gizmo::GizmoVisual)> {
         let entity = self.selection.primary()?;
-        let transform = self.world.get(entity)?.transform_3d?;
+        let transform = self.gizmo_subject(entity)?;
         let aspect = rect.width() / rect.height().max(1.0);
         // Which space this entity is drawn in decides which camera its handle
         // is projected through. Drawn through the world camera regardless, a
@@ -343,7 +343,7 @@ impl EditorApp {
             .iter()
             .filter(|entity| Some(**entity) != primary)
             .filter_map(|entity| {
-                let transform = self.world.get(*entity)?.transform_3d?;
+                let transform = self.gizmo_subject(*entity)?;
                 let (camera, anchoring) = self.gizmo_camera(*entity, aspect, transform, camera)?;
                 let at = gizmo::to_viewport(camera.view_projection, anchoring.origin(), viewport)?;
                 Some(rect.min + egui::vec2(at.x, at.y))
@@ -473,7 +473,7 @@ impl EditorApp {
         if response.drag_started_by(egui::PointerButton::Primary)
             && let (Some(entity), Some(axis), Some(pointer)) =
                 (self.selection.primary(), hovered, pointer)
-            && let Some(transform) = self.world.get(entity).and_then(|data| data.transform_3d)
+            && let Some(transform) = self.gizmo_subject(entity)
         {
             self.gizmo_drag = gizmo::begin_drag(
                 entity,
@@ -524,13 +524,14 @@ impl EditorApp {
         selection::topmost(&self.world, self.selection.all())
             .into_iter()
             .filter(|entity| *entity != primary)
-            .filter_map(|entity| Some((entity, self.world.get(entity)?.transform_3d?)))
+            .filter_map(|entity| Some((entity, self.gizmo_subject(entity)?)))
             .collect()
     }
 
     /// A whole drag is one undo step even though its current answer is applied
     /// every frame, because all of its transactions share this merge key.
-    fn apply_gizmo_transform(&mut self, drag: GizmoDrag, transform: Transform3D) {
+    fn apply_gizmo_transform(&mut self, drag: GizmoDrag, placed: Transform3D) {
+        let transform = self.stored_from_gizmo(drag.entity, placed);
         let unchanged = self
             .world
             .get(drag.entity)
@@ -547,11 +548,11 @@ impl EditorApp {
         // The same change, from each follower's own start rather than from the
         // primary's: dragging a row of five pips two units right moves each of
         // them two units right, and leaves the row a row.
-        let change = gizmo::Change::between(drag.start(), transform);
+        let change = gizmo::Change::between(drag.start(), placed);
         for (entity, start) in &self.gizmo_followers {
             buffer.push(WorldCommand::SetTransform3D {
                 entity: *entity,
-                transform: Some(change.applied_to(*start)),
+                transform: Some(self.stored_from_gizmo(*entity, change.applied_to(*start))),
             });
         }
         let transaction = buffer

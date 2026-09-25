@@ -53,6 +53,7 @@ mod device;
 mod dock_strip;
 mod editing;
 mod frame;
+mod gizmo_space;
 mod hierarchy;
 mod history_view;
 mod inspector_panel;

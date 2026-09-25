@@ -113,8 +113,27 @@ interprets, and `WorldHost` is the only place that gives them a meaning.
 | Path | Type | Read | Write |
 | --- | --- | --- | --- |
 | `this.transform.position.{x,y,z}` | `f32` | yes | yes |
+| `this.transform.world_position.{x,y,z}` | `f32` | yes | yes |
 | `this.transform.scale.{x,y,z}` | `f32` | yes | yes |
 | `this.transform.rotation_z` | `f32` | yes | yes |
+
+**A child's transform is relative to its parent.** Moving, turning or growing a
+parent carries its children, so a marker spawned under a player with
+`World.spawn_child` stays over the player's head at the local offset it was
+given, and a turret put on a ship turns with the ship. `position`, `scale` and
+`rotation_z` are that local transform, which is also what the inspector shows
+and the scene stores; for an entity with no parent they are simply where it is.
+`world_position` is where it ends up once every parent has had its say. Read it
+to compare two entities in different places in the hierarchy; write it to put a
+child at a point in the world, which stores whatever local position puts it
+there. `World.set_parent` keeps the local transform, so something spawned at
+local zero and then parented sits on its new parent.
+
+Screen UI is placed by the overlay's layout rather than this, and its
+`position` is already relative to its parent's box.
+
+| Path | Type | Read | Write |
+| --- | --- | --- | --- |
 | `this.sprite.tint.{r,g,b,a}` | `f32` | yes | yes |
 | `this.sprite.color_multiply.{r,g,b,a}` | `f32` | yes | yes |
 | `this.sprite.color_offset.{r,g,b,a}` | `f32` | yes | yes |
@@ -206,6 +225,7 @@ table above lists, reaching the same numbers.
 | Path | Type | Read | Write |
 | --- | --- | --- | --- |
 | `this.entity.transform.position.{x,y,z}` | `f32` | yes | yes |
+| `this.entity.transform.world_position.{x,y,z}` | `f32` | yes | yes |
 | `this.entity.transform.scale.{x,y,z}` | `f32` | yes | yes |
 | `this.entity.transform.rotation_z` | `f32` | yes | yes |
 | `this.entity.sprite.tint.{r,g,b,a}` | `f32` | yes | yes |

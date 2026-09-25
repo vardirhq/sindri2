@@ -41,8 +41,10 @@ script Showcase {
             let world_scale = 6.0 / min(1.0, Viewport.aspect);
             let pointer_x = Pointer.overlay_x * world_scale;
             let pointer_y = Pointer.overlay_y * world_scale;
-            let dx = pointer_x - this.transform.position.x;
-            let dy = pointer_y - this.transform.position.y;
+            // Where it is on screen, parents included: a piece of the ship is
+            // tapped where the ship has put it.
+            let dx = pointer_x - this.transform.world_position.x;
+            let dy = pointer_y - this.transform.world_position.y;
             let distance = sqrt(dx * dx + dy * dy);
 
             if distance <= this.tap_radius {

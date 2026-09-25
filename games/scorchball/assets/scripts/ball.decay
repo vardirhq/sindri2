@@ -181,8 +181,6 @@ script Ball {
         if Animation.clip(zone) != clip {
             Animation.play(zone, clip);
         }
-        zone.transform.position.x = this.transform.position.x;
-        zone.transform.position.y = this.transform.position.y;
     }
 
     fn team(player: Entity) -> f32 {

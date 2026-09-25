@@ -33,7 +33,6 @@ script Player {
     var face_right: bool = true;
     var face_down: bool = true;
     var moving: bool = false;
-    var marker: Entity = null;
     var referee: Entity = null;
     var ball: Entity = null;
 
@@ -48,12 +47,10 @@ script Player {
         }
         this.referee = World.find("Match");
         this.ball = World.find("Ball");
-        // A child is not carried by its parent's transform, so the marker is
-        // placed over the player's head every frame in `mark`; being a child
-        // is what takes it away with the player.
+        // A child, so it rides over the player's head, grows with them, and
+        // goes when they do.
         let marker = World.spawn_child(this.arrow, this.entity);
         Animation.play(marker, marker_clip());
-        this.marker = marker;
         show();
     }
 
@@ -69,18 +66,6 @@ script Player {
         grow(dt);
         burn(dt);
         show();
-        mark();
-    }
-
-    fn mark() {
-        let marker = this.marker;
-        if marker == null {
-            return;
-        }
-        let scale = this.transform.scale.y;
-        marker.transform.position.x = this.transform.position.x;
-        marker.transform.position.y = this.transform.position.y + 0.31 * scale + 0.55;
-        marker.transform.position.z = this.transform.position.z + 0.01;
     }
 
     fn take_signals() {
@@ -149,7 +134,6 @@ script Player {
         this.transform.position.x = max(-15.8, min(15.8, this.transform.position.x));
         this.transform.position.y = max(-6.4, min(7.0, this.transform.position.y));
         this.transform.position.z = 1.0 - this.transform.position.y * 0.01;
-        mark();
     }
 
     // The right bumper sends the ball where the right stick points, or the

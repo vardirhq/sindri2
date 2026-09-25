@@ -263,10 +263,10 @@ fn apply_follow(world: &World, follow: Option<&CameraFollow>, position: &mut [f3
     let Some(follow) = follow else {
         return;
     };
+    // Where the target is in the world, so a camera can follow a child.
     let Some(target) = world
         .entity_for_source_id(&follow.target)
-        .and_then(|entity| world.get(entity))
-        .and_then(|data| data.transform_3d)
+        .and_then(|entity| world.world_transform(entity))
     else {
         return;
     };

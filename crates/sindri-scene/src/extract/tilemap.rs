@@ -29,10 +29,7 @@ impl SceneExtractor {
     ) -> Result<(), SceneExtractError> {
         for (entity, tilemap) in self.components.query::<TilemapComponent>(world)? {
             tilemap.validate()?;
-            let transform = world
-                .get(entity)
-                .and_then(|data| data.transform_3d)
-                .unwrap_or_default();
+            let transform = world.world_transform(entity).unwrap_or_default();
             let texture = textures.resolve(&tilemap.texture);
             let world_transform = transform_matrix(transform);
             let camera = cameras.world.ok_or(SceneExtractError::MissingWorldCamera)?;

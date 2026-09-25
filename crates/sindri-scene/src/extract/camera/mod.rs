@@ -351,10 +351,7 @@ fn authored_cameras(
             if resolved.world.is_some() {
                 return Err(SceneExtractError::MultipleWorldCameras);
             }
-            let transform = world
-                .get(entity)
-                .and_then(|data| data.transform_3d)
-                .unwrap_or_default();
+            let transform = world.world_transform(entity).unwrap_or_default();
             let eye = Vec3::from_array(transform.position);
             let rotation = safe_rotation(transform);
             // Authored cameras are ordinary transformed entities. Scale has no

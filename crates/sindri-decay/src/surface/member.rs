@@ -18,8 +18,24 @@ const SCALE: &[(&str, Node)] = &[
     ("z", Node::Leaf(Leaf::TransformAxis(Vector::Scale, 2))),
 ];
 
+const WORLD_POSITION: &[(&str, Node)] = &[
+    (
+        "x",
+        Node::Leaf(Leaf::TransformAxis(Vector::WorldPosition, 0)),
+    ),
+    (
+        "y",
+        Node::Leaf(Leaf::TransformAxis(Vector::WorldPosition, 1)),
+    ),
+    (
+        "z",
+        Node::Leaf(Leaf::TransformAxis(Vector::WorldPosition, 2)),
+    ),
+];
+
 pub(crate) const TRANSFORM_MEMBERS: &[(&str, Node)] = &[
     ("position", Node::Group(VEC3, POSITION)),
+    ("world_position", Node::Group(VEC3, WORLD_POSITION)),
     ("scale", Node::Group(VEC3, SCALE)),
     (
         "rotation_z",

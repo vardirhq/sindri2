@@ -250,10 +250,7 @@ impl SceneExtractor {
             Err(error) => return Err(error),
         };
         let focus = SectionCoord::new(component.focus[0], component.focus[1], component.focus[2]);
-        let transform = world
-            .get(entity)
-            .and_then(|data| data.transform_3d)
-            .unwrap_or_default();
+        let transform = world.world_transform(entity).unwrap_or_default();
         let root = transform_matrix(transform);
         let mut commands = runtimes
             .get_mut(&entity)

@@ -59,6 +59,23 @@ past: a 2D entity is one that keeps to a plane, not one with a different
 transform type —
 see `docs/2d-model.md`.
 
+**A child's transform is local to its parent.** Moving, turning or growing a
+parent carries its children, and `World::world_transform` is where an entity
+ends up with every parent folded in. Everything that places something in the
+world reads that: sprites, shapes, meshes, tilemaps, tile volumes, voxel worlds,
+cameras and their follow targets, lights, grid placement, particle bursts, and
+2D physics, which starts a child body at its world pose and writes its answer
+back as the local transform that puts it there. The editor draws and drags a
+child's handles in the world and stores the local result, and moving an entity
+to a new parent in the hierarchy keeps it where it was on screen. Scripts'
+`transform.position` is the stored local value and `world_position` the world
+one; `World.set_parent` keeps the local transform. Scale composes per axis,
+which is exact unless a rotated parent is scaled unevenly. Shapes composed this
+way already; the rest ignored the parent, so a child sprite drew at its offset
+from the world origin, a child's particle burst fired there, and a script had
+to place a follower by hand every frame. Screen UI keeps its own layout, which
+already placed an element inside its parent's box.
+
 Entity storage was measured at 1k, 10k, and 100k entities before considering an
 archetype ECS; `docs/entity-scaling.md` records why one is not warranted.
 
@@ -1661,12 +1678,13 @@ while alight, and `goal_blue` or `goal_red` to the match. Possession, pickups
 and reach are distance checks, because a collider does not scale with its
 entity and the Enlarger makes a player bigger.
 
-**It found two gaps.** A child is not drawn relative to its parent, so the
-marker over a player's head, a falling signpost and the ring under
-the ball are placed by script each frame (a parity row now says so). And the
-test harness did not lay out screen text, so a misspelled text anchor passed
-every test and was first refused by the editor; the harness now lays it out
-each step.
+**It found two gaps, both closed.** A child sprite was drawn from its own
+transform alone, so the marker over a player's head, a falling signpost and
+the ring under the ball had to be placed by script every frame; a child's
+transform is now local to its parent everywhere (see World and entities), and
+they ride their parents. And the test harness did not lay out screen text, so
+a misspelled text anchor passed every test and was first refused by the
+editor; the harness now lays it out each step.
 
 **It is checked, not just run.** `games/scorchball/tests/` presses pads: two
 join on their own sides, ready up and kick off; Blue takes the ball, dribbles

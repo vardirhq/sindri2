@@ -138,10 +138,7 @@ impl OcclusionOverlay {
                     else {
                         continue;
                     };
-                    let transform = world
-                        .get(finding.volume)
-                        .and_then(|data| data.transform_3d)
-                        .unwrap_or_default();
+                    let transform = world.world_transform(finding.volume).unwrap_or_default();
                     slot.insert((grid, transform))
                 }
             };

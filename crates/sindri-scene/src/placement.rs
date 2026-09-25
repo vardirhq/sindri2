@@ -106,8 +106,7 @@ pub fn resolve_grid_placements(
         };
         let derived = surfaces_of(world, components, grid_entity, tile_sets, surfaces)?;
         let origin = world
-            .get(grid_entity)
-            .and_then(|data| data.transform_3d)
+            .world_transform(grid_entity)
             .unwrap_or_default()
             .position;
 

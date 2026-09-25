@@ -230,10 +230,7 @@ impl SceneExtractor {
             .and_then(|bindings| bindings.get(&volume.tileset))
             .ok_or_else(|| SceneExtractError::UnboundTileSet(volume.tileset.clone()))?;
 
-        let transform = world
-            .get(entity)
-            .and_then(|data| data.transform_3d)
-            .unwrap_or_default();
+        let transform = world.world_transform(entity).unwrap_or_default();
         if let Some(cell_size) = grid.solid_cell() {
             return Ok(BakedVolume {
                 authored: true,

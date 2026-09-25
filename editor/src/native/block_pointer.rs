@@ -61,7 +61,7 @@ impl EditorApp {
         let grid: TileGridComponent =
             serde_json::from_value(data.components.get(tile_volume::GRID_TYPE_NAME)?.clone())
                 .ok()?;
-        let transform = data.transform_3d.unwrap_or_default();
+        let transform = self.world.world_transform(entity).unwrap_or_default();
         let aspect = rect.width() / rect.height().max(1.0);
         let camera = self
             .scene

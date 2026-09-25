@@ -240,6 +240,7 @@ impl Host for WorldHost<'_> {
         };
         let entity = self.subject(subject, path)?;
         let transform = self.transform_of(entity);
+        let world = self.world.world_transform(entity);
         let components = self
             .world
             .get(entity)
@@ -251,7 +252,7 @@ impl Host for WorldHost<'_> {
         // and it is the right answer for an entity that has no sprite: the
         // surface says a script *may* reach one, not that every entity has one.
         Ok(leaf
-            .read(transform.as_ref(), &components)
+            .read(transform.as_ref(), world.as_ref(), &components)
             .map(Value::Number))
     }
 
@@ -281,6 +282,17 @@ impl Host for WorldHost<'_> {
                     return Ok(false);
                 };
                 match leaf {
+                    Leaf::TransformAxis(vector, index) if vector.is_world() => {
+                        // Moved in the world, and stored as the place under its
+                        // parent that puts it there.
+                        let Some(mut placed) = self.world.world_transform(entity) else {
+                            return Ok(false);
+                        };
+                        let mut values = vector.get(&placed);
+                        values[index] = as_f32(number);
+                        vector.set(&mut placed, values);
+                        transform = self.world.local_for_world(entity, placed);
+                    }
                     Leaf::TransformAxis(vector, index) => {
                         let mut values = vector.get(&transform);
                         values[index] = as_f32(number);

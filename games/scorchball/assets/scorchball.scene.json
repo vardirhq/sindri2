@@ -454,11 +454,12 @@
     {
       "id": "ball-ring",
       "name": "Ball Ring",
+      "parent": "ball",
       "transform_3d": {
         "position": [
           0,
           0,
-          0.5
+          -0.4
         ],
         "rotation": [
           0,
@@ -467,8 +468,8 @@
           1
         ],
         "scale": [
-          3.2,
-          3.2,
+          2,
+          2,
           1
         ]
       },

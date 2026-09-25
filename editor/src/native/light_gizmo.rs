@@ -148,8 +148,8 @@ impl EditorApp {
         self.world
             .entities()
             .filter(|(_, data)| data.components.contains_key(LightComponent::TYPE_NAME))
-            .filter_map(|(entity, data)| {
-                let transform = data.transform_3d.unwrap_or_default();
+            .filter_map(|(entity, _)| {
+                let transform = self.world.world_transform(entity).unwrap_or_default();
                 light_visual(
                     entity,
                     Vec3::from_array(transform.position),

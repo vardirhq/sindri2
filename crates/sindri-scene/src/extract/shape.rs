@@ -22,14 +22,6 @@ use super::camera::view::OverlayExtent;
 use super::ui::ui_matrix;
 use super::{SceneExtractError, SceneExtractor, transform_matrix};
 
-/// How far a world-space transform hierarchy is followed while extracting a
-/// drawable.
-///
-/// `World::set_parent` refuses cycles, so the bound is only defensive for a
-/// malformed or hand-built world. No authored hierarchy has a useful reason to
-/// be sixty-four objects deep.
-const MAX_WORLD_HIERARCHY_DEPTH: usize = 64;
-
 /// Optional authored vertices carried beside the typed shape fields.
 ///
 /// `ShapeGeometry` deliberately remains the compact common shape schema. Custom
@@ -61,32 +53,16 @@ fn authored_points(world: &World, entity: EntityId, component: &str) -> Vec<[f32
 
 /// A world-space drawable's local transform with every ancestor folded in.
 ///
-/// World hierarchy is local-to-parent, just like the UI hierarchy. Elite
-/// decorations in Orbital exposed the missing half of that rule: their shape
-/// entities were correctly parented to an enemy, but shape extraction rendered
-/// the child's local origin as the world's origin. Composing root-to-leaf here
-/// makes a child at local `(0, 0)` sit on its parent from the first frame and
-/// continue following it as the parent moves.
+/// World hierarchy is local-to-parent, just like the UI hierarchy: a child at
+/// local `(0, 0)` sits on its parent and follows it. The composition is the
+/// world's own, so a shape and a sprite under the same parent agree; a child
+/// with no transform of its own sits where its parent is.
 fn world_model_matrix(world: &World, entity: EntityId) -> Mat4 {
-    let mut chain = vec![entity];
-    let mut walker = entity;
-    while chain.len() < MAX_WORLD_HIERARCHY_DEPTH {
-        let Some(parent) = world.get(walker).and_then(|data| data.parent) else {
-            break;
-        };
-        chain.push(parent);
-        walker = parent;
-    }
-
-    let mut model = Mat4::IDENTITY;
-    for link in chain.iter().rev().copied() {
-        let transform = world
-            .get(link)
-            .and_then(|data| data.transform_3d)
-            .unwrap_or_default();
-        model *= transform_matrix(transform);
-    }
-    model
+    transform_matrix(
+        world
+            .world_transform(entity)
+            .unwrap_or_else(|| world.parent_space(entity)),
+    )
 }
 
 fn shape_instance(
