@@ -13,6 +13,9 @@ pub(crate) const RGBA: &str = "Rgba";
 
 pub(crate) const INPUT: &str = "Input";
 
+/// The players' pads, read by player slot.
+pub(crate) const GAMEPAD: &str = "Gamepad";
+
 /// Where the person is pointing, whatever they are pointing with.
 pub(crate) const POINTER: &str = "Pointer";
 

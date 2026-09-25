@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use sindri_core::{Presses, StickSettings, VirtualStick};
 
+use super::gamepad::{GamepadAxis, GamepadButton, Gamepads, PadId};
 use super::{Key, MouseButton};
 
 /// How many fingers a host reports before the rest are dropped.
@@ -59,6 +60,24 @@ pub enum InputEvent {
     },
     /// Window focus gained or lost.
     FocusChanged(bool),
+    /// A pad arrived, or went.
+    GamepadConnected(PadId),
+    GamepadDisconnected(PadId),
+    GamepadPressed {
+        pad: PadId,
+        button: GamepadButton,
+    },
+    GamepadReleased {
+        pad: PadId,
+        button: GamepadButton,
+    },
+    /// Where a stick or trigger is now: sticks -1 to 1 in screen axes, right
+    /// and down positive, triggers 0 to 1.
+    GamepadAxisMoved {
+        pad: PadId,
+        axis: GamepadAxis,
+        value: f32,
+    },
 }
 
 /// Accumulated input for the current frame.
@@ -106,6 +125,8 @@ pub struct InputState {
     /// that rebuilt them would get a slightly different feel and one more
     /// place for them to be wrong.
     stick: VirtualStick,
+    /// Every pad, and the player slots they hold.
+    gamepads: Gamepads,
 }
 
 impl Default for InputState {
@@ -126,6 +147,7 @@ impl Default for InputState {
             focused: true,
             presses: Presses::default(),
             stick: VirtualStick::default(),
+            gamepads: Gamepads::default(),
         }
     }
 }
@@ -204,6 +226,13 @@ impl InputState {
                     self.release_everything();
                 }
             }
+            InputEvent::GamepadConnected(pad) => self.gamepads.connect(pad),
+            InputEvent::GamepadDisconnected(pad) => self.gamepads.disconnect(pad),
+            InputEvent::GamepadPressed { pad, button } => self.gamepads.press(pad, button),
+            InputEvent::GamepadReleased { pad, button } => self.gamepads.release(pad, button),
+            InputEvent::GamepadAxisMoved { pad, axis, value } => {
+                self.gamepads.move_axis(pad, axis, value);
+            }
         }
         self.settle();
     }
@@ -223,6 +252,7 @@ impl InputState {
         self.pointer_delta = [0.0, 0.0];
         self.scroll_delta = [0.0, 0.0];
         self.presses.advance(delta);
+        self.gamepads.begin_frame();
         self.settle();
     }
 
@@ -238,6 +268,7 @@ impl InputState {
         for (id, position) in std::mem::take(&mut self.touches) {
             self.touches_ended.insert(id, position);
         }
+        self.gamepads.release_everything();
     }
 
     /// Re-reads whatever is derived from the presses.
@@ -380,6 +411,18 @@ impl InputState {
 
     pub const fn scroll_delta(&self) -> [f32; 2] {
         self.scroll_delta
+    }
+
+    /// Starts the players over, as a game starting again does: every pad stays
+    /// connected and holds no slot until it presses again.
+    pub fn forget_players(&mut self) {
+        self.gamepads.forget_players();
+    }
+
+    /// Every pad, and which player holds which.
+    #[must_use]
+    pub const fn gamepads(&self) -> &Gamepads {
+        &self.gamepads
     }
 
     pub const fn is_focused(&self) -> bool {

@@ -13,13 +13,19 @@ repository.workspace = true
 # not want it is anything that only reads the *rest* of this crate — the input
 # state, the key names — and would otherwise need libasound2-dev on the machine
 # to build a tool that never makes a noise.
-default = ["audio"]
+default = ["audio", "gamepad"]
 audio = ["dep:rodio"]
+# Reading pads. On Linux this links libudev (libudev-dev to build), for the
+# reason audio links ALSA; a tool that never reads a pad turns it off.
+gamepad = ["dep:gilrs"]
 
 [dependencies]
 sindri-core = { path = "../sindri-core", version = "0.1.0" }
 serde_json.workspace = true
 thiserror.workspace = true
+# One library for pads on every target: evdev on Linux, the platform's own on
+# Windows and macOS, and the Gamepad API in a browser.
+gilrs = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # WAV and Vorbis stay on permissive alternate decoders. MP3 uses Symphonia:

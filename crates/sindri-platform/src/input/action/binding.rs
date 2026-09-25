@@ -1,6 +1,6 @@
 //! The physical things an action can be driven by, and how they combine.
 
-use crate::input::{Key, MouseButton};
+use crate::input::{GamepadAxis, GamepadButton, Key, MouseButton};
 
 /// One physical input, named the way a binding file names it.
 ///
@@ -20,6 +20,10 @@ pub enum Source {
     PointerDeltaY,
     ScrollX,
     ScrollY,
+    /// A button on any pad, for a game with one player.
+    GamepadButton(GamepadButton),
+    /// A stick or trigger on any pad: whichever is pushed furthest.
+    GamepadAxis(GamepadAxis),
 }
 
 impl Source {
@@ -38,6 +42,8 @@ impl Source {
             Self::PointerDeltaY => "pointer.dy".to_owned(),
             Self::ScrollX => "scroll.x".to_owned(),
             Self::ScrollY => "scroll.y".to_owned(),
+            Self::GamepadButton(button) => format!("gamepad.{}", button.name()),
+            Self::GamepadAxis(axis) => format!("gamepad.axis.{}", axis.name()),
         }
     }
 
@@ -61,6 +67,10 @@ impl Source {
         match prefix {
             "key" => Key::from_name(rest).map(Self::Key),
             "mouse" => MouseButton::from_name(rest).map(Self::MouseButton),
+            "gamepad" => match rest.strip_prefix("axis.") {
+                Some(axis) => GamepadAxis::from_name(axis).map(Self::GamepadAxis),
+                None => GamepadButton::from_name(rest).map(Self::GamepadButton),
+            },
             _ => None,
         }
     }
@@ -72,7 +82,10 @@ impl Source {
     /// deflection, while an axis reports whatever it is sitting at.
     #[must_use]
     pub const fn is_digital(self) -> bool {
-        matches!(self, Self::Key(_) | Self::MouseButton(_))
+        matches!(
+            self,
+            Self::Key(_) | Self::MouseButton(_) | Self::GamepadButton(_)
+        )
     }
 }
 
@@ -120,7 +133,7 @@ impl Binding {
 #[cfg(test)]
 mod tests {
     use super::{Binding, Source};
-    use crate::input::{Key, MouseButton};
+    use crate::input::{GamepadAxis, GamepadButton, Key, MouseButton};
 
     #[test]
     fn every_source_survives_being_written_down_and_read_back() {
@@ -150,6 +163,21 @@ mod tests {
     fn a_source_nobody_has_heard_of_is_refused_rather_than_defaulted() {
         assert_eq!(Source::from_name("key.Nonexistent"), None);
         assert_eq!(Source::from_name("gamepad.South"), None);
+        assert_eq!(
+            Source::from_name("gamepad.south"),
+            Some(Source::GamepadButton(GamepadButton::South))
+        );
+        assert_eq!(
+            Source::from_name("gamepad.axis.left_x"),
+            Some(Source::GamepadAxis(GamepadAxis::LeftX))
+        );
+        for source in GamepadButton::ALL
+            .map(Source::GamepadButton)
+            .into_iter()
+            .chain(GamepadAxis::ALL.map(Source::GamepadAxis))
+        {
+            assert_eq!(Source::from_name(&source.name()), Some(source));
+        }
         assert_eq!(Source::from_name("pointer.z"), None);
         assert_eq!(Source::from_name("nonsense"), None);
     }

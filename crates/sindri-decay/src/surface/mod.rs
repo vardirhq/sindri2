@@ -18,6 +18,7 @@
 //! name in `names` and a root here.
 
 mod call;
+mod gamepad;
 mod member;
 pub(super) mod names;
 mod person;
@@ -31,10 +32,11 @@ pub(crate) use call::{
     ProfileCall, RANDOM_CALLS, RandomCall, SAVE_CALLS, SCENE_CALLS, SaveCall, SceneCall,
     TIME_VALUES, TimeValue, UI_CALLS, UiCall, WORLD_CALLS, WorldCall,
 };
+pub(crate) use gamepad::{GAMEPAD_QUERIES, GamepadQuery, gamepad_type};
 pub(crate) use member::{SHAPE_MEMBERS, SPRITE_MEMBERS, TRANSFORM_MEMBERS, UI_IMAGE_MEMBERS};
 pub(crate) use names::{
-    AIM, ANIMATION, CAMERA, EFFECTS, ENTITY, GAME, GESTURE, GRID, INPUT, PHYSICS, POINTER, PREFAB,
-    PROFILE, PROFILES, RANDOM, SAVE, SCENE, SHAPE, SPRITE, STICK, TILE_GRID_COMPONENT,
+    AIM, ANIMATION, CAMERA, EFFECTS, ENTITY, GAME, GAMEPAD, GESTURE, GRID, INPUT, PHYSICS, POINTER,
+    PREFAB, PROFILE, PROFILES, RANDOM, SAVE, SCENE, SHAPE, SPRITE, STICK, TILE_GRID_COMPONENT,
     TILEMAP_COMPONENT, TIME, TOUCH, TRANSFORM, UI, UI_IMAGE, VIEWPORT, WORLD,
 };
 pub(crate) use person::{

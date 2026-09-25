@@ -19,7 +19,7 @@
 //! as the game is concerned.
 
 use eframe::egui;
-use sindri_platform::{InputEvent, InputState, Key, MouseButton};
+use sindri_platform::{GamepadReader, InputEvent, InputState, Key, MouseButton};
 
 /// egui's pointer button for each engine button.
 ///
@@ -90,11 +90,19 @@ const KEYS: &[(egui::Key, Key)] = &[
 #[derive(Debug, Default)]
 pub struct EditorInput {
     state: InputState,
+    /// Pads, which egui does not report, asked once a frame.
+    pads: GamepadReader,
 }
 
 impl EditorInput {
     pub const fn state(&self) -> &InputState {
         &self.state
+    }
+
+    /// Starts the players over for a fresh Play: every pad joins again with
+    /// its next press, as it would in a game that has just started.
+    pub fn forget_players(&mut self) {
+        self.state.forget_players();
     }
 
     /// Spends this frame's edges and accumulated motion.
@@ -125,6 +133,17 @@ impl EditorInput {
     /// someone is dragging the splitter, and a pointer position that lags a
     /// resize by a frame is not something a game can notice.
     pub fn update(&mut self, context: &egui::Context, listening: bool, view: Option<egui::Rect>) {
+        // Asked whether or not anything is listening, so a pad plugged in or
+        // pulled out between plays is known about; what it pressed is only
+        // heard while the scene runs.
+        let state = &mut self.state;
+        self.pads.poll(|event| match event {
+            InputEvent::GamepadConnected(_) | InputEvent::GamepadDisconnected(_) => {
+                state.apply(event);
+            }
+            _ if listening => state.apply(event),
+            _ => {}
+        });
         if !listening {
             // The same path a host takes when its window loses focus, which is
             // exactly this situation: input is going somewhere else.

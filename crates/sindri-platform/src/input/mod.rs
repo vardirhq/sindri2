@@ -7,8 +7,10 @@
 
 pub mod action;
 mod button;
+mod gamepad;
 mod key;
 mod presses;
+mod reader;
 mod state;
 
 #[cfg(test)]
@@ -19,5 +21,7 @@ pub use action::{
     ActionState, Actions, ActionsDocumentError, Binding, Source,
 };
 pub use button::MouseButton;
+pub use gamepad::{DEAD_ZONE, GamepadAxis, GamepadButton, Gamepads, PadId, SLOT_LIMIT};
 pub use key::Key;
+pub use reader::GamepadReader;
 pub use state::{InputEvent, InputState};

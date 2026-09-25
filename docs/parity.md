@@ -107,7 +107,6 @@ written the row.
 | --- | --- | --- |
 | **Input actions** | `crates/sindri-platform/src/input/action/` parses an action document, binds named actions to keys, pointer axes and scroll | No scene component, no editor surface, no Decay binding. Games poll raw keys instead. |
 | **Scroll input** | `Source::ScrollX/ScrollY` are bound and parsed | Never surfaced to Decay, so no game can use a wheel. |
-| **Gamepad bindings** | `"gamepad.South"` parses as a binding *name* | `Source::from_name` returns `None` for it — an explicit, tested hole. A gamepad is unimplemented, not merely unbound. |
 
 Stranded capability is the cheapest work in this file: the engine cost is
 already paid and only the reach is missing. It is also the most invisible, which
@@ -270,7 +269,7 @@ Sindri's strongest domain relative to the baseline.
 | Unified pointer, bounded fingers | ✅ | ✅ | ✅ | ✅ | **Par** | — |
 | Touch stick built from a finger | ✅ | — | ✅ | ✅ | **Ahead** | A considered solution to a problem most engines leave to the game |
 | **Action mapping (named actions, rebindable)** | 🟡 | ❌ | ❌ | ❌ | **Behind** | Exists and is stranded. This becomes the input system rather than growing beside it |
-| **Gamepad** | ❌ | ❌ | ❌ | ❌ | **Absent** | Binding names parse; `Source::from_name` returns `None`. A tested hole |
+| **Gamepad, by player slot** | ✅ | 🟡 | ✅ | ❌ | **Behind** | Pads on desktop and in the browser, read by player slot: a face button or Start joins, unplugging leaves, one join per frame. Play in the editor reads pads, not yet exercised with a real one in CI. No game uses them yet, and there is no rumble or per-player action map |
 | **Scroll wheel** | 🟡 | — | ❌ | ❌ | **Behind** | Bound in the action layer, never surfaced |
 | **Rebinding UI** | ❌ | ❌ | ❌ | ❌ | **Absent** | Rewired sells on this |
 
@@ -470,7 +469,7 @@ were native gaps. Treat these rows as close to automatic.
 | **Cinemachine** | Camera follow, framing, confining, shake | **Absent** — hand-rolled per game |
 | **Post Processing Stack** | Bloom, colour grading, vignette | **Behind** — an authored world stack now covers exposure, tone mapping, contrast, saturation, bloom, and vignette; LUT grading and advanced cinematic effects remain |
 | **Shader Graph** | Shader authoring without code | **Absent** — no materials at all |
-| **Input System** | Action mapping, rebinding, gamepad | **Behind** — action layer stranded, gamepad unimplemented |
+| **Input System** | Action mapping, rebinding, gamepad | **Behind** — action layer stranded; gamepads read by player slot, without rumble or per-player actions |
 | **Addressables** | Asset streaming and release | **Absent** — not urgent at our scale |
 | **ProBuilder** | In-editor geometry | **Won't** — 3D is not the product |
 
@@ -537,8 +536,8 @@ output of the file; everything above is evidence.
 5. **Audio buses and a master volume.** A settings screen now has a music
    slider and nothing behind it: there is no bus to route a clip to and no
    master volume for the slider to move.
-6. **Un-strand the input action layer, and implement gamepad.** The engine cost
-   is paid. Make it the input system, per the anti-goal.
+6. **Un-strand the input action layer.** The engine cost is paid, and pads are
+   now read by player slot. Make it the input system, per the anti-goal.
 7. **Named collision layers instead of raw `u32` masks.** Cheap, daily friction.
 8. **Tweening and easing.** The most-installed Unity asset in history. Menus,
    pickups, transitions.
