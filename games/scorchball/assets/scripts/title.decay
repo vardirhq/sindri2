@@ -1,0 +1,31 @@
+// Scorchball's front door. The title screen owns presentation choices only;
+// the match remains responsible for joining players and running football.
+script Title {
+    var local_button: Entity = null;
+    var bot_button: Entity = null;
+
+    fn start() {
+        this.local_button = World.find("Local Multiplayer");
+        this.bot_button = World.find("Play vs Bot");
+    }
+
+    fn update(dt: f32) {
+        if Ui.is_pressed(this.bot_button) {
+            Game.set("versus_bot", 1.0);
+            begin();
+            return;
+        }
+        if Ui.is_pressed(this.local_button)
+            || Gamepad.just_pressed(0.0, "south")
+            || Gamepad.just_pressed(0.0, "start")
+            || Gamepad.just_pressed(0.0, "select") {
+            Game.set("versus_bot", 0.0);
+            begin();
+        }
+    }
+
+    fn begin() {
+        Game.set("menu_done", 1.0);
+        World.despawn(this.entity);
+    }
+}
