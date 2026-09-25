@@ -1,7 +1,7 @@
 //! Styling a live world in place draws what styling a copy draws, and
 //! leaves nothing behind once undone.
 
-use sindri_core::{SceneDocument, World};
+use sindri_core::{EntityData, SceneDocument, World};
 use sindri_weave::{PresentationWorld, Presenter, UiStates};
 use weave::{Viewport, parse};
 
@@ -26,6 +26,7 @@ const STYLE: &str = r"
     #panel { width: 400px; height: 300px; padding: 20px; background: #102030;
              box-shadow: 0 4px 12px #000; flex-wrap: wrap; }
     text { color: #ffffff; margin: 4px; flex: 1; }
+    .late { width: 222px; height: 111px; background: #a04020; }
     * { x: 0; }
 ";
 
@@ -44,6 +45,22 @@ fn entity(world: &World, name: &str) -> sindri_core::EntityId {
         .find(|(_, data)| data.name.as_deref() == Some(name))
         .map(|(entity, _)| entity)
         .expect("the entity is there")
+}
+
+fn spawn_late(world: &mut World) -> sindri_core::EntityId {
+    let mut data = EntityData {
+        name: Some("late".to_owned()),
+        ..EntityData::default()
+    };
+    data.components.insert(
+        "weave.style".to_owned(),
+        serde_json::json!({ "classes": ["late"] }),
+    );
+    data.components.insert(
+        "sindri.ui.shape".to_owned(),
+        serde_json::json!({ "kind": "rect", "anchor": "center" }),
+    );
+    world.spawn(data)
 }
 
 const VIEWPORT: Viewport = Viewport {
@@ -116,6 +133,59 @@ fn a_value_a_script_wrote_is_not_styled_back() {
         .and_then(|data| data.transform_3d)
         .expect("a transform");
     assert!((drawn.scale[1] - 0.01).abs() < 1.0e-6, "{drawn:?}");
+    undo.undo(&mut live);
+}
+
+#[test]
+fn a_spawned_element_is_settled_before_an_idle_draw() {
+    let mut live = load();
+    let sheet = parse(STYLE).expect("Weave parses");
+    let mut presenter = Presenter::new();
+    presenter
+        .settle(&mut live, std::slice::from_ref(&sheet), VIEWPORT)
+        .expect("settles");
+
+    let late = spawn_late(&mut live);
+    let expected = PresentationWorld::resolve(&live, &sheet, VIEWPORT).expect("styles the spawn");
+    let expected_late = expected.world().get(late).expect("late entity").clone();
+
+    let undo = presenter
+        .present_over(
+            &mut live,
+            std::slice::from_ref(&sheet),
+            VIEWPORT,
+            &UiStates::new(),
+        )
+        .expect("settles the spawn without hover");
+    assert_eq!(live.get(late), Some(&expected_late));
+
+    undo.undo(&mut live);
+    assert_eq!(live.get(late), Some(&expected_late));
+}
+
+#[test]
+fn settling_a_spawn_does_not_overwrite_an_existing_script_value() {
+    let mut live = load();
+    let sheet = parse(STYLE).expect("Weave parses");
+    let mut presenter = Presenter::new();
+    presenter
+        .settle(&mut live, std::slice::from_ref(&sheet), VIEWPORT)
+        .expect("settles");
+    let label = entity(&live, "label");
+    live.get_mut(label)
+        .and_then(|data| data.transform_3d.as_mut())
+        .expect("a transform")
+        .scale[1] = 0.01;
+    spawn_late(&mut live);
+
+    let undo = presenter
+        .present_over(&mut live, &[sheet], VIEWPORT, &UiStates::new())
+        .expect("settles the spawn");
+    let existing = live
+        .get(label)
+        .and_then(|data| data.transform_3d)
+        .expect("a transform");
+    assert!((existing.scale[1] - 0.01).abs() < 1.0e-6, "{existing:?}");
     undo.undo(&mut live);
 }
 

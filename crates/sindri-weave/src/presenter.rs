@@ -1,5 +1,7 @@
 //! The live presentation a running game draws and hit-tests each frame.
 
+use std::collections::BTreeSet;
+
 use sindri_core::{EntityId, World};
 use weave::{States, Stylesheet, Viewport};
 
@@ -11,15 +13,19 @@ use crate::{ApplyError, Declared, MAX_HIERARCHY_DEPTH, Pass, Transitions, UiStat
 /// [settled](Self::settle) into the world when the game starts and whenever
 /// the screen changes shape: that is the world the scripts read, and a script
 /// that then writes a value keeps it, as an inline style beats a stylesheet.
-/// Each frame, only what the pointer's states and running transitions change
-/// is [laid over](Self::present_over) that, for the draw and the hit-test,
-/// and taken off again. A frame with nothing hovered and nothing easing costs
-/// nothing.
+/// Entities spawned later are settled once when they first appear. Each frame,
+/// only what the pointer's states and running transitions change is
+/// [laid over](Self::present_over) that, for the draw and the hit-test, and
+/// taken off again. A frame with nothing hovered, nothing easing and no world
+/// topology change does no stylesheet work.
 #[derive(Clone, Debug, Default)]
 pub struct Presenter {
     transitions: Transitions,
     /// What each stylesheet settled each element with.
     settled: Vec<Declared>,
+    /// Entity handles present at the last settlement/topology check. A new
+    /// handle means a runtime spawn that has never received its base style.
+    known: BTreeSet<EntityId>,
     /// Whether the last frame had nothing to lay over, so this one, if it has
     /// nothing either, can be skipped.
     idle: bool,
@@ -84,7 +90,64 @@ impl Presenter {
             };
             apply(world, stylesheet, viewport, &UiStates::new(), pass)?;
         }
+        self.known = world.entities().map(|(entity, _)| entity).collect();
         self.idle = true;
+        Ok(())
+    }
+
+    /// Gives newly spawned entities their base stylesheet values without
+    /// touching entities scripts may have changed since the initial settle.
+    ///
+    /// Styling happens on a copy first. Only the new entities are copied back,
+    /// so an invalid declaration cannot leave a half-styled live world and an
+    /// existing entity keeps script-written values as an inline style would.
+    fn settle_spawned(
+        &mut self,
+        world: &mut World,
+        stylesheets: &[Stylesheet],
+        viewport: Viewport,
+    ) -> Result<(), ApplyError> {
+        let current: BTreeSet<_> = world.entities().map(|(entity, _)| entity).collect();
+        if current == self.known {
+            return Ok(());
+        }
+
+        for settled in &mut self.settled {
+            settled.retain(|entity, _| current.contains(entity));
+        }
+        let spawned: Vec<_> = current.difference(&self.known).copied().collect();
+        if spawned.is_empty() {
+            self.known = current;
+            return Ok(());
+        }
+
+        let mut styled = world.clone();
+        let mut recorded = vec![Declared::new(); stylesheets.len()];
+        for (stylesheet, declarations) in stylesheets.iter().zip(&mut recorded) {
+            let pass = Pass {
+                record: Some(declarations),
+                ..Pass::default()
+            };
+            apply(&mut styled, stylesheet, viewport, &UiStates::new(), pass)?;
+        }
+
+        for entity in &spawned {
+            let styled_data = styled
+                .get(*entity)
+                .expect("spawned entity is present in styled world")
+                .clone();
+            *world
+                .get_mut(*entity)
+                .expect("spawned entity is present in live world") = styled_data;
+        }
+        for (settled, declarations) in self.settled.iter_mut().zip(recorded) {
+            for entity in &spawned {
+                if let Some(values) = declarations.get(entity) {
+                    settled.insert(*entity, values.clone());
+                }
+            }
+        }
+        self.known = current;
         Ok(())
     }
 
@@ -100,6 +163,7 @@ impl Presenter {
         viewport: Viewport,
         states: &UiStates,
     ) -> Result<Undo, ApplyError> {
+        self.settle_spawned(world, stylesheets, viewport)?;
         let mut undo = Undo::default();
         if states.is_empty() && self.idle && !self.transitions.animating() {
             return Ok(undo);
