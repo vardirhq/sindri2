@@ -4,6 +4,12 @@ format_version = 1
 name = "Scorchball"
 main_scene = "assets/scorchball.scene.json"
 
-# Sounds the scripts play by name, which no walk of the scene can see.
+# Sounds and the title prefab are named from scripts, which no walk of the
+# authored scene can see. The Weave file is the title presentation entry point.
 [assets]
-include = ["audio/hit.wav", "audio/run.wav"]
+include = [
+  "ui.weave",
+  "prefabs/title.prefab.json",
+  "audio/hit.wav",
+  "audio/run.wav",
+]
