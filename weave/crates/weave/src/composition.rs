@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use thiserror::Error;
 
-use crate::{ParseError, Stylesheet, parse};
+use crate::{ORIGIN, ParseError, Stylesheet, parse};
 
 #[derive(Debug, Error, PartialEq)]
 pub enum ComposeError {
@@ -173,6 +173,14 @@ fn expand(
             expanded.push('\n');
         }
     }
+    // Where this file's own rules start, so each can say where it was
+    // written after the files are joined into one.
+    let body_line = source[..source.len() - body.len()]
+        .bytes()
+        .filter(|byte| *byte == b'\n')
+        .count()
+        + 1;
+    expanded.push_str(&format!("{ORIGIN} \"{id}\" {body_line};"));
     expanded.push_str(body);
 
     stack.pop();
@@ -363,6 +371,42 @@ mod tests {
         assert_eq!(
             imports("@use \"theme.weave\"; .x { width: 1px; }"),
             Ok(vec!["theme.weave".into()])
+        );
+    }
+
+    #[test]
+    fn every_rule_says_which_file_and_line_it_came_from() {
+        let sources = BTreeMap::from([
+            (
+                "ui/base.weave".to_owned(),
+                "/* shared\n   look */\n.button {\n  width: 1px;\n}\n".to_owned(),
+            ),
+            (
+                "ui/menu.weave".to_owned(),
+                "@use \"base.weave\";\n\n#start,\n.primary:hover { width: 2px; }\n@media (orientation: portrait) {\n  text { color: red; }\n}\n"
+                    .to_owned(),
+            ),
+        ]);
+        let sheet = compose("ui/menu.weave", &sources).expect("composes");
+        let origins: Vec<(&str, usize, &str)> = sheet
+            .rules
+            .iter()
+            .map(|rule| {
+                (
+                    rule.origin.file.as_str(),
+                    rule.origin.line,
+                    rule.origin.selector.as_str(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            origins,
+            [
+                ("ui/base.weave", 3, ".button"),
+                ("ui/menu.weave", 3, "#start"),
+                ("ui/menu.weave", 3, ".primary:hover"),
+                ("ui/menu.weave", 6, "text"),
+            ]
         );
     }
 }

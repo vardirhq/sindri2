@@ -91,6 +91,14 @@ Each step is its own pull request. A step is checked here when it has landed.
    struck through; edit a value in place and write it to the stylesheet;
    preview at phone, tablet and desktop sizes with safe areas; hot reload
    into the running game.
+   - [x] The inspector's Styles section: the box model as drawn, every
+     matched rule strongest first with its `file:line`, overridden
+     declarations struck through, and the computed values and variables, at
+     the size the scene is presented at.
+   - [x] Hot reload of a saved stylesheet, and named device sizes for the
+     Game view (both already there).
+   - [ ] Edit a value in the Styles section and write it to the stylesheet.
+   - [ ] Pick an element by clicking it in the running game.
 3. **Widgets.** Toggle and checkbox, radio, dropdown, text input, scroll view,
    tabs, dialog, tooltip, progress, all styled by Weave and scriptable from
    Decay. Focus navigation by keyboard and gamepad, in an order derived from

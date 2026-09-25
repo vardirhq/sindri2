@@ -350,8 +350,11 @@ their source, authors reusable classes in a dedicated inspector section, and
 applies the composed presentation to both Scene and Game views. It watches the
 manifest and complete `@use` graph for saved changes, keeps the last good
 presentation after a broken save, and reports composition failures with their
-source path, line, and column. Stylesheet source editing and named viewport
-presets still live outside the editor.
+source path, line, and column. The inspector's Styles section is Weave's
+devtools: the box model as drawn, every matched rule with its `file:line`
+and the overridden declarations struck through, and the computed values, at
+the Game view's size. Editing a value there is not built yet; stylesheets
+hot-reload on save.
 
 Weave's `margin` and `padding` (one to four values, per-side longhands, CSS
 percentages) write that box, and `box-shadow` writes the shape's shadow.

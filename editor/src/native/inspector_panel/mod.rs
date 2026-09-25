@@ -504,6 +504,7 @@ impl EditorApp {
         ));
         self.thumbnails
             .refresh(&self.render_state, &self.textures, &references);
+        let styles = self.styles_view(ui.ctx(), entity);
         let context = self.panel_context(&components);
         let addable = self.addable_components(&components, context.defaults());
         // The text the ID field is showing: whatever is being typed if this
@@ -558,6 +559,9 @@ impl EditorApp {
                         );
                         added = add_component_button(ui, &addable);
                     });
+                    if let Some(styles) = &styles {
+                        section::styles::styles_section(ui, styles);
+                    }
                 });
         }
         self.commit_draft(entity, &original, &draft);

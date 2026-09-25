@@ -8,6 +8,7 @@
 pub(super) mod animation;
 pub(super) mod grid;
 pub(super) mod script;
+pub(super) mod styles;
 pub(super) mod text;
 pub(super) mod tile_volume;
 pub(super) mod tilemap;

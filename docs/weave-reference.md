@@ -403,6 +403,24 @@ only what pointer states and running transitions change is laid over that for
 the draw, and taken off again before the scripts run; with nothing hovered
 and nothing easing, a frame does no styling work at all.
 
+## Inspecting styles in the editor
+
+Select a UI element and the inspector's **Styles** section shows what Weave
+did to it, as a browser's devtools do:
+
+- the box model as drawn: margin, padding and size, in the stylesheet's
+  pixels at the size the scene is presented at;
+- every rule that matched, strongest first, with the file and line it was
+  written on; a declaration a stronger rule, or a later stylesheet,
+  overrode is struck through;
+- the computed values the element ends up with, inherited ones included,
+  and the custom properties in scope.
+
+It follows the Game view's size, so switching the device preset shows the
+rules its media queries choose. It is read-only; save the stylesheet and the
+editor reloads it. `sindri_weave::inspect` answers the same questions for
+other tools.
+
 ## Authoring guidance
 
 The editor recognizes manifest-listed `.weave` roots, previews their source,

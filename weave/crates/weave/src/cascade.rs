@@ -65,6 +65,69 @@ fn inherits(property: &str) -> bool {
     is_custom(property) || INHERITED.contains(&property)
 }
 
+/// One rule that matched an element, as a devtools panel lists it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Matched {
+    /// The rule's index in the stylesheet.
+    pub rule: usize,
+    pub specificity: Specificity,
+    /// Each declaration, and whether it is the one that applies: `false`
+    /// when a stronger rule declares the same property.
+    pub declarations: Vec<(String, String, bool)>,
+}
+
+/// Every rule that matches the element at `node`, strongest first — the
+/// order devtools list them in — with which of their declarations won.
+#[must_use]
+pub fn matched(
+    stylesheet: &Stylesheet,
+    tree: &impl Tree,
+    node: usize,
+    viewport: Viewport,
+) -> Vec<Matched> {
+    let applying: Vec<(usize, Specificity)> = stylesheet
+        .rules
+        .iter()
+        .enumerate()
+        .filter(|(_, rule)| {
+            rule.conditions.iter().all(|query| query.matches(viewport))
+                && rule.selector.matches(tree, node)
+        })
+        .map(|(order, rule)| (order, rule.selector.specificity()))
+        .collect();
+    // The winner for each property: the strongest rule that declares it.
+    let mut winners: BTreeMap<&str, (Specificity, usize)> = BTreeMap::new();
+    for (order, specificity) in &applying {
+        for property in stylesheet.rules[*order].declarations.keys() {
+            let replace = winners
+                .get(property.as_str())
+                .is_none_or(|held| (*specificity, *order) >= *held);
+            if replace {
+                winners.insert(property, (*specificity, *order));
+            }
+        }
+    }
+    let mut listed: Vec<Matched> = applying
+        .iter()
+        .map(|(order, specificity)| Matched {
+            rule: *order,
+            specificity: *specificity,
+            declarations: stylesheet.rules[*order]
+                .declarations
+                .iter()
+                .map(|(property, value)| {
+                    let won = winners
+                        .get(property.as_str())
+                        .is_some_and(|(_, winner)| winner == order);
+                    (property.clone(), value.clone(), won)
+                })
+                .collect(),
+        })
+        .collect();
+    listed.sort_by_key(|rule| std::cmp::Reverse((rule.specificity, rule.rule)));
+    listed
+}
+
 /// Computes the style of the element at `node`, given its parent's.
 ///
 /// Parents must be computed before their children, so the caller walks the
@@ -339,5 +402,37 @@ mod tests {
         let sheet = "text { color: #000; } text:hover { color: #f00; }";
         assert_eq!(label(sheet, States::NONE).get("color"), Some("#000"));
         assert_eq!(label(sheet, States::HOVER).get("color"), Some("#f00"));
+    }
+
+    #[test]
+    fn matched_lists_the_strongest_rule_first_and_marks_what_lost() {
+        let sheet = parse(
+            "text { color: #111; width: 1px; }\n\
+             #label { color: #222; }\n\
+             text:hover { color: #333; }\n\
+             .elsewhere { color: #444; }",
+        )
+        .expect("stylesheet parses");
+        let tree = Panel {
+            label_states: States::NONE,
+        };
+        let rules = matched(&sheet, &tree, 1, VIEW);
+        // The ID rule, then the element rule; the hover and class rules do
+        // not match this label at all.
+        let order: Vec<usize> = rules.iter().map(|rule| rule.rule).collect();
+        assert_eq!(order, [1, 0]);
+        assert_eq!(
+            rules[0].declarations,
+            [("color".to_owned(), "#222".to_owned(), true)]
+        );
+        // `text`'s colour lost to the ID; its width did not.
+        assert_eq!(
+            rules[1].declarations,
+            [
+                ("color".to_owned(), "#111".to_owned(), false),
+                ("width".to_owned(), "1px".to_owned(), true),
+            ]
+        );
+        assert_eq!(sheet.rules[rules[0].rule].origin.line, 2);
     }
 }
