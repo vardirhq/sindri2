@@ -78,20 +78,30 @@ script Match {
 
     // A pad that joins gets a player on its side of the pitch; a pad that is
     // unplugged takes its player with it.
+    //
+    // Select in the lobby adds a bot to the side with fewer players, one bot
+    // a side.
     fn players() {
         let joined = Gamepad.joined();
         if joined > 0.0 {
-            let made = World.spawn(this.player);
-            World.set_property(made, "slot", joined);
-            // Blue on the left, Red on the right, pairs spread up and down.
-            var x: f32 = -7.0;
-            if joined % 2.0 == 0.0 { x = 7.0; }
-            var y: f32 = 1.0;
-            if joined > 2.0 { y = -3.5; }
-            made.transform.position.x = x;
-            made.transform.position.y = y;
-            this.joins += 1.0;
-            Game.set("joins", this.joins);
+            place(joined, false);
+        }
+        if this.phase == 0.0 && Gamepad.just_pressed(0.0, "select") {
+            var blue: f32 = 0.0;
+            var red: f32 = 0.0;
+            var bot_blue: bool = false;
+            var bot_red: bool = false;
+            for someone in World.with_tag("player") {
+                let slot = World.property_number(someone, "slot", 0.0);
+                if slot % 2.0 == 1.0 { blue += 1.0; } else { red += 1.0; }
+                if slot == 11.0 { bot_blue = true; }
+                if slot == 12.0 { bot_red = true; }
+            }
+            if !bot_red && (red <= blue || bot_blue) {
+                place(12.0, true);
+            } else if !bot_blue {
+                place(11.0, true);
+            }
         }
         let left = Gamepad.left();
         if left > 0.0 {
@@ -101,6 +111,25 @@ script Match {
                 }
             }
         }
+    }
+
+    // Blue on the left, Red on the right, a second player on a side lower down.
+    fn place(slot: f32, bot: bool) {
+        var x: f32 = -7.0;
+        if slot % 2.0 == 0.0 { x = 7.0; }
+        var y: f32 = 1.0;
+        for someone in World.with_tag("player") {
+            if World.property_number(someone, "slot", 0.0) % 2.0 == slot % 2.0 {
+                y = -3.5;
+            }
+        }
+        let made = World.spawn(this.player);
+        World.set_property(made, "slot", slot);
+        World.set_property(made, "bot", bot);
+        made.transform.position.x = x;
+        made.transform.position.y = y;
+        this.joins += 1.0;
+        Game.set("joins", this.joins);
     }
 
     fn goals() {

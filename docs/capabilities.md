@@ -1690,13 +1690,18 @@ editor; the harness now lays it out each step.
 join on their own sides, ready up and kick off; Blue takes the ball, dribbles
 past Red and scores; a sign cannot be taken until it lands; unplugging a pad
 takes its player off; Blue collects signs until it has had all four powers and each does what it says; and a
-Fireball sets an opponent running wild until it burns out.
+Fireball sets an opponent running wild until it burns out. Select in the lobby
+adds a bot, which attacks, supports, defends goal-side of the ball and goes for
+loose balls it can reach first, looking a few times a second with a little aim
+noise; the tests have one score on a player standing still, and two play each
+other until one scores.
 
 ### Not yet
 
 - No music: the original tracks' terms are unchecked, and MP3 is an exception
   the dependency policy would rather not grow.
 - No match end, pause or restart without Stop.
+- Bots do not pass, go for power-ups on purpose, or come in difficulties.
 - Played with real pads by nobody yet: CI has none, and neither did the
   session that ported it.
 

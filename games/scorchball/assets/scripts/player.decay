@@ -3,8 +3,15 @@
 //
 // A player is made by the match when a pad joins, and told which slot it is.
 // Odd slots play for Blue, who defend the left goal; even slots for Red.
+//
+// A bot is a player with no pad: the match makes one on slot 11 or 12 when
+// Select is pressed in the lobby, and it steers itself (see `think`).
 script Player {
     @export let slot: f32 = 1.0;
+    @export let bot: bool = false;
+    // How long a bot takes to notice what changed, and how far off it aims.
+    @export let reaction: f32 = 0.22;
+    @export let aim_noise: f32 = 0.7;
     @export let arrow: Prefab;
     @export let speed: f32 = 10.0;
     @export let kick_speed: f32 = 22.0;
@@ -35,6 +42,18 @@ script Player {
     var moving: bool = false;
     var referee: Entity = null;
     var ball: Entity = null;
+    // A bot's plan: where it is heading, and a kick it has decided on.
+    var plan_left: f32 = 0.0;
+    var want_x: f32 = 0.0;
+    var want_y: f32 = 0.0;
+    var kick_left: f32 = -1.0;
+    var aim_x: f32 = 0.0;
+    var aim_y: f32 = 0.0;
+    var kick_now: bool = false;
+    var seen_bx: f32 = 0.0;
+    var seen_by: f32 = 0.0;
+    var ball_vx: f32 = 0.0;
+    var ball_vy: f32 = 0.0;
 
     fn start() {
         if this.slot % 2.0 == 1.0 {
@@ -51,13 +70,21 @@ script Player {
         // goes when they do.
         let marker = World.spawn_child(this.arrow, this.entity);
         Animation.play(marker, marker_clip());
+        if this.bot {
+            this.ready = true;
+            this.size = 1.0;
+        }
         show();
     }
 
     fn update(dt: f32) {
         let phase = Game.get("phase", 0.0);
         take_signals();
-        lobby(phase);
+        if this.bot {
+            think(dt, phase);
+        } else {
+            lobby(phase);
+        }
         if this.ready {
             World.send_signal(this.referee, "ready", 1.0);
         }
@@ -105,6 +132,9 @@ script Player {
         if this.burn_left > 0.0 {
             tx = this.burn_x * this.speed;
             ty = this.burn_y * this.speed;
+        } else if this.bot && phase >= 2.0 {
+            tx = this.want_x * this.speed;
+            ty = this.want_y * this.speed;
         } else if this.ready && phase >= 2.0 {
             var x: f32 = Gamepad.axis(this.slot, "left_x");
             var y: f32 = Gamepad.axis(this.slot, "left_y");
@@ -142,11 +172,22 @@ script Player {
         if phase < 2.0 || this.burn_left > 0.0 || Game.get("holder", 0.0) != this.slot {
             return;
         }
-        if !Gamepad.just_pressed(this.slot, "right_bumper") {
-            return;
+        var ax: f32 = 0.0;
+        var ay: f32 = 0.0;
+        if this.bot {
+            if !this.kick_now {
+                return;
+            }
+            this.kick_now = false;
+            ax = this.aim_x;
+            ay = this.aim_y;
+        } else {
+            if !Gamepad.just_pressed(this.slot, "right_bumper") {
+                return;
+            }
+            ax = Gamepad.axis(this.slot, "right_x");
+            ay = -Gamepad.axis(this.slot, "right_y");
         }
-        var ax: f32 = Gamepad.axis(this.slot, "right_x");
-        var ay: f32 = -Gamepad.axis(this.slot, "right_y");
         let length = sqrt(ax * ax + ay * ay);
         if length < 0.3 {
             ax = -1.0;
@@ -244,6 +285,177 @@ script Player {
         if this.slot == 1.0 { return "p1"; }
         if this.slot == 2.0 { return "p2"; }
         if this.slot == 3.0 { return "p3"; }
+        if this.slot == 11.0 { return "p1"; }
+        if this.slot == 12.0 { return "p2"; }
         return "p4";
+    }
+
+    // ---- The bot ----------------------------------------------------------
+    //
+    // A bot looks at the pitch a few times a second, not every frame, and
+    // acts on what it saw a moment ago, so it can be wrong-footed like a
+    // person. Each look it picks one of four things to do: attack with the
+    // ball, support a teammate who has it, defend against whoever has it, or
+    // go for a loose ball it can reach first. A defender stands between the
+    // ball and its goal and closes in, rather than chasing.
+    fn think(dt: f32, phase: f32) {
+        if this.kick_left >= 0.0 {
+            this.kick_left -= dt;
+            if this.kick_left < 0.0 {
+                this.kick_now = true;
+            }
+        }
+        this.plan_left -= dt;
+        if phase < 2.0 || this.plan_left > 0.0 {
+            return;
+        }
+        let look = this.reaction * Random.range(0.7, 1.3);
+        this.plan_left = look;
+        let ball = this.ball;
+        let bx = ball.transform.position.x;
+        let by = ball.transform.position.y;
+        this.ball_vx = (bx - this.seen_bx) / look;
+        this.ball_vy = (by - this.seen_by) / look;
+        this.seen_bx = bx;
+        this.seen_by = by;
+
+        let holder = Game.get("holder", 0.0);
+        if holder == this.slot {
+            attack(bx, by);
+        } else if holder > 0.0 && holder % 2.0 == this.slot % 2.0 {
+            support(bx, by);
+        } else if holder > 0.0 {
+            defend(bx, by, true);
+        } else if first_to(bx, by) {
+            // Run to where the ball is going, from behind it.
+            head_to(bx + this.ball_vx * 0.4 - attack_way() * 0.3, by + this.ball_vy * 0.4, 1.0);
+        } else {
+            defend(bx, by, false);
+        }
+    }
+
+    // Towards the goal, round anyone in the way, and a shot once close enough
+    // or crowded: at the side of the goal the nearest opponent is not.
+    fn attack(bx: f32, by: f32) {
+        let way = attack_way();
+        let goal_x = 14.9 * way;
+        let near = nearest_opponent(bx, by);
+        var ox: f32 = 100.0;
+        var oy: f32 = 100.0;
+        if near != null {
+            ox = near.transform.position.x;
+            oy = feet(near);
+        }
+        let ahead = (ox - bx) * way;
+        let pressed = abs(ox - bx) < 2.0 && abs(oy - by) < 2.0;
+        let range = abs(goal_x - bx);
+        if this.kick_left < 0.0 && (range < 9.0 || (pressed && range < 15.0 && ahead > 0.0)) {
+            var side: f32 = 1.4;
+            if oy > 0.0 { side = -1.4; }
+            let aim_y = side + Random.range(-this.aim_noise, this.aim_noise);
+            let dx = goal_x + way - bx;
+            let dy = aim_y - by;
+            let length = sqrt(dx * dx + dy * dy);
+            this.aim_x = dx / length;
+            this.aim_y = dy / length;
+            this.kick_left = Random.range(0.05, 0.2);
+        }
+        var dy: f32 = (0.0 - by) * 0.15;
+        if ahead > 0.0 && ahead < 4.5 && abs(oy - by) < 2.5 {
+            // Someone in front: go round on the side with more room.
+            dy = 0.9;
+            if oy > by || by > 4.5 { dy = -0.9; }
+            if by < -4.5 { dy = 0.9; }
+        }
+        steer(way, dy, 1.0);
+    }
+
+    // A teammate has it: get ahead of the ball on the other side of the
+    // pitch, ready for it.
+    fn support(bx: f32, by: f32) {
+        head_to(bx + attack_way() * 5.0, 0.0 - by * 0.6, 0.9);
+    }
+
+    // Goal-side of the ball, a third of the way back to goal, and in to
+    // tackle once close. `pressing` is whether someone has it.
+    fn defend(bx: f32, by: f32, pressing: bool) {
+        let own_x = -14.9 * attack_way();
+        let x = this.transform.position.x;
+        let y = feet(this.entity);
+        let dx = bx - x;
+        let dy = by - y;
+        let goal_side = (x - bx) * attack_way() < 0.0;
+        if pressing && goal_side && sqrt(dx * dx + dy * dy) < 3.5 {
+            head_to(bx, by, 1.0);
+            return;
+        }
+        head_to(bx + (own_x - bx) * 0.35, by * 0.65, 1.0);
+    }
+
+    // Whether this bot gets to a loose ball before anyone on the other team.
+    fn first_to(bx: f32, by: f32) -> bool {
+        let mine = distance(this.entity, bx, by);
+        let near = nearest_opponent(bx, by);
+        if near == null {
+            return true;
+        }
+        return mine < distance(near, bx, by) + 1.5;
+    }
+
+    fn nearest_opponent(bx: f32, by: f32) -> Entity {
+        var best: Entity = null;
+        var best_distance: f32 = 1000.0;
+        for someone in World.with_tag("player") {
+            let slot = World.property_number(someone, "slot", 0.0);
+            if slot % 2.0 != this.slot % 2.0 {
+                let d = distance(someone, bx, by);
+                if d < best_distance {
+                    best_distance = d;
+                    best = someone;
+                }
+            }
+        }
+        return best;
+    }
+
+    fn head_to(x: f32, y: f32, pace: f32) {
+        let dx = x - this.transform.position.x;
+        let dy = y - feet(this.entity);
+        let length = sqrt(dx * dx + dy * dy);
+        if length < 0.2 {
+            steer(0.0, 0.0, 0.0);
+            return;
+        }
+        // Slowing into place rather than overshooting it.
+        steer(dx, dy, pace * min(1.0, length / 1.5));
+    }
+
+    fn steer(dx: f32, dy: f32, pace: f32) {
+        let length = sqrt(dx * dx + dy * dy);
+        if length < 0.001 {
+            this.want_x = 0.0;
+            this.want_y = 0.0;
+            return;
+        }
+        this.want_x = dx / length * pace;
+        this.want_y = dy / length * pace;
+    }
+
+    fn distance(someone: Entity, x: f32, y: f32) -> f32 {
+        let dx = x - someone.transform.position.x;
+        let dy = y - feet(someone);
+        return sqrt(dx * dx + dy * dy);
+    }
+
+    // Where a player's feet are, which is where they take the ball.
+    fn feet(someone: Entity) -> f32 {
+        return someone.transform.position.y - 1.1 * someone.transform.scale.x / 3.2;
+    }
+
+    fn attack_way() -> f32 {
+        if this.team == 1.0 {
+            return 1.0;
+        }
+        return -1.0;
     }
 }

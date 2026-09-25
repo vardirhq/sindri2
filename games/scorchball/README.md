@@ -21,6 +21,17 @@ screen is proven. Gamepads, read by player slot, were added to Sindri for it.
   from someone else. The right bumper kicks it where the right stick points,
   or the way you face with the stick at rest.
 - **Leave:** unplug the pad.
+- **Play against a bot:** Select (Back/View) in the lobby adds a bot to the
+  side with fewer players, one bot a side. It readies itself.
+
+A bot looks at the pitch about four times a second and acts on what it saw,
+so it reacts a little late and its shots are a little off, as a person's
+are. Each look it decides whether to attack with the ball (towards goal,
+round whoever is in front, and a shot at the far side of the goal once close
+or crowded), support a teammate who has it, defend (goal-side of the ball and
+in to tackle once close, rather than chasing), or go for a loose ball it can
+reach first. It does not yet pass, pick up power-ups on purpose, or vary in
+difficulty.
 
 Across a goal line between the posts is a goal; off the pitch anywhere else is
 out, and the ball comes back to the centre spot.
@@ -46,7 +57,8 @@ There is no game code. The game is `assets/`:
 - `prefabs/`: a player, the marker over their head, and a power-up's shadow and its signpost.
 - `scripts/match.decay`: joining and leaving, ready-up, the countdown, the score,
   power-up spawns and the wind.
-- `scripts/player.decay`: walking, skins, readying, kicking, growing and burning.
+- `scripts/player.decay`: walking, skins, readying, kicking, growing and
+  burning, and the bot's brain.
 - `scripts/ball.decay`: possession, kicks, fire, goals and out of bounds.
 - `scripts/powerup.decay`: a signpost falling, landing, and what it gives.
 
@@ -78,7 +90,9 @@ characters' four-way walks, **2D physics** so players bump into each other,
 their own sides, ready up and kick off; Blue takes the ball, dribbles and
 scores; a sign cannot be taken until it lands; unplugging a pad takes its
 player off; every power does what it says;
-and a Fireball sets an opponent running wild until it burns out. `src/lib.rs`
+and a Fireball sets an opponent running wild until it burns out.
+`tests/a_bot_plays.rs` adds a bot with Select, which readies itself and scores
+on a player who stands still, and has two bots play until one scores. `src/lib.rs`
 is the harness that plays it without a window, built from the same public
 pieces a host uses.
 
