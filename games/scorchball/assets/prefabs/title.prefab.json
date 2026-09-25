@@ -1,0 +1,127 @@
+{
+  "format_version": 1,
+  "metadata": { "name": "Scorchball Title" },
+  "entities": [
+    {
+      "id": "title-root",
+      "name": "Title Screen",
+      "components": {
+        "weave.style": { "classes": ["title-screen"] },
+        "sindri.ui.shape": { "kind": "rect", "fill": [0.02, 0.025, 0.04, 1.0], "anchor": "center", "layer": 200 },
+        "sindri.ui.layout": { "direction": "row", "spacing": 0.0, "justify": "center", "align": "center" },
+        "sindri.script": { "source": "scripts/title.decay", "script": "Title", "properties": {} }
+      }
+    },
+    {
+      "id": "title-menu",
+      "name": "Title Menu",
+      "parent": "title-root",
+      "components": {
+        "weave.style": { "classes": ["title-menu"] },
+        "sindri.ui.layout": { "direction": "column", "spacing": 0.03, "justify": "center", "align": "start" }
+      }
+    },
+    {
+      "id": "title-kicker",
+      "name": "Title Kicker",
+      "parent": "title-menu",
+      "components": {
+        "weave.style": { "classes": ["title-kicker"] },
+        "sindri.ui.text": { "text": "COUCH FOOTBALL // CONTROLLED CHAOS", "font": "fonts/Inter.ttf", "font_size": 0.025, "bounds": [0.7, 0.06], "anchor": "center", "layer": 203, "bold": true }
+      }
+    },
+    {
+      "id": "title-wordmark",
+      "name": "Scorchball",
+      "parent": "title-menu",
+      "components": {
+        "weave.style": { "classes": ["title-wordmark"] },
+        "sindri.ui.text": { "text": "SCORCHBALL", "font": "fonts/Inter.ttf", "font_size": 0.1, "bounds": [0.8, 0.16], "anchor": "center", "layer": 203, "bold": true }
+      }
+    },
+    {
+      "id": "title-tagline",
+      "name": "Title Tagline",
+      "parent": "title-menu",
+      "components": {
+        "weave.style": { "classes": ["title-tagline"] },
+        "sindri.ui.text": { "text": "Football was too sensible.", "font": "fonts/Inter.ttf", "font_size": 0.03, "bounds": [0.7, 0.07], "anchor": "center", "layer": 203 }
+      }
+    },
+    {
+      "id": "play-bot",
+      "name": "Play vs Bot",
+      "parent": "title-menu",
+      "components": {
+        "weave.style": { "classes": ["title-button", "primary"] },
+        "sindri.ui.button": { "label": "Play vs Bot" },
+        "sindri.ui.shape": { "kind": "rect", "fill": [0.95, 0.35, 0.05, 1.0], "anchor": "center", "layer": 202 }
+      }
+    },
+    {
+      "id": "play-bot-label",
+      "name": "Play vs Bot Label",
+      "parent": "play-bot",
+      "components": {
+        "weave.style": { "classes": ["title-button-label"] },
+        "sindri.ui.text": { "text": "PLAY VS BOT", "font": "fonts/Inter.ttf", "font_size": 0.035, "bounds": [0.5, 0.06], "anchor": "center", "layer": 204, "bold": true }
+      }
+    },
+    {
+      "id": "play-local",
+      "name": "Local Multiplayer",
+      "parent": "title-menu",
+      "components": {
+        "weave.style": { "classes": ["title-button", "secondary"] },
+        "sindri.ui.button": { "label": "Local Multiplayer" },
+        "sindri.ui.shape": { "kind": "rect", "fill": [0.08, 0.1, 0.14, 1.0], "anchor": "center", "layer": 202 }
+      }
+    },
+    {
+      "id": "play-local-label",
+      "name": "Local Multiplayer Label",
+      "parent": "play-local",
+      "components": {
+        "weave.style": { "classes": ["title-button-label"] },
+        "sindri.ui.text": { "text": "LOCAL MULTIPLAYER", "font": "fonts/Inter.ttf", "font_size": 0.032, "bounds": [0.5, 0.06], "anchor": "center", "layer": 204, "bold": true }
+      }
+    },
+    {
+      "id": "title-footnote",
+      "name": "Title Footnote",
+      "parent": "title-menu",
+      "components": {
+        "weave.style": { "classes": ["title-footnote"] },
+        "sindri.ui.text": { "text": "1-4 PLAYERS  •  GAMEPADS RECOMMENDED", "font": "fonts/Inter.ttf", "font_size": 0.02, "bounds": [0.7, 0.05], "anchor": "center", "layer": 203, "bold": true }
+      }
+    },
+    {
+      "id": "title-art",
+      "name": "Title Art",
+      "parent": "title-root",
+      "components": {
+        "weave.style": { "classes": ["title-art"] },
+        "sindri.ui.shape": { "kind": "rect", "fill": [0.08, 0.025, 0.015, 1.0], "anchor": "center", "layer": 201 },
+        "sindri.ui.layout": { "direction": "column", "spacing": 0.03, "justify": "center", "align": "center" }
+      }
+    },
+    {
+      "id": "title-ball",
+      "name": "Title Ball",
+      "parent": "title-art",
+      "components": {
+        "weave.style": { "classes": ["title-ball"] },
+        "sindri.ui.image": { "texture": "textures/ball.png", "anchor": "center", "layer": 204 }
+      }
+    },
+    {
+      "id": "title-chaos",
+      "name": "Title Chaos",
+      "parent": "title-art",
+      "components": {
+        "weave.style": { "classes": ["title-chaos"] },
+        "sindri.ui.text": { "text": "🔥  BIG PLAYERS\n💨  WIND\n⚽  FIREBALL\n💥  PUSH BOOST", "font": "fonts/Inter.ttf", "font_size": 0.03, "bounds": [0.5, 0.3], "anchor": "center", "layer": 204, "bold": true }
+      }
+    }
+  ]
+}
