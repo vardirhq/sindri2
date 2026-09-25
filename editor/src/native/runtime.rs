@@ -391,6 +391,7 @@ impl EditorApp {
         // a pause deliberately does not touch it: that would replay numbers the
         // scene has already acted on.
         self.random = sindri_core::Rng::default();
+        self.input.forget_players();
         if let Err(error) = self.lifecycle.start() {
             self.report(error.to_string());
         }

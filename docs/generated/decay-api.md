@@ -34,6 +34,7 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 - `Camera`: `Camera`
 - `Effects`: `Effects`
 - `Game`: `Game`
+- `Gamepad`: `Gamepad`
 - `Gesture`: `Gesture`
 - `Grid`: `Grid`
 - `Input`: `Input`
@@ -113,6 +114,17 @@ Names in scope without qualification. Decay has no imports, so each of these is 
 
 - `get(String, f32)` → `f32`
 - `set(String, f32)` → `unit`
+
+### `Gamepad`
+
+- `axis(f32, String)` → `f32`
+- `count()` → `f32`
+- `is_connected(f32)` → `bool`
+- `is_down(f32, String)` → `bool`
+- `joined()` → `f32`
+- `just_pressed(f32, String)` → `bool`
+- `just_released(f32, String)` → `bool`
+- `left()` → `f32`
 
 ### `Gesture`
 

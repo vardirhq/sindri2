@@ -1158,6 +1158,48 @@ cancel into whichever the operating system reported last. A press is not a hold:
 `just_pressed` is true for one frame however long the key stays down, and the
 operating system's key repeat is not a second press.
 
+### Gamepads, and which player holds which
+
+| Call | Returns |
+| --- | --- |
+| `Gamepad.joined()` | `f32`, the player slot claimed this frame, or 0 |
+| `Gamepad.left()` | `f32`, the player slot given back this frame, or 0 |
+| `Gamepad.count()` | `f32`, how many slots are held |
+| `Gamepad.is_connected(slot)` | `bool` |
+| `Gamepad.is_down(slot, button)` | `bool` |
+| `Gamepad.just_pressed(slot, button)` | `bool` |
+| `Gamepad.just_released(slot, button)` | `bool` |
+| `Gamepad.axis(slot, axis)` | `f32` |
+
+A pad is read by **player slot**, not by device. The first pad a face button or
+Start is pressed on claims slot 1, the next slot 2, up to eight. A slot stays
+claimed while its pad is connected and is given back when it is unplugged, so a
+couch game adds a player when `joined()` is non-zero and removes one when
+`left()` is. Each is an edge like a key press, and never names two slots in one
+frame: a second pad pressing in the same frame joins the frame after, so reading
+one join per frame misses nobody. Pressing Play again in the editor starts the
+players over.
+
+**Slot 0 is every pad at once**, for a game with one player who might pick up
+any of them: `Gamepad.just_pressed(0, "south")` is a press on any pad.
+
+The press that claims a slot is not reported through that slot. It meant "I am
+playing", and a game reading it again as "jump" would have every player jump as
+they join. Slot 0 still sees it.
+
+Buttons are named by position, so one name means the same button on every make
+of pad: `"south"`, `"east"`, `"west"`, `"north"`, `"left_bumper"`,
+`"right_bumper"`, `"left_trigger"`, `"right_trigger"`, `"select"`, `"start"`,
+`"left_stick"`, `"right_stick"`, `"dpad_up"`, `"dpad_down"`, `"dpad_left"` and
+`"dpad_right"`. Axes are `"left_x"`, `"left_y"`, `"right_x"`, `"right_y"`,
+`"left_trigger"` and `"right_trigger"`. Sticks read -1 to 1 in screen axes, as
+`Stick` does, right and *down* positive, with a round dead zone taken out so a
+stick at rest reads zero and a diagonal push is not snapped to an axis.
+Triggers read 0 to 1. A name nothing answers to is refused, as a key's is, and
+so is a slot that is not a whole number from 0 to 8.
+
+An action binding reads any pad as `gamepad.south` or `gamepad.axis.left_x`.
+
 ### Where the person is pointing
 
 | Path | Type |

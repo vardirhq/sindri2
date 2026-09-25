@@ -119,6 +119,21 @@ A pointer outside the view is reported as gone rather than clamped to its edge,
 because a game told the person is pointing at somewhere they are not is worse
 than a game told they are not pointing at all.
 
+Gamepads are read on desktop and in the browser (`GamepadReader`, over `gilrs`,
+behind the platform's default `gamepad` feature, which links libudev on Linux
+the way audio links ALSA). Every host that draws a window asks for them once a
+frame, and so does the editor's Play. A game reads pads by **player slot**
+rather than by device: a face button or Start on an unclaimed pad claims the
+first free slot, a slot stays claimed while its pad is connected and is given
+back when it goes, and joins and leaves are one-frame edges that never name
+two slots at once, so a second pad pressing in the same frame joins the next.
+The press that claims a slot is not reported through it, so joining does not
+also jump. Slot 0 reads every pad, for a game with one player. Buttons are
+named by position (`south`, `right_bumper`, `dpad_up`), sticks read in screen
+axes with a round dead zone taken out, and focus loss lets go of every button
+without dropping a player. Scripts read `Gamepad`; an action binding reads any
+pad as `gamepad.south` or `gamepad.axis.left_x`.
+
 ### Audio
 
 Audio is a platform service rather than simulation state. Encoded WAV, Ogg, and

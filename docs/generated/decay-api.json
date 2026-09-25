@@ -35,6 +35,11 @@
     },
     {
       "kind": "value",
+      "name": "Gamepad",
+      "type": "Gamepad"
+    },
+    {
+      "kind": "value",
       "name": "Gesture",
       "type": "Gesture"
     },
@@ -461,6 +466,73 @@
         }
       ],
       "name": "Game"
+    },
+    {
+      "members": [
+        {
+          "kind": "function",
+          "name": "axis",
+          "parameters": [
+            "f32",
+            "String"
+          ],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "count",
+          "parameters": [],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "is_connected",
+          "parameters": [
+            "f32"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "is_down",
+          "parameters": [
+            "f32",
+            "String"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "joined",
+          "parameters": [],
+          "returns": "f32"
+        },
+        {
+          "kind": "function",
+          "name": "just_pressed",
+          "parameters": [
+            "f32",
+            "String"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "just_released",
+          "parameters": [
+            "f32",
+            "String"
+          ],
+          "returns": "bool"
+        },
+        {
+          "kind": "function",
+          "name": "left",
+          "parameters": [],
+          "returns": "f32"
+        }
+      ],
+      "name": "Gamepad"
     },
     {
       "members": [

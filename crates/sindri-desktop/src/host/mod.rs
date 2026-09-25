@@ -29,7 +29,7 @@ use self::visibility::VisibilityListener;
 use std::sync::Arc;
 
 use sindri_gpu::{GpuContext, WindowSurface};
-use sindri_platform::FrameTimer;
+use sindri_platform::{FrameTimer, GamepadReader};
 use winit::{
     application::ApplicationHandler,
     event::WindowEvent,
@@ -48,6 +48,8 @@ use self::startup::spawn;
 use self::startup::announce_failure;
 
 struct Running<A> {
+    /// Pads, which no window system reports, asked once a frame.
+    pads: GamepadReader,
     gpu: GpuContext,
     surface: WindowSurface,
     app: A,
@@ -242,6 +244,8 @@ impl<A: DesktopApp> Host<A> {
             return Ok(Flow::Continue);
         };
 
+        let app = &mut running.app;
+        running.pads.poll(|event| app.input(event));
         let delta = running.timer.tick(&running.clock);
         let flow = running.app.update(delta).map_err(DesktopError::App)?;
         if flow == Flow::Exit {
@@ -383,6 +387,7 @@ impl<A: DesktopApp> ApplicationHandler<Startup> for Host<A> {
         }
 
         self.state = State::Running(Box::new(Running {
+            pads: GamepadReader::new(),
             gpu,
             surface,
             app,

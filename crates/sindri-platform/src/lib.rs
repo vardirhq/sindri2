@@ -25,8 +25,8 @@ pub use clock::{Clock, FrameTimer, ManualClock};
 pub use host::{EngineHost, FrameContext, FramePhase, FrameTime, Game, HostError};
 pub use input::{
     ACTIONS_FORMAT_VERSION, ACTIONS_SUFFIX, ActionId, ActionKind, ActionMap, ActionMapError,
-    ActionState, Actions, ActionsDocumentError, Binding, InputEvent, InputState, Key, MouseButton,
-    Source,
+    ActionState, Actions, ActionsDocumentError, Binding, DEAD_ZONE, GamepadAxis, GamepadButton,
+    GamepadReader, Gamepads, InputEvent, InputState, Key, MouseButton, PadId, SLOT_LIMIT, Source,
 };
 #[cfg(target_arch = "wasm32")]
 pub use saves::BrowserSaves;

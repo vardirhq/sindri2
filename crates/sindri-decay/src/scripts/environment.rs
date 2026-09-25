@@ -17,11 +17,11 @@ use crate::{
     audio_host::AUDIO,
     surface::{
         ANIMATION, ANIMATION_CALLS, AnimationCall, EFFECTS, EFFECTS_CALLS, ENTITY, EffectsCall,
-        FUNCTIONS, GAME, GAME_CALLS, GameCall, HostFunction, INPUT, INPUT_QUERIES, Node, PHYSICS,
-        PHYSICS_CALLS, PREFAB, PRINT, PROFILE, PROFILE_CALLS, PROFILES, PhysicsCall, ProfileCall,
-        RANDOM, RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS, SCENE, SCENE_CALLS, SaveCall,
-        SceneCall, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, UI, UI_CALLS, UiCall, WORLD,
-        WORLD_CALLS, WorldCall,
+        FUNCTIONS, GAME, GAME_CALLS, GAMEPAD, GameCall, HostFunction, INPUT, INPUT_QUERIES, Node,
+        PHYSICS, PHYSICS_CALLS, PREFAB, PRINT, PROFILE, PROFILE_CALLS, PROFILES, PhysicsCall,
+        ProfileCall, RANDOM, RANDOM_CALLS, RandomCall, SAVE, SAVE_CALLS, SCENE, SCENE_CALLS,
+        SaveCall, SceneCall, THIS, THROUGH_REFERENCE, TIME, TIME_VALUES, UI, UI_CALLS, UiCall,
+        WORLD, WORLD_CALLS, WorldCall, gamepad_type,
     },
 };
 
@@ -86,6 +86,8 @@ pub fn environment() -> Environment {
     }
     environment.add_type(INPUT, input);
     environment.add_value(INPUT, Type::Named(INPUT.to_owned()));
+    environment.add_type(GAMEPAD, gamepad_type());
+    environment.add_value(GAMEPAD, Type::Named(GAMEPAD.to_owned()));
 
     let mut game = HostType::new();
     for (name, call) in GAME_CALLS {

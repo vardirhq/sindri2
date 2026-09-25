@@ -186,6 +186,8 @@ fn measure(source: Source, input: &InputState) -> f32 {
         Source::PointerDeltaY => input.pointer_delta()[1],
         Source::ScrollX => input.scroll_delta()[0],
         Source::ScrollY => input.scroll_delta()[1],
+        Source::GamepadButton(button) => held_as_number(input.gamepads().down(0, button)),
+        Source::GamepadAxis(axis) => input.gamepads().axis(0, axis),
     }
 }
 

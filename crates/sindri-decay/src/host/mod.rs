@@ -16,6 +16,7 @@ mod call;
 mod convert;
 mod dispatch;
 mod effects;
+mod gamepad;
 mod geometry;
 mod map;
 mod person;

@@ -74,7 +74,14 @@ pub(super) fn apply(presses: &mut Presses, event: InputEvent, pointer: Option<[f
                 presses.cancel_all();
             }
         }
-        InputEvent::KeyPressed(_) | InputEvent::KeyReleased(_) | InputEvent::Scrolled { .. } => {}
+        InputEvent::KeyPressed(_)
+        | InputEvent::KeyReleased(_)
+        | InputEvent::Scrolled { .. }
+        | InputEvent::GamepadConnected(_)
+        | InputEvent::GamepadDisconnected(_)
+        | InputEvent::GamepadPressed { .. }
+        | InputEvent::GamepadReleased { .. }
+        | InputEvent::GamepadAxisMoved { .. } => {}
     }
 }
 

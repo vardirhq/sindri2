@@ -265,7 +265,7 @@ jobs:
       # CPAL backend links on Linux — has to be present before it runs.
       - uses: ./.github/actions/linux-deps
         with:
-          packages: libasound2-dev
+          packages: libasound2-dev libudev-dev
       - name: Clippy with structured diagnostics
         id: clippy
         shell: bash
@@ -316,7 +316,7 @@ jobs:
       # Vulkan stack has to be here before the tests are.
       - uses: ./.github/actions/linux-deps
         with:
-          packages: imagemagick libasound2-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
+          packages: imagemagick libasound2-dev libudev-dev libvulkan1 libxkbcommon-x11-0 mesa-vulkan-drivers xdotool xvfb
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9.143
@@ -455,7 +455,7 @@ jobs:
       # out from a red build that something in the graph moved.
       - uses: ./.github/actions/linux-deps
         with:
-          packages: libasound2-dev
+          packages: libasound2-dev libudev-dev
       # Built from source, this took a minute and forty seconds of every run to
       # produce a binary whose version is pinned anyway. The prebuilt release is
       # the same artifact without the compile. The version still has to match
