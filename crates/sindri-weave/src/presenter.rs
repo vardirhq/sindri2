@@ -128,13 +128,7 @@ impl Presenter {
                 record: Some(declarations),
                 ..Pass::default()
             };
-            apply(
-                &mut styled,
-                stylesheet,
-                viewport,
-                &UiStates::new(),
-                pass,
-            )?;
+            apply(&mut styled, stylesheet, viewport, &UiStates::new(), pass)?;
         }
 
         for entity in &spawned {

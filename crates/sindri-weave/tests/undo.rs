@@ -179,12 +179,7 @@ fn settling_a_spawn_does_not_overwrite_an_existing_script_value() {
     spawn_late(&mut live);
 
     presenter
-        .present_over(
-            &mut live,
-            &[sheet],
-            VIEWPORT,
-            &UiStates::new(),
-        )
+        .present_over(&mut live, &[sheet], VIEWPORT, &UiStates::new())
         .expect("settles the spawn");
     let existing = live
         .get(label)
