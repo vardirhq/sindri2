@@ -376,6 +376,18 @@ impl ScreenUi {
         self.slider_changed = Some(entity);
     }
 
+    /// The frontmost element at `point`, in overlay units, pressable or not,
+    /// as last laid out: what a devtools picker selects when the game is
+    /// clicked.
+    #[must_use]
+    pub fn element_at(&self, point: [f32; 2]) -> Option<EntityId> {
+        self.rects
+            .iter()
+            .filter(|(_, element)| element.rect.contains(point))
+            .max_by_key(|(entity, element)| (element.layer, entity.index()))
+            .map(|(entity, _)| *entity)
+    }
+
     fn topmost_at(&self, point: [f32; 2]) -> Option<EntityId> {
         self.rects
             .iter()

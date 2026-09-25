@@ -517,6 +517,7 @@ impl EditorApp {
         // refusal rather than the console reporting one every frame.
         let identity_refused = identity_commands(&self.world, entity, &identity).err();
         let mut identity_edit = IdentityEdit::default();
+        let mut style_edit = None;
         {
             let scripts = &self.scripts;
             let mut tools = InspectorTools {
@@ -560,10 +561,11 @@ impl EditorApp {
                         added = add_component_button(ui, &addable);
                     });
                     if let Some(styles) = &styles {
-                        section::styles::styles_section(ui, styles);
+                        style_edit = section::styles::styles_section(ui, styles);
                     }
                 });
         }
+        self.write_style(style_edit);
         self.commit_draft(entity, &original, &draft);
         self.settle_identity(entity, identity, identity_edit);
         self.commit_components(entity, &original_components, &components);

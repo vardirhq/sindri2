@@ -411,3 +411,32 @@ fn an_image_that_is_not_a_button_does_not_take_the_pointer() {
     assert!(!screen.is_hovered(entity));
     assert!(!screen.captures_pointer(), "a HUD swallowed the pointer");
 }
+
+/// Devtools' picker is not a click: it finds whatever is drawn at a point,
+/// a panel no one can press included, and the frontmost of what overlaps.
+#[test]
+fn a_picker_finds_the_frontmost_element_pressable_or_not() {
+    let mut world = World::default();
+    let panel = world.spawn(EntityData {
+        transform_3d: Some(Transform3D {
+            scale: [1.0, 1.0, 1.0],
+            ..Transform3D::default()
+        }),
+        components: [(
+            UiImageComponent::TYPE_NAME.to_owned(),
+            json!({ "texture": "panel.png" }),
+        )]
+        .into_iter()
+        .collect(),
+        ..EntityData::default()
+    });
+    let start = button(&mut world, [0.3, 0.0], [0.2, 0.2]);
+    world.get_mut(start).expect("there").components.insert(
+        UiImageComponent::TYPE_NAME.to_owned(),
+        json!({ "texture": "button.png", "layer": 1 }),
+    );
+    let screen = updated(&mut world, &at(WIDTH / 2.0, HEIGHT / 2.0));
+    assert_eq!(screen.element_at([0.0, 0.0]), Some(panel));
+    assert_eq!(screen.element_at([0.3, 0.0]), Some(start));
+    assert_eq!(screen.element_at([1.3, 0.9]), None);
+}

@@ -107,6 +107,14 @@ impl super::EditorApp {
     /// player would see makes it a picture of something else.
     pub(super) fn game_tools(&mut self, ui: &mut egui::Ui) {
         toolbar::strip(ui, metric::TOOLBAR_HEIGHT, |ui| {
+            self.game_tool_row(ui, true);
+        });
+    }
+
+    /// The strip's controls, for a strip or a floating island; `explained`
+    /// adds the note about narrow screens where there is room for it.
+    pub(super) fn game_tool_row(&mut self, ui: &mut egui::Ui, explained: bool) {
+        ui.horizontal_centered(|ui| {
             ui.label(
                 egui::RichText::new("Screen")
                     .size(text::NOTE)
@@ -120,24 +128,82 @@ impl super::EditorApp {
                         ui.selectable_value(&mut self.game_device, device, device.name);
                     }
                 });
+            ui.add_space(metric::GROUP_GAP);
+            // The screen is laid out only once the game has run a step, so
+            // there is nothing to pick from before Play.
+            let played = self.lifecycle.state() != sindri_core::EngineState::Stopped;
+            let mut picking = played && picking(ui.ctx());
+            ui.add_enabled_ui(played, |ui| {
+                ui.toggle_value(&mut picking, "Pick")
+                    .on_hover_text(
+                        "Click an element in the running game to select it and see \
+                         its styles in the inspector",
+                    )
+                    .on_disabled_hover_text("Press Play to pick elements in the game");
+            });
+            set_picking(ui.ctx(), picking);
             if let Some((width, height)) = self.game_device.size {
                 ui.add_space(metric::GROUP_GAP);
                 toolbar::readout(ui, "size", &format!("{width:.0}×{height:.0}"), true);
-                ui.add_space(metric::GROUP_GAP);
-                ui.label(
-                    egui::RichText::new(
-                        "The overlay is as wide as the aspect, so a narrow screen \
-                         is the one to arrange against",
-                    )
-                    .size(text::NOTE)
-                    .color(color::TEXT_FAINT),
-                );
+                if explained {
+                    ui.add_space(metric::GROUP_GAP);
+                    ui.label(
+                        egui::RichText::new(
+                            "The overlay is as wide as the aspect, so a narrow screen \
+                             is the one to arrange against",
+                        )
+                        .size(text::NOTE)
+                        .color(color::TEXT_FAINT),
+                    );
+                }
             }
         });
     }
 }
 
+/// Whether the next press in the Game view picks the element under it for
+/// the inspector, as a browser's element picker does, instead of reaching the
+/// game. Kept with the view's other passing state rather than in the scene.
+pub(super) fn picking(context: &egui::Context) -> bool {
+    context.data(|data| data.get_temp(egui::Id::new(PICKING)).unwrap_or(false))
+}
+
+fn set_picking(context: &egui::Context, on: bool) {
+    context.data_mut(|data| data.insert_temp(egui::Id::new(PICKING), on));
+}
+
+const PICKING: &str = "game-view-picking";
+
 impl super::EditorApp {
+    /// Selects the frontmost element under a press in the Game view, and
+    /// leaves picking, as a browser's element picker does after one click.
+    pub(super) fn pick_in_game(&mut self, context: &egui::Context) {
+        let Some(rect) = self.game_view_rect else {
+            return;
+        };
+        let press = context.input(|input| {
+            input
+                .pointer
+                .primary_pressed()
+                .then(|| input.pointer.interact_pos())
+                .flatten()
+        });
+        let Some(position) = press.filter(|position| rect.contains(*position)) else {
+            return;
+        };
+        // In the view's points, like the extent the screen was laid out at:
+        // the overlay is a fraction of the view either way.
+        let extent = sindri_scene::ScreenExtent::new(rect.width(), rect.height());
+        let local = [position.x - rect.min.x, position.y - rect.min.y];
+        if let Some(entity) = extent
+            .pointer(local)
+            .and_then(|point| self.screen_ui.element_at(point))
+        {
+            self.select(Some(entity));
+        }
+        set_picking(context, false);
+    }
+
     /// The shape of the screen the game runs at, for the canvas in the Scene
     /// view.
     ///

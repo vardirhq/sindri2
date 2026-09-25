@@ -353,8 +353,9 @@ presentation after a broken save, and reports composition failures with their
 source path, line, and column. The inspector's Styles section is Weave's
 devtools: the box model as drawn, every matched rule with its `file:line`
 and the overridden declarations struck through, and the computed values, at
-the Game view's size. Editing a value there is not built yet; stylesheets
-hot-reload on save.
+the Game view's size. Clicking a value there edits it in place and writes
+it into the stylesheet at the rule's line, which then reloads; the Game
+view's Pick toggle selects an element by clicking it in the running game.
 
 Weave's `margin` and `padding` (one to four values, per-side longhands, CSS
 percentages) write that box, and `box-shadow` writes the shape's shadow.

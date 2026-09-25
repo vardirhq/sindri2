@@ -111,6 +111,8 @@ const OVERLAY_GUTTER: f32 = 12.0;
 /// island a full-width band again, wearing rounded ends and hiding half its own
 /// controls behind the hierarchy.
 const ISLAND_WIDTH: f32 = 620.0;
+/// The Game view's island: a device preset, its size and the picker.
+const GAME_ISLAND_WIDTH: f32 = 400.0;
 
 impl EditorApp {
     /// Draws every place that holds anything: docks, then the scene, then the
@@ -311,8 +313,15 @@ impl EditorApp {
                 }
             }
             DockPanel::Game => {
-                self.game_tools(ui);
-                self.render_view(ui, WorkspaceTab::Game);
+                if self.preferences.workspace.chrome().floats() {
+                    // As the Scene view's tools: a strip at the top would be
+                    // under the floating title bar, out of reach.
+                    self.render_view(ui, WorkspaceTab::Game);
+                    self.game_island(ui);
+                } else {
+                    self.game_tools(ui);
+                    self.render_view(ui, WorkspaceTab::Game);
+                }
             }
             DockPanel::Hierarchy => self.hierarchy_body(ui),
             DockPanel::Inspector => self.inspector_body(ui),
@@ -348,17 +357,39 @@ impl EditorApp {
     /// are the verbs that are always available, and a control that moves is a
     /// control that has to be looked for.
     fn tool_island(&mut self, ui: &mut egui::Ui) {
+        self.island(
+            ui,
+            "scene-tool-island",
+            ISLAND_WIDTH,
+            Self::scene_tools_island,
+        );
+    }
+
+    /// The Game view's tools, floating as the Scene view's do.
+    fn game_island(&mut self, ui: &mut egui::Ui) {
+        self.island(ui, "game-tool-island", GAME_ISLAND_WIDTH, |app, ui| {
+            app.game_tool_row(ui, false);
+        });
+    }
+
+    fn island(
+        &mut self,
+        ui: &mut egui::Ui,
+        id: &str,
+        width: f32,
+        contents: impl FnOnce(&mut Self, &mut egui::Ui),
+    ) {
         let field = self.overlay_field();
         // Given an explicit rectangle rather than left to size itself. An
         // auto-sizing `Area` measured zero here and the island rendered
         // nothing at all — the same pattern the docked overlays already use
         // works, and the centring needs a known width anyway.
-        let width = ISLAND_WIDTH.min(field.width() - OVERLAY_GUTTER * 2.0);
+        let width = width.min(field.width() - OVERLAY_GUTTER * 2.0);
         let rect = Rect::from_min_size(
             egui::pos2(field.center().x - width / 2.0, field.top() + OVERLAY_GUTTER),
             egui::vec2(width, metric::TOOLBAR_HEIGHT),
         );
-        egui::Area::new(egui::Id::new("scene-tool-island"))
+        egui::Area::new(egui::Id::new(id))
             .fixed_pos(rect.min)
             .order(egui::Order::Middle)
             .interactable(true)
@@ -367,7 +398,7 @@ impl EditorApp {
                 ui.set_max_size(rect.size());
                 panel::overlay_frame().show(ui, |ui| {
                     ui.set_clip_rect(rect.shrink(1.0));
-                    self.scene_tools_island(ui);
+                    contents(self, ui);
                 });
             });
     }

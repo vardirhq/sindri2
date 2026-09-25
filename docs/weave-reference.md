@@ -417,9 +417,17 @@ did to it, as a browser's devtools do:
   and the custom properties in scope.
 
 It follows the Game view's size, so switching the device preset shows the
-rules its media queries choose. It is read-only; save the stylesheet and the
-editor reloads it. `sindri_weave::inspect` answers the same questions for
-other tools.
+rules its media queries choose. Click a declaration's value to change it:
+Enter or clicking away writes the new value into the stylesheet on the
+rule's line, leaving the rest of the file as it was, and the styles reload
+from the file; Escape leaves it alone. A value that comes from a shorthand
+(`padding-top` from `padding`) is refused rather than guessed at; edit the
+shorthand. While the game is playing or paused, the Game view's **Pick**
+toggle turns the next click in the game into a selection: the frontmost
+element under it is selected, and the game does not receive the click.
+
+`sindri_weave::inspect` answers the same questions for other tools, and
+`weave::set_declaration` makes the same edit to a stylesheet's source.
 
 ## Authoring guidance
 
@@ -427,8 +435,9 @@ The editor recognizes manifest-listed `.weave` roots, previews their source,
 authors `weave.style.classes`, and applies the composed result to Scene and Game
 views. It hot-reloads saved changes throughout each root's `@use` graph. A
 broken reload keeps the last good presentation and reports the source path,
-line, and column. Editing stylesheet source and choosing named viewport presets
-remain external workflows.
+line, and column. The Game view's device presets choose the viewport, and a
+single value can be changed from the Styles section; writing stylesheets
+otherwise happens in a text editor.
 
 - Keep semantic identity in entity IDs and reusable appearance in classes.
 - Keep one small entry stylesheet and split large surfaces with `@use`.

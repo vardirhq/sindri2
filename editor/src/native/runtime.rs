@@ -210,7 +210,15 @@ impl EditorApp {
         // stopping releases what was held rather than leaving it down.
         let listening =
             self.lifecycle.state() == EngineState::Running && !context.egui_wants_keyboard_input();
-        self.input.update(context, listening, self.game_view_rect);
+        // While picking, the Game view's pointer is the picker's: the game
+        // sees it leave, and its press selects rather than plays.
+        let game_view = if super::device::picking(context) {
+            self.pick_in_game(context);
+            None
+        } else {
+            self.game_view_rect
+        };
+        self.input.update(context, listening, game_view);
         // Forgotten now that this frame's input has been read, and filled in
         // again by whichever view draws. A workspace that stops showing the
         // Game view then reports no rectangle rather than the last one it had,

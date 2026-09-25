@@ -12,6 +12,7 @@ use thiserror::Error;
 
 mod cascade;
 mod composition;
+mod edit;
 mod media;
 mod parse_selector;
 mod selector;
@@ -20,6 +21,7 @@ mod structural;
 
 pub use cascade::{Computed, INHERITED, Matched, cascade, matched};
 pub use composition::{ComposeError, compose, compose_all, imports, resolve_import};
+pub use edit::{EditError, set_declaration};
 pub use media::{MediaCondition, MediaQuery};
 pub use selector::{
     Combinator, Compound, Element, ListKind, Position, Selector, Specificity, States, Structural,

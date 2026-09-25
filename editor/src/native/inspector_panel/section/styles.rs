@@ -3,8 +3,9 @@
 //! A browser's Styles pane, for the scene. The box model as drawn, every rule
 //! that matched with the declarations a stronger rule overrode struck
 //! through, each with the file and line it was written on, and what the
-//! element ends up with. Read-only: the stylesheet is the place to change it,
-//! and it reloads as soon as it is saved.
+//! element ends up with. Clicking a declaration's value edits it, and the
+//! change is written into the stylesheet at that line, which then reloads:
+//! the file stays the one source of truth, as it would after a save.
 
 use eframe::egui::{self, Align2, Color32, FontId, Id, Sense, Stroke, StrokeKind, Vec2};
 use sindri_core::EntityId;
@@ -29,7 +30,25 @@ pub(in crate::native) struct StylesView {
     pixels_per_unit: f32,
 }
 
+/// A value changed in the panel, to be written where its rule was written.
+pub(in crate::native) struct StyleEdit {
+    pub file: String,
+    pub line: usize,
+    pub selector: String,
+    pub property: String,
+    pub value: String,
+}
+
 const SECTION: &str = "inspector-weave-cascade";
+/// The declaration being edited, if any, and the text typed so far.
+const EDITING: &str = "inspector-weave-editing";
+
+#[derive(Clone)]
+struct Editing {
+    declaration: Id,
+    draft: String,
+    focused: bool,
+}
 
 impl EditorApp {
     /// What the panel shows about `entity`, or `None` when there is nothing
@@ -87,6 +106,29 @@ impl EditorApp {
     }
 }
 
+impl EditorApp {
+    /// Writes a value edited in the panel into its stylesheet. The styles
+    /// reload from the file, so what the scene shows is what was saved.
+    pub(in crate::native) fn write_style(&mut self, edit: Option<StyleEdit>) {
+        let Some(edit) = edit else {
+            return;
+        };
+        match self.styles.set_declaration(
+            &edit.file,
+            edit.line,
+            &edit.selector,
+            &edit.property,
+            &edit.value,
+        ) {
+            Ok(()) => self.console.info(format!(
+                "{}:{}: {} set to {}",
+                edit.file, edit.line, edit.property, edit.value
+            )),
+            Err(error) => self.console.error(error),
+        }
+    }
+}
+
 fn is_ui(world: &sindri_core::World, entity: EntityId) -> bool {
     world.get(entity).is_some_and(|data| {
         data.components
@@ -95,11 +137,12 @@ fn is_ui(world: &sindri_core::World, entity: EntityId) -> bool {
     })
 }
 
-/// Draws the panel for a UI element in a styled project.
-pub(in crate::native) fn styles_section(ui: &mut egui::Ui, view: &StylesView) {
+/// Draws the panel for a UI element in a styled project, and returns the
+/// value edited in it, if one was committed this frame.
+pub(in crate::native) fn styles_section(ui: &mut egui::Ui, view: &StylesView) -> Option<StyleEdit> {
     let open = section::component(ui, Id::new(SECTION), icons::STYLESHEET, "Styles", |_| {});
     if !open {
-        return;
+        return None;
     }
     ui.add_space(6.0);
     box_model(ui, view);
@@ -110,8 +153,9 @@ pub(in crate::native) fn styles_section(ui: &mut egui::Ui, view: &StylesView) {
             "No rule in the project's stylesheets matches this element.",
         );
     }
+    let mut edit = None;
     for rule in &view.inspection.rules {
-        rule_block(ui, rule);
+        edit = edit.or(rule_block(ui, rule));
     }
     if !view.inspection.computed.is_empty() {
         heading(ui, "Computed");
@@ -126,6 +170,7 @@ pub(in crate::native) fn styles_section(ui: &mut egui::Ui, view: &StylesView) {
         }
     }
     ui.add_space(6.0);
+    edit
 }
 
 fn heading(ui: &mut egui::Ui, title: &str) {
@@ -143,7 +188,7 @@ fn heading(ui: &mut egui::Ui, title: &str) {
 
 /// One matched rule: its selector and where it was written, then its
 /// declarations, the overridden ones struck through as a browser shows them.
-fn rule_block(ui: &mut egui::Ui, rule: &InspectedRule) {
+fn rule_block(ui: &mut egui::Ui, rule: &InspectedRule) -> Option<StyleEdit> {
     ui.add_space(4.0);
     ui.horizontal(|ui| {
         ui.add_space(metric::GUTTER);
@@ -167,8 +212,23 @@ fn rule_block(ui: &mut egui::Ui, rule: &InspectedRule) {
             );
         });
     });
+    let mut edit = None;
     for (property, value, applies) in &rule.declarations {
-        declaration(ui, property, value, *applies);
+        // Only a rule read from a project file has somewhere to write to.
+        if rule.origin.file.is_empty() {
+            declaration(ui, property, value, *applies);
+            continue;
+        }
+        let id = Id::new((EDITING, &rule.origin.file, rule.origin.line, property));
+        if let Some(value) = editable(ui, id, property, value, *applies) {
+            edit = Some(StyleEdit {
+                file: rule.origin.file.clone(),
+                line: rule.origin.line,
+                selector: rule.origin.selector.clone(),
+                property: property.clone(),
+                value,
+            });
+        }
     }
     ui.horizontal(|ui| {
         ui.add_space(metric::GUTTER);
@@ -179,27 +239,103 @@ fn rule_block(ui: &mut egui::Ui, rule: &InspectedRule) {
                 .color(color::FORGE_BRIGHT),
         );
     });
+    edit
+}
+
+fn declaration_text(text: String, applies: bool) -> egui::RichText {
+    let mut line = egui::RichText::new(text)
+        .monospace()
+        .size(text::LABEL)
+        .color(if applies {
+            color::TEXT
+        } else {
+            color::TEXT_FAINT
+        });
+    if !applies {
+        line = line.strikethrough();
+    }
+    line
+}
+
+/// A declaration whose value can be clicked and typed over, as in a
+/// browser's Styles pane. Enter or clicking away commits it; Escape leaves
+/// the stylesheet as it was. Returns the new value when one is committed.
+fn editable(
+    ui: &mut egui::Ui,
+    id: Id,
+    property: &str,
+    value: &str,
+    applies: bool,
+) -> Option<String> {
+    let key = Id::new(EDITING);
+    let editing = ui
+        .data(|data| data.get_temp::<Editing>(key))
+        .filter(|editing| editing.declaration == id);
+    let mut committed = None;
+    ui.horizontal(|ui| {
+        ui.add_space(metric::GUTTER + metric::INDENT);
+        ui.spacing_mut().item_spacing.x = 0.0;
+        ui.label(declaration_text(format!("{property}: "), applies));
+        let Some(mut editing) = editing else {
+            let shown = ui
+                .add(
+                    egui::Label::new(declaration_text(value.to_owned(), applies))
+                        .sense(Sense::click()),
+                )
+                .on_hover_cursor(egui::CursorIcon::Text)
+                .on_hover_text(if applies {
+                    "Applies to this element. Click to change it in the stylesheet"
+                } else {
+                    "Overridden by a stronger rule or a later stylesheet. Click to change it"
+                });
+            if shown.clicked() {
+                ui.data_mut(|data| {
+                    data.insert_temp(
+                        key,
+                        Editing {
+                            declaration: id,
+                            draft: value.to_owned(),
+                            focused: false,
+                        },
+                    );
+                });
+            }
+            ui.label(declaration_text(";".to_owned(), applies));
+            return;
+        };
+        let field = ui.add(
+            egui::TextEdit::singleline(&mut editing.draft)
+                .id(id)
+                .font(egui::TextStyle::Monospace)
+                .desired_width(ui.available_width() - metric::GUTTER),
+        );
+        if !editing.focused {
+            field.request_focus();
+            editing.focused = true;
+        }
+        if field.lost_focus() {
+            let cancelled = ui.input(|input| input.key_pressed(egui::Key::Escape));
+            let draft = editing.draft.trim();
+            if !cancelled && draft != value {
+                committed = Some(draft.to_owned());
+            }
+            ui.data_mut(|data| data.remove::<Editing>(key));
+        } else {
+            ui.data_mut(|data| data.insert_temp(key, editing));
+        }
+    });
+    committed
 }
 
 fn declaration(ui: &mut egui::Ui, property: &str, value: &str, applies: bool) {
     ui.horizontal(|ui| {
         ui.add_space(metric::GUTTER + metric::INDENT);
-        let mut line = egui::RichText::new(format!("{property}: {value};"))
-            .monospace()
-            .size(text::LABEL)
-            .color(if applies {
-                color::TEXT
+        ui.label(declaration_text(format!("{property}: {value};"), applies))
+            .on_hover_text(if applies {
+                "Applies to this element"
             } else {
-                color::TEXT_FAINT
+                "Overridden by a stronger rule or a later stylesheet"
             });
-        if !applies {
-            line = line.strikethrough();
-        }
-        ui.label(line).on_hover_text(if applies {
-            "Applies to this element"
-        } else {
-            "Overridden by a stronger rule or a later stylesheet"
-        });
     });
 }
 
