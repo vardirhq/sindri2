@@ -35,8 +35,8 @@ use std::collections::BTreeMap;
 use glam::{Quat, Vec2};
 use sindri_core::{ComponentRegistryError, ComponentSchemaRegistry, EntityId, Transform3D, World};
 
-use super::UiButtonComponent;
 use super::layout_pass::{Laid, lay_out};
+use super::{UiButtonComponent, UiTextSizes};
 use crate::{UiAnchor, UiImageComponent, UiShapeComponent, UiTextComponent};
 
 /// How deep a parent chain is followed.
@@ -112,8 +112,18 @@ impl UiHierarchy {
         world: &World,
         components: &ComponentSchemaRegistry,
     ) -> Result<Self, ComponentRegistryError> {
+        Self::measured(world, components, &UiTextSizes::new())
+    }
+
+    /// Resolves every UI element, with the words of text elements that fit
+    /// their content measured by a host: see [`super::measure_ui_text`].
+    pub fn measured(
+        world: &World,
+        components: &ComponentSchemaRegistry,
+        text: &UiTextSizes,
+    ) -> Result<Self, ComponentRegistryError> {
         let anchors = declared_anchors(world, components)?;
-        let laid = lay_out(world, components)?;
+        let laid = lay_out(world, components, text)?;
         let mut placed = BTreeMap::new();
         for entity in anchors.keys().copied() {
             let mut resolved = resolve(world, &anchors, &laid, entity);

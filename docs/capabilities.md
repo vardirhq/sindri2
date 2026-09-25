@@ -363,8 +363,25 @@ as well as places, and drawing, hit-testing and the editor's picking use
 them. Weave's `flex`, its longhands, `flex-wrap`, `order`, `align-self`,
 `width: auto` and the rest write the same data.
 
+Text sizes what holds it: a text element whose `sindri.ui.box` fits its
+content (Weave's `width: auto`) is measured by its font each draw, so a label
+sizes a button, and a label is the least a shrinking flex item keeps.
+Hosts measure through `sindri_scene::measure_ui_text` and pass the sizes to
+extraction and hit-testing.
+
+`sindri.ui.grid` lays children out in CSS grid's columns and rows: fixed,
+`auto` and `fr` tracks, explicit or automatic placement with spans, implicit
+tracks, gaps and cell alignment. Weave's `display: grid` and the
+`grid-template-*`, `grid-column`/`grid-row`, gap and alignment properties
+write it.
+
+Selectors include the structural pseudo-classes (`:first-child`,
+`:nth-child(2n+1)`, `:root` and the rest), `:not()`, `:is()`, `:where()`,
+and the `+` and `~` sibling combinators, matched in scene order; lengths
+take `calc()`.
+
 This is not a general CSS implementation yet. `@keyframes`, borders per side,
-sizing from measured text, grid, and accessibility mapping remain absent.
+grid's `minmax()` and named areas, and accessibility mapping remain absent.
 
 ### Screen UI
 

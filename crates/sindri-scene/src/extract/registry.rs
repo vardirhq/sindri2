@@ -30,7 +30,9 @@ use crate::components::{
     UiShapeKind, UiTextComponent, VoxelGeneratorDocument, VoxelWorldComponent,
 };
 use crate::effects::EffectBurstComponent;
-use crate::screen_ui::{UiBoxComponent, UiButtonComponent, UiLayoutComponent, UiSliderComponent};
+use crate::screen_ui::{
+    UiBoxComponent, UiButtonComponent, UiGridComponent, UiLayoutComponent, UiSliderComponent,
+};
 use crate::textures::PROCEDURAL_TEXTURES;
 
 use super::SceneExtractError;
@@ -182,6 +184,57 @@ fn register_environment(components: &mut ComponentSchemaRegistry) -> Result<(), 
 }
 
 /// Everything a scene puts on the screen.
+/// The components that place UI elements: a flex line, a grid, and the box
+/// each element brings to them.
+fn register_ui_layout(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
+    // A centred column preserves the layout behavior scenes had before
+    // alignment/distribution became authorable.
+    components.register_with_default::<UiLayoutComponent>(
+        "UI Layout",
+        serde_json::json!({
+            "direction": "column",
+            "spacing": 0.25,
+            "justify": "center",
+            "align": "center",
+            "wrap": false,
+            "fit_content": [false, false]
+        }),
+    )?;
+    // No room either side and CSS's item defaults: adding a box changes
+    // nothing until something is set, so it can go on any element.
+    components.register_with_default::<UiBoxComponent>(
+        "UI Box",
+        serde_json::json!({
+            "margin": [0.0, 0.0, 0.0, 0.0],
+            "padding": [0.0, 0.0, 0.0, 0.0],
+            "grow": 0.0,
+            "shrink": 1.0,
+            "basis": -1.0,
+            "order": 0,
+            "align_self": "auto",
+            "min_size": [0.0, 0.0],
+            "max_size": [0.0, 0.0],
+            "fit_content": [false, false],
+            "grid_column": [0, 0],
+            "grid_row": [0, 0]
+        }),
+    )?;
+    // Two equal columns: the smallest grid that shows it is one, and adding
+    // it to a panel lays its children out in pairs at once.
+    components.register_with_default::<UiGridComponent>(
+        "UI Grid",
+        serde_json::json!({
+            "columns": ["1fr", "1fr"],
+            "rows": [],
+            "gap": [0.05, 0.05],
+            "justify_items": "stretch",
+            "align_items": "stretch",
+            "fit_content": [false, false]
+        }),
+    )?;
+    Ok(())
+}
+
 fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), SceneExtractError> {
     // Each default is what a freshly added component of that type looks
     // like, and is what makes the type addable at all. They are chosen to
@@ -249,35 +302,7 @@ fn register_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "disabled": false
         }),
     )?;
-    // A centred column preserves the layout behavior scenes had before
-    // alignment/distribution became authorable.
-    components.register_with_default::<UiLayoutComponent>(
-        "UI Layout",
-        serde_json::json!({
-            "direction": "column",
-            "spacing": 0.25,
-            "justify": "center",
-            "align": "center",
-            "wrap": false,
-            "fit_content": [false, false]
-        }),
-    )?;
-    // No room either side and CSS's item defaults: adding a box changes
-    // nothing until something is set, so it can go on any element.
-    components.register_with_default::<UiBoxComponent>(
-        "UI Box",
-        serde_json::json!({
-            "margin": [0.0, 0.0, 0.0, 0.0],
-            "padding": [0.0, 0.0, 0.0, 0.0],
-            "grow": 0.0,
-            "shrink": 1.0,
-            "basis": -1.0,
-            "order": 0,
-            "align_self": "auto",
-            "min_size": [0.0, 0.0],
-            "max_size": [0.0, 0.0]
-        }),
-    )?;
+    register_ui_layout(components)?;
     // A visible burst, because one that threw nothing would look like a
     // component that does not work.
     components.register_with_default::<EffectBurstComponent>(

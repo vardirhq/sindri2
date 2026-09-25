@@ -109,6 +109,14 @@ impl RuntimeViewport {
         canvas: UiCanvas,
     ) -> Result<(), String> {
         self.resize(size.0, size.1);
+        // Text that fits its words is measured by the same renderer that
+        // draws it, so the view shows the size the game will.
+        let text_sizes = sindri_scene::measure_ui_text(
+            source.world,
+            source.scene.components(),
+            &mut renderers.text,
+        )
+        .map_err(|error| error.to_string())?;
         let prepared = source
             .scene
             .extract_animated(
@@ -121,7 +129,8 @@ impl RuntimeViewport {
                     .with_effects(source.effects)
                     .with_tile_sets(source.textures.tile_sets())
                     .with_seconds(super::animated::seconds())
-                    .with_canvas(canvas),
+                    .with_canvas(canvas)
+                    .with_text_sizes(&text_sizes),
             )
             .map_err(|error| error.to_string())?;
         let mut encoder =

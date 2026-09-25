@@ -63,12 +63,14 @@ async fn capture(path: &Path, width: u32, height: u32, scene: &str) -> Result<()
     }
     let textures = TextureRegistry::new(&gpu.device, &gpu.queue);
 
-    let prepared = SceneExtractor::new()?.extract_animated(
+    let extractor = SceneExtractor::new()?;
+    let text_sizes = sindri_scene::measure_ui_text(&world, extractor.components(), &mut text)?;
+    let prepared = extractor.extract_animated(
         &world,
         Viewport::new(width, height),
         CameraView::default(),
         &TextureBindings::default(),
-        SceneRuntime::default(),
+        SceneRuntime::default().with_text_sizes(&text_sizes),
     )?;
     let mut encoder = gpu
         .device

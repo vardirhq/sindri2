@@ -132,6 +132,20 @@ pub(crate) fn set_field(
     }
 }
 
+/// Marks whether the element fits its content on `axis`.
+pub(crate) fn set_fit(world: &mut World, entity: EntityId, axis: usize, fits: bool) {
+    let Some(object) = box_of(world, entity) else {
+        return;
+    };
+    let pair = object
+        .entry("fit_content".to_owned())
+        .or_insert_with(|| serde_json::json!([false, false]));
+    if let Some(array) = pair.as_array_mut() {
+        array.resize(2, false.into());
+        array[axis] = fits.into();
+    }
+}
+
 /// Writes one axis of a pair field, `min_size` or `max_size`.
 pub(crate) fn set_axis(world: &mut World, entity: EntityId, field: &str, axis: usize, value: f32) {
     set_entry(world, entity, field, 2, axis, value);

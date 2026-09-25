@@ -87,12 +87,23 @@ Selectors are written as in CSS:
 | Compound | `button.primary:hover` | All of its parts at once |
 | Descendant | `.menu text` | The right-hand entity anywhere inside the left |
 | Child | `.menu > button` | The right-hand entity directly inside the left |
+| Next sibling | `text + slider` | The right-hand entity straight after the left, under the same parent |
+| Later sibling | `.primary ~ button` | The right-hand entity anywhere after the left, under the same parent |
+| Position | `:first-child`, `:last-child`, `:only-child`, `:nth-child(2n+1)`, `:nth-last-child(2)`, `:root` | An entity by where it sits among its siblings, in scene order |
+| Negation | `button:not(.primary, :first-child)` | An entity none of the list matches |
+| Any of | `:is(#a, .b)`, `:where(#a, .b)` | An entity any of the list matches |
 | List | `.title, .subtitle` | Either |
 
 An element name is a UI component's short name: `text` for `sindri.ui.text`,
 `image`, `shape`, `button`, `slider`, `layout`, and likewise `sprite` for
 `sindri.sprite`. The full name still works, so `sindri.ui.text { … }` means
 what it always did.
+
+Siblings are an entity's parent's children in the scene's order, and the
+scene's top-level entities for one with no parent; `:root` is an entity with
+no parent. `:nth-child()` takes CSS's `an+b`, `odd` and `even`. `:not()` and
+`:is()` are as specific as their most specific argument, and `:where()` is
+not specific at all, as in CSS.
 
 `:disabled` and `:checked` come from the entity's own data: a component with
 `"disabled": true` makes its entity `:disabled`. `:hover`, `:active` and
@@ -165,6 +176,11 @@ covering the outer border.
 
 `min-*` and `max-*` constraints apply to the final resolved size.
 
+`calc()` mixes units wherever a length goes: `width: calc(100% - 40px)`,
+`padding: calc(var(--gap) * 2) 8px`. Lengths add and subtract, and multiply
+or divide by plain numbers; `u` names the overlay's own unit inside one.
+`min()`, `max()` and `clamp()` are not read yet.
+
 ## Layout properties
 
 | Property | Accepted values | Effect |
@@ -186,7 +202,12 @@ covering the outer border.
 | `flex-basis` | length, or `auto` | Size along the line before growing or shrinking |
 | `order` | integer | Position in the layout, lowest first |
 | `align-self` | `auto`, `start`, `center`, `end`, `stretch` | One item's cross-axis alignment |
-| `width`, `height` | `auto` | On a layout: size to its children, padding and gaps |
+| `display` | `grid`, `flex` | Makes the element a grid or a flex line |
+| `grid-template-columns`, `grid-template-rows` | tracks: `1fr`, `auto`, lengths, `repeat(n, …)`, or `none` | The grid's columns and rows |
+| `gap`, `row-gap`, `column-gap` | length (`gap` takes a row and a column gap) | Space between grid tracks; a flex line takes the gap along it |
+| `justify-items` | `start`, `center`, `end`, `stretch` | Where grid items sit across their cells |
+| `grid-column`, `grid-row` | `2`, `span 2`, `2 / 4`, `2 / span 3`, `auto` | Where an item starts in a grid and how many tracks it spans |
+| `width`, `height` | `auto` | On a layout: size to its children, padding and gaps. On a text element: size to its measured words and padding |
 
 Layout is hierarchical. A child must be parented beneath the layout entity in
 the scene; visual overlap does not establish layout membership. Explicit child
@@ -205,6 +226,35 @@ than by re-sharing what a clamped child could not take, and a child that is
 not itself a layout has no automatic minimum, because text is not measured
 yet. A layout's automatic minimum is its children and padding, so a badge
 does not shrink into its own label.
+
+A grid (`display: grid`, or a `sindri.ui.grid` component in the scene) places
+its children in columns and rows. Tracks are fixed lengths, `auto` (as big as
+the largest item alone in the track) or `fr` shares of the room those leave;
+an `fr` track is never smaller than what is in it, as CSS's `1fr` means
+`minmax(auto, 1fr)`. Items with a `grid-column` and `grid-row` are placed
+first, then items held to a row, then the rest flow into the next free cell
+row by row, and rows or columns past the template are added as `auto`
+tracks. Items fill their cells unless `justify-items`, `align-items` or an
+item's `align-self` says otherwise, and `width: auto` sizes a grid to its
+tracks. Not yet: `minmax()`, named lines and areas, `auto-fill`/`auto-fit`,
+dense packing, and spanning items sizing the tracks they cross.
+
+Text is measured by its font. A text element with `width: auto` or
+`height: auto` is sized to its words, measured by the same shaping that draws
+them (with no width limit when the width fits, so a label is one line), plus
+its padding. That size is also its minimum when a layout shrinks it. So a
+button that fits its content grows with its label:
+
+```css
+.badge { width: auto; height: auto; padding: 12px 18px; }
+.badge-label { width: auto; height: auto; }
+```
+
+Measuring needs the font, so it is the host's to do: the game, the browser
+export, the editor's views and the showcase's capture all measure each draw
+(`sindri_scene::measure_ui_text`) and hand the sizes to layout, drawing and
+hit-testing. A wrapping text's minimum is still its whole measured width, not
+its longest word.
 
 `padding` and `margin` take one to four values in CSS order (all; vertical
 and horizontal; top, horizontal and bottom; top, right, bottom and left), and
@@ -380,15 +430,15 @@ entity, property, and value. Unknown properties are currently ignored.
 
 The following CSS concepts are not implemented:
 
-- sizing from measured text (`width: auto` on a text element, or text as
-  the minimum a flex item shrinks to)
+- a wrapping text's longest word as its minimum, and text wrapping to the
+  width a layout gave it
 - borders per side, negative margins, and more than one or an `inset` shadow
 - `align-content` other than its default, `row-gap`/`column-gap`, and
   reversed directions
-- grid, scrolling, and clipping regions
-- calculations (`calc()`)
-- attribute selectors, sibling combinators, and structural pseudo-classes
-  such as `:first-child` or `:not()`
+- grid's `minmax()`, named lines and areas, `auto-fill`, and dense packing
+- scrolling and clipping regions
+- `min()`, `max()` and `clamp()`
+- attribute selectors, and the `-of-type` pseudo-classes
 - `:focus` in the running game: nothing takes focus until keyboard and
   gamepad navigation land
 - `@keyframes` animation

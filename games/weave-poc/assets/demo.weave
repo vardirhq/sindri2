@@ -34,8 +34,10 @@ sindri.ui.text {
 }
 
 .viewport-badge {
-    width: 150px;
-    height: 38px;
+    /* Sized to its label: its words, measured, and this padding round them. */
+    width: auto;
+    height: auto;
+    padding: 12px 18px;
     /* Keeps its size when the top bar is short of room; the eyebrow gives. */
     flex-shrink: 0;
     direction: row;
@@ -48,8 +50,8 @@ sindri.ui.text {
 }
 
 .badge-label {
-    width: 140px;
-    height: 14px;
+    width: auto;
+    height: auto;
     color: #a7f3d0;
     font-size: 12px;
     line-height: 14px;
@@ -184,9 +186,12 @@ sindri.ui.text {
 .features {
     width: 100%;
     height: 92px;
-    direction: row;
-    gap: 14px;
-    justify-content: space-between;
+    /* Three cards on a grid: the outer two against the edges, the middle one
+       centred between them. */
+    display: grid;
+    grid-template-columns: 31% 1fr 31%;
+    grid-template-rows: 1fr;
+    justify-items: center;
     align-items: center;
 }
 
@@ -202,15 +207,16 @@ sindri.ui.text {
     border-radius: 14px;
 }
 
-.feature-start {
+/* The cards by their place in the row, not by a class each. */
+.feature-card:first-child {
     border-color: #2dd4bf;
 }
 
-.feature-center {
+.feature-card:nth-child(2) {
     border-color: #60a5fa;
 }
 
-.feature-end {
+.feature-card:last-child {
     border-color: #a78bfa;
 }
 
@@ -251,13 +257,10 @@ sindri.ui.text {
     }
 
     .viewport-badge {
-        width: 26vw;
-        height: 8vw;
+        padding: 2.2vw 3.4vw;
     }
 
     .badge-label {
-        width: 24vw;
-        height: 3.5vw;
         font-size: 2.8vw;
         line-height: 3.5vw;
     }
@@ -349,10 +352,10 @@ sindri.ui.text {
     .features {
         width: 100%;
         height: 30vw;
-        direction: column;
-        gap: 2.25vw;
-        justify-content: start;
-        align-items: center;
+        /* One column on a phone, the cards stacked from the top. */
+        grid-template-columns: 1fr;
+        grid-template-rows: none;
+        row-gap: 2.25vw;
     }
 
     .feature-card {
@@ -363,15 +366,15 @@ sindri.ui.text {
         border-radius: 3vw;
     }
 
-    .feature-start {
+    .feature-card:first-child {
         align-items: start;
     }
 
-    .feature-center {
+    .feature-card:nth-child(2) {
         align-items: center;
     }
 
-    .feature-end {
+    .feature-card:last-child {
         align-items: end;
     }
 

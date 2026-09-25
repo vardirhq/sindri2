@@ -18,7 +18,9 @@ use sindri_render::{
     TextRenderer, Texture2D, TextureRegistry, TexturedCubeRenderer, Viewport,
     encode_prepared_frame,
 };
-use sindri_scene::{CameraView, SceneExtractor, SceneRuntime, TextureBindings, TileSetBindings};
+use sindri_scene::{
+    CameraView, SceneExtractor, SceneRuntime, TextureBindings, TileSetBindings, measure_ui_text,
+};
 use weave::Viewport as WeaveViewport;
 
 use self::loader::{BrowserProjectAssets, BrowserProjectLoader};
@@ -315,20 +317,28 @@ impl DesktopApp for BrowserCausewayApp {
         let mut world = std::mem::take(engine.world_mut());
         let styled = engine.game_mut().style(&mut world, viewport);
         let prepared = styled.and_then(|undo| {
-            let prepared = self.scene.extract_animated(
-                &world,
-                Viewport::new(context.width(), context.height()),
-                CameraView::default(),
-                &self.bindings,
-                SceneRuntime::default()
-                    .with_animations(engine.game().animations())
-                    .with_effects(engine.game().effects())
-                    .with_tile_sets(&self.tile_sets),
-            );
+            // Measured as styled, since a stylesheet sets the font size.
+            let prepared = measure_ui_text(&world, self.scene.components(), &mut self.text)
+                .map_err(CausewayError::from)
+                .and_then(|sizes| {
+                    let prepared = self.scene.extract_animated(
+                        &world,
+                        Viewport::new(context.width(), context.height()),
+                        CameraView::default(),
+                        &self.bindings,
+                        SceneRuntime::default()
+                            .with_animations(engine.game().animations())
+                            .with_effects(engine.game().effects())
+                            .with_tile_sets(&self.tile_sets)
+                            .with_text_sizes(&sizes),
+                    )?;
+                    engine.game_mut().record_drawn(&world, viewport, sizes)?;
+                    Ok(prepared)
+                });
             if let Some(undo) = undo {
                 undo.undo(&mut world);
             }
-            prepared.map_err(CausewayError::from)
+            prepared
         });
         *engine.world_mut() = world;
         let prepared = prepared?;

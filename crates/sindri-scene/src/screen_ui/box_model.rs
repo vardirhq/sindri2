@@ -86,6 +86,20 @@ pub struct UiBoxComponent {
     /// The largest it may be made, across and down. Zero is no limit.
     #[serde(default)]
     pub max_size: [f32; 2],
+    /// Whether the element sizes itself to what it holds, across and down:
+    /// CSS's `width: auto` on something with content of its own. For a text
+    /// element that is its measured words, and its padding; a layout says the
+    /// same for its children with its own `fit_content`.
+    #[serde(default)]
+    pub fit_content: [bool; 2],
+    /// In a grid: the column line it starts at, counted from one, and how
+    /// many columns it spans (zero reads as one). A start of zero is placed
+    /// automatically.
+    #[serde(default)]
+    pub grid_column: [u32; 2],
+    /// In a grid: the row line it starts at, and how many rows it spans.
+    #[serde(default)]
+    pub grid_row: [u32; 2],
 }
 
 const fn one() -> f32 {
@@ -108,6 +122,9 @@ impl Default for UiBoxComponent {
             align_self: UiAlignSelf::Auto,
             min_size: [0.0; 2],
             max_size: [0.0; 2],
+            fit_content: [false; 2],
+            grid_column: [0, 0],
+            grid_row: [0, 0],
         }
     }
 }

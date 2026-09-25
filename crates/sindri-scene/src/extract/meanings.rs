@@ -31,8 +31,8 @@ use crate::components::{UiAnchor, UiTextCase, UiTextLineAlign, UiTextWrap};
 use crate::effects::EffectBurstComponent;
 use crate::physics::{Collider2dComponent, RigidBody2dComponent};
 use crate::screen_ui::{
-    UiAlign, UiAlignSelf, UiBoxComponent, UiDirection, UiJustify, UiLayoutComponent,
-    UiSliderComponent, UiSliderOrientation,
+    UiAlign, UiAlignSelf, UiBoxComponent, UiDirection, UiGridComponent, UiJustify,
+    UiLayoutComponent, UiSliderComponent, UiSliderOrientation,
 };
 use crate::tilemap_collision::TilemapCollider2dComponent;
 
@@ -130,6 +130,11 @@ fn describe_drawables(components: &mut ComponentSchemaRegistry) -> Result<(), Sc
             "align",
             FieldMeaning::choice(UiAlign::ALL.into_iter().map(UiAlign::as_str)),
         ),
+    ])?;
+    let alignments = || FieldMeaning::choice(UiAlign::ALL.into_iter().map(UiAlign::as_str));
+    components.describe::<UiGridComponent>([
+        ("justify_items", alignments()),
+        ("align_items", alignments()),
     ])?;
     components.describe::<UiBoxComponent>([(
         "align_self",

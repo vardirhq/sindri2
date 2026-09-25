@@ -73,11 +73,19 @@ Each step is its own pull request. A step is checked here when it has landed.
      `space-around` and `space-evenly`, min/max limits, and layouts that
      size to their content with `width: auto`. Layout decides sizes as well
      as places, and what is drawn and clicked uses them.
-   - [ ] Intrinsic sizing from text: a label measured by its font, so text
+   - [x] Intrinsic sizing from text: a label measured by its font, so text
      can size a button and be the minimum a flex item shrinks to.
-   - [ ] Grid layout.
-   - [ ] `calc()`, `:not()`, `:first-child` and the other structural
-     pseudo-classes.
+   - [ ] Wrapped text's smallest width (its longest word) as a flex item's
+     minimum, and text wrapping to the width a layout gave it.
+   - [x] Grid layout: fixed, `auto` and `fr` tracks with `repeat()`,
+     explicit and automatic placement with spans, implicit tracks, gaps, and
+     item alignment in the cell.
+   - [ ] Grid's `minmax()`, named lines and areas, `auto-fill`, dense
+     packing, and spanning items sizing the tracks they cross.
+   - [x] `calc()`, `:not()`, `:is()`, `:where()`, `:root`, `:first-child`,
+     `:nth-child()` and the other structural pseudo-classes, and the `+` and
+     `~` sibling combinators.
+   - [ ] `min()`, `max()`, `clamp()`, attribute selectors and `-of-type`.
 2. **Devtools in the editor.** Pick any UI element to see its box model,
    computed style, and every rule that matched with the overridden ones
    struck through; edit a value in place and write it to the stylesheet;

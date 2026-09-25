@@ -50,7 +50,7 @@ use thiserror::Error;
 use self::sprite::Shared;
 use self::tile_volume::BakedVolume;
 use crate::Effects2d;
-use crate::screen_ui::UiHierarchy;
+use crate::screen_ui::{UiHierarchy, UiTextSizes};
 use crate::{
     AnimationError, EnvironmentError, SpriteAnimations, TextureBindings, TileGridError,
     TileSetBindings, TileVolumeError, TilemapError,
@@ -288,6 +288,7 @@ impl SceneExtractor {
             canvas,
             tile_sets,
             seconds,
+            text_sizes,
         } = runtime;
         let aspect = viewport.aspect_ratio()?;
         let mut cameras = self.resolve_cameras(world, aspect, view)?;
@@ -303,7 +304,9 @@ impl SceneExtractor {
         // Resolved once and shared: what is drawn, what is clickable and what
         // the editor puts a handle on all have to agree about where a child of
         // a panel is.
-        let hierarchy = UiHierarchy::of(world, &self.components)?;
+        let unmeasured = UiTextSizes::new();
+        let hierarchy =
+            UiHierarchy::measured(world, &self.components, text_sizes.unwrap_or(&unmeasured))?;
         self.push_images(
             world,
             &cameras,
@@ -341,6 +344,7 @@ impl SceneExtractor {
             canvas,
             tile_sets,
             seconds,
+            text_sizes,
         } = runtime;
         let aspect = viewport.aspect_ratio()?;
         let mut cameras = resolved_screen_overlay(aspect);
@@ -362,7 +366,9 @@ impl SceneExtractor {
         // Resolved once and shared: what is drawn, what is clickable and what
         // the editor puts a handle on all have to agree about where a child of
         // a panel is.
-        let hierarchy = UiHierarchy::of(world, &self.components)?;
+        let unmeasured = UiTextSizes::new();
+        let hierarchy =
+            UiHierarchy::measured(world, &self.components, text_sizes.unwrap_or(&unmeasured))?;
         self.push_images(
             world,
             &cameras,
@@ -406,9 +412,19 @@ pub struct SceneRuntime<'a> {
     /// screen. An editor arranging one wants it in the scene, where panning and
     /// zooming reach it.
     pub canvas: UiCanvas,
+    /// The measured words of text elements that fit their content, from
+    /// [`crate::measure_ui_text`]. `None` lays them out at their own size.
+    pub text_sizes: Option<&'a UiTextSizes>,
 }
 
 impl<'a> SceneRuntime<'a> {
+    /// The runtime with text elements sized to their measured words.
+    #[must_use]
+    pub const fn with_text_sizes(mut self, sizes: &'a UiTextSizes) -> Self {
+        self.text_sizes = Some(sizes);
+        self
+    }
+
     /// The runtime with animations playing.
     #[must_use]
     pub const fn with_animations(mut self, animations: &'a SpriteAnimations) -> Self {

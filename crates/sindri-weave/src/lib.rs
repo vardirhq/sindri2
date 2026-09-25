@@ -12,8 +12,10 @@ use thiserror::Error;
 use weave::{Computed, States, Stylesheet, Viewport};
 
 mod box_model;
+mod calc;
 mod computed;
 mod flex;
+mod grid;
 mod presenter;
 mod shadow;
 mod transition;
@@ -135,11 +137,22 @@ pub(crate) fn apply(
 
         // Visual lengths such as border radius are relative to the final box,
         // so settle both axes and their constraints before decoration.
+        // What the element is comes first: sizing and every layout property
+        // after it write to the grid or the flex line `display` chose.
+        if let Some(display) = applied.get("display") {
+            grid::display(world, entity, id, display)?;
+        }
         apply_sizing(world, entity, id, &applied, viewport)?;
         for (property, value) in applied.into_declarations() {
             if !matches!(
                 property.as_str(),
-                "width" | "height" | "min-width" | "max-width" | "min-height" | "max-height"
+                "width"
+                    | "height"
+                    | "min-width"
+                    | "max-width"
+                    | "min-height"
+                    | "max-height"
+                    | "display"
             ) {
                 apply_property(world, entity, id, &property, &value, viewport)?;
             }
@@ -234,9 +247,22 @@ fn apply_sizing(
     Ok(())
 }
 
-/// Marks whether a layout fits its content on `axis`. An element that is not
-/// a layout has no content to fit, and is left alone.
+/// Marks whether an element fits its content on `axis`: a layout its
+/// children, a text element its measured words. Anything else has no content
+/// to fit, and is left alone.
 fn set_fit_content(world: &mut World, entity: EntityId, axis: usize, fits: bool) {
+    if grid::set_fit_content(world, entity, axis, fits) {
+        return;
+    }
+    let has = |name: &str| {
+        world
+            .get(entity)
+            .is_some_and(|data| data.components.contains_key(name))
+    };
+    if !has("sindri.ui.layout") && has("sindri.ui.text") {
+        box_model::set_fit(world, entity, axis, fits);
+        return;
+    }
     let Some(layout) = world
         .get_mut(entity)
         .and_then(|data| data.components.get_mut("sindri.ui.layout"))
@@ -280,6 +306,7 @@ fn apply_property(
     viewport: Viewport,
 ) -> Result<(), ApplyError> {
     if box_model::apply(world, entity, id, property, value, viewport)?
+        || grid::apply(world, entity, id, property, value, viewport)?
         || flex::apply(world, entity, id, property, value, viewport)?
     {
         return Ok(());

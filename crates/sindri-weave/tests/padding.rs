@@ -181,3 +181,56 @@ fn padding_and_margin_reach_the_box_side_by_side() {
     // A percentage is of the panel's content width: 2.0 less 0.4 of padding.
     near(sides("child", "margin"), [0.16, 0.16, 0.1, 0.16]);
 }
+
+#[test]
+fn calc_mixes_units_in_sizes_and_sides() {
+    let document = SceneDocument::from_json(
+        r#"{
+            "format_version": 10,
+            "metadata": { "name": "weave-calc" },
+            "entities": [
+                { "id": "panel", "name": "panel",
+                  "components": { "sindri.ui.shape": { "kind": "rect" } } },
+                { "id": "child", "name": "child", "parent": "panel",
+                  "components": { "sindri.ui.shape": { "kind": "rect" } } }
+            ]
+        }"#,
+    )
+    .expect("scene parses");
+    let source = World::from_scene(&document).expect("scene loads").world;
+    // 800 pixels high is two units: 40px is a tenth, 25vh is half a unit.
+    let sheet = parse(
+        r"
+            :root { --inset: 20px; }
+            #panel { width: 800px; height: 400px; }
+            #child {
+                width: calc(100% - 2 * var(--inset));
+                height: calc(25vh + 40px);
+                padding: calc(var(--inset) * 2) 0;
+            }
+        ",
+    )
+    .expect("Weave parses");
+    let styled = PresentationWorld::resolve(
+        &source,
+        &sheet,
+        Viewport {
+            width: 1_200.0,
+            height: 800.0,
+        },
+    )
+    .expect("styles resolve");
+    let (_, child) = styled
+        .world()
+        .entities()
+        .find(|(_, data)| data.name.as_deref() == Some("child"))
+        .expect("the child is there");
+    let size = child.transform_3d.expect("sized").scale_2d();
+    // The panel is two units wide; less 40px (a tenth) of insets.
+    assert!((size[0] - 1.9).abs() < 1.0e-5, "{size:?}");
+    assert!((size[1] - 0.6).abs() < 1.0e-5, "{size:?}");
+    let top = child.components["sindri.ui.box"]["padding"][0]
+        .as_f64()
+        .expect("a side");
+    assert!((top - 0.1).abs() < 1.0e-6, "{top}");
+}
