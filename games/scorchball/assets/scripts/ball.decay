@@ -4,8 +4,9 @@
 // Held, it sits at the holder's feet on the side they face. Loose, it rolls
 // and slows. Touching a held ball steals it, as it always did. Hard strikes
 // build heat in the ball, which cools over time and throws increasingly lively
-// flecks. On fire it cannot be held: it bounces off whoever touches it, and
-// sets alight anyone on the other team from the player who lit it.
+// flecks. Human shots accept a brief, fading right-stick aftertouch window.
+// On fire it cannot be held: it bounces off whoever touches it, and sets alight
+// anyone on the other team from the player who lit it.
 //
 // Possession is decided by distance rather than by a collider, so an enlarged
 // player reaches further without a body of a different size.
@@ -31,6 +32,7 @@ script Ball {
     var fire_clock: f32 = 0.0;
     var heat: f32 = 0.0;
     var heat_clock: f32 = 0.0;
+    var aftertouch_slot: f32 = 0.0;
     var zone: Entity = null;
     var referee: Entity = null;
 
@@ -79,11 +81,24 @@ script Ball {
                 Camera.add_trauma(min(0.32, (speed - 24.0) / 55.0));
             }
         }
+        let slot = World.take_signal("aftertouch_slot");
+        if slot > 0.0 {
+            this.aftertouch_slot = slot;
+        }
+        let ax = World.take_signal("aftertouch_x");
+        let ay = World.take_signal("aftertouch_y");
+        if (abs(ax) > 0.0 || abs(ay) > 0.0) && this.aftertouch_slot > 0.0 && this.holder == null {
+            // The player script sends tiny frame-scaled nudges for only a short
+            // time, so aftertouch bends a shot instead of becoming ball steering.
+            this.vx += ax;
+            this.vy += ay;
+        }
         let lit = World.take_signal("fire");
         if lit > 0.0 {
             this.fire_left = this.fire_time;
             this.fire_team = lit;
             this.holder = null;
+            this.aftertouch_slot = 0.0;
         }
     }
 
@@ -100,6 +115,7 @@ script Ball {
                     bounce(player, dx, dy, distance);
                 } else {
                     this.holder = player;
+                    this.aftertouch_slot = 0.0;
                     this.vx = 0.0;
                     this.vy = 0.0;
                     Audio.play("audio/run.wav", 0.5);
@@ -114,6 +130,7 @@ script Ball {
         this.vy = dy / length * 12.0;
         this.kicker = player;
         this.kicked_ago = 0.0;
+        this.aftertouch_slot = 0.0;
         if team(player) != this.fire_team {
             World.send_signal(player, "burn", 1.0);
         }
@@ -190,6 +207,7 @@ script Ball {
 
     fn hit_post() {
         let speed = sqrt(this.vx * this.vx + this.vy * this.vy);
+        this.aftertouch_slot = 0.0;
         if this.transform.position.x > 0.0 {
             this.transform.position.x = this.goal_line - 0.02;
             this.vx = -abs(this.vx) * 0.72;
@@ -213,6 +231,7 @@ script Ball {
         this.holder = null;
         this.heat = 0.0;
         this.heat_clock = 0.0;
+        this.aftertouch_slot = 0.0;
         Game.set("holder", 0.0);
         mark();
     }
