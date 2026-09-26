@@ -29,10 +29,13 @@ then places one bot on the opposing side automatically.
   deliberately ridiculous speed, and grass flecks kick up at full pace. Touch
   the ball to take it, even from someone else. Hold the right bumper to charge
   a shot and release to kick where the right stick points, or the way you face
-  with the stick at rest. A quick tap is the ordinary kick. Hard shots kick up
-  flecks and shake the camera, and a near miss can clatter off a goal post and
-  rebound back into play. Repeated hard strikes also heat the ordinary ball up:
-  its flecks become more frequent until play calms down and it cools again.
+  with the stick at rest. A quick tap is the ordinary kick. For a fraction of
+  a second after a human shot, keep using the right stick to bend its path; the
+  influence fades quickly rather than steering the ball indefinitely. Hard
+  shots kick up flecks and shake the camera, and a near miss can clatter off a
+  goal post and rebound back into play. Repeated hard strikes also heat the
+  ordinary ball up: its flecks become more frequent until play calms down and it
+  cools again.
 - **Leave:** unplug the pad.
 - **Quick bot:** Select (Back/View) in the lobby still adds a bot to the side
   with fewer players, one bot a side. It readies itself.
@@ -44,7 +47,8 @@ round whoever is in front, and a shot at the far side of the goal once close
 or crowded), support a teammate who has it, defend (goal-side of the ball and
 in to tackle once close, rather than chasing), or go for a loose ball it can
 reach first. It does not yet pass, pick up power-ups on purpose, or vary in
-difficulty.
+difficulty. Bots also keep their existing straight shot behavior; aftertouch is
+reserved for human pad input.
 
 Across a goal line between the posts is a goal; off the pitch anywhere else is
 out, and the ball comes back to the centre spot. A goal keeps the existing
@@ -78,9 +82,9 @@ There is no game code. The game is `assets/`:
 - `scripts/match.decay`: joining and leaving, ready-up, the countdown, the score,
   sprint/goal feedback, power-up spawns, bot-mode handoff and the wind.
 - `scripts/player.decay`: walking, sprinting, skins, readying, charged kicking,
-  growing and burning, and the bot's brain.
-- `scripts/ball.decay`: possession, kicks, accumulating shot heat, hard-shot
-  feedback, goal-post rebounds, fire, goals and out of bounds.
+  short-lived human aftertouch, growing and burning, and the bot's brain.
+- `scripts/ball.decay`: possession, kicks, aftertouch, accumulating shot heat,
+  hard-shot feedback, goal-post rebounds, fire, goals and out of bounds.
 - `scripts/powerup.decay`: a signpost falling, landing, and what it gives.
 
 It uses, with no Rust of its own: pads read by **player slot** (`Gamepad`),
@@ -97,9 +101,10 @@ heat, **camera shake** for goals and impacts, **sounds**, and **screen text**.
 - Players can sprint with the left bumper; it speeds both movement and the
   existing walk animation, deliberately exaggerates the animation speed, and
   kicks up flecks while a human player is at sprint pace.
-- Kicks can be charged by holding the right bumper. Strong shots get extra
-  impact feedback, shots just outside the goal mouth rebound from the posts,
-  and repeated hard strikes visibly heat the ordinary ball until it cools.
+- Kicks can be charged by holding the right bumper. Human players also get a
+  brief fading right-stick aftertouch window after release, strong shots get
+  extra impact feedback, shots just outside the goal mouth rebound from the
+  posts, and repeated hard strikes visibly heat the ordinary ball until it cools.
 - Goals add a short player-centered celebration burst on top of the existing
   GOAL callout, camera hit and score update.
 - Up to four players rather than two; odd slots play for Blue, even for Red.
