@@ -24,9 +24,11 @@ then places one bot on the opposing side automatically.
 - **Ready:** Y (North). Press it again to take it back. When two players are
   ready, a countdown runs to "Kickoff!". A player who joins mid-match readies
   straight into play.
-- **Play:** the left stick (or d-pad) walks. Touch the ball to take it, even
-  from someone else. The right bumper kicks it where the right stick points,
-  or the way you face with the stick at rest.
+- **Play:** the left stick (or d-pad) walks. Hold the left bumper while moving
+  to sprint; the player moves faster and the existing walk cycle runs at a
+  deliberately ridiculous speed. Touch the ball to take it, even from someone
+  else. The right bumper kicks it where the right stick points, or the way you
+  face with the stick at rest.
 - **Leave:** unplug the pad.
 - **Quick bot:** Select (Back/View) in the lobby still adds a bot to the side
   with fewer players, one bot a side. It readies itself.
@@ -68,21 +70,23 @@ There is no game code. The game is `assets/`:
 - `scripts/title.decay`: title choices and transition into the lobby.
 - `scripts/match.decay`: joining and leaving, ready-up, the countdown, the score,
   power-up spawns, bot-mode handoff and the wind.
-- `scripts/player.decay`: walking, skins, readying, kicking, growing and
-  burning, and the bot's brain.
+- `scripts/player.decay`: walking, sprinting, skins, readying, kicking, growing
+  and burning, and the bot's brain.
 - `scripts/ball.decay`: possession, kicks, fire, goals and out of bounds.
 - `scripts/powerup.decay`: a signpost falling, landing, and what it gives.
 
 It uses, with no Rust of its own: pads read by **player slot** (`Gamepad`),
 **prefabs**, **Weave** responsive UI, pointer-aware **UI buttons**, **sprite
-animation** for the two characters' four-way walks, **2D physics** so players
-bump into each other, **signals** between scripts, **flecks** for fire,
-**camera shake** on a goal, **sounds**, and **screen text**.
+animation** for the two characters' four-way walks and silly-fast sprints,
+**2D physics** so players bump into each other, **signals** between scripts,
+**flecks** for fire, **camera shake** on a goal, **sounds**, and **screen text**.
 
 ## Changed from the Unity version
 
 - A real title screen now leads into local or bot play instead of dropping
   straight into the prototype lobby.
+- Players can sprint with the left bumper; it speeds both movement and the
+  existing walk animation, deliberately exaggerating the animation speed.
 - Up to four players rather than two; odd slots play for Blue, even for Red.
 - Possession, pickups and the Enlarger's reach are decided by distance rather
   than colliders, because a Sindri collider does not scale with its entity.
