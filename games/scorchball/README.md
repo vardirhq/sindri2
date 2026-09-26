@@ -30,7 +30,9 @@ then places one bot on the opposing side automatically.
   else. Hold the right bumper to charge a shot and release to kick where the
   right stick points, or the way you face with the stick at rest. A quick tap
   is the ordinary kick. Hard shots kick up flecks and shake the camera, and a
-  near miss can clatter off a goal post and rebound back into play.
+  near miss can clatter off a goal post and rebound back into play. Repeated
+  hard strikes also heat the ordinary ball up: its flecks become more frequent
+  until play calms down and it cools again.
 - **Leave:** unplug the pad.
 - **Quick bot:** Select (Back/View) in the lobby still adds a bot to the side
   with fewer players, one bot a side. It readies itself.
@@ -58,7 +60,8 @@ Walk into it for what the sign shows; left alone it goes after ten seconds.
 - **Wind:** for 20 seconds the pitch blows towards the other team's goal.
 - **Fireball:** the ball burns for 20 seconds. It cannot be held, bounces off
   whoever touches it, and sets alight anyone on the other team, who then runs
-  wild for five seconds.
+  wild for five seconds. This remains distinct from ordinary shot heat, which
+  is visual feedback and does not change possession or hurt players.
 
 ## What it is made of
 
@@ -74,16 +77,16 @@ There is no game code. The game is `assets/`:
   power-up spawns, bot-mode handoff and the wind.
 - `scripts/player.decay`: walking, sprinting, skins, readying, charged kicking,
   growing and burning, and the bot's brain.
-- `scripts/ball.decay`: possession, kicks, hard-shot feedback, goal-post rebounds,
-  fire, goals and out of bounds.
+- `scripts/ball.decay`: possession, kicks, accumulating shot heat, hard-shot
+  feedback, goal-post rebounds, fire, goals and out of bounds.
 - `scripts/powerup.decay`: a signpost falling, landing, and what it gives.
 
 It uses, with no Rust of its own: pads read by **player slot** (`Gamepad`),
 **prefabs**, **Weave** responsive UI, pointer-aware **UI buttons**, **sprite
 animation** for the two characters' four-way walks and silly-fast sprints,
 **2D physics** so players bump into each other, **signals** between scripts,
-**flecks** for fire and hard shots, **camera shake** for goals and impacts,
-**sounds**, and **screen text**.
+**flecks** for fire, hard shots and accumulated ball heat, **camera shake** for
+goals and impacts, **sounds**, and **screen text**.
 
 ## Changed from the Unity version
 
@@ -92,7 +95,8 @@ animation** for the two characters' four-way walks and silly-fast sprints,
 - Players can sprint with the left bumper; it speeds both movement and the
   existing walk animation, deliberately exaggerating the animation speed.
 - Kicks can be charged by holding the right bumper. Strong shots get extra
-  impact feedback, and shots just outside the goal mouth rebound from the posts.
+  impact feedback, shots just outside the goal mouth rebound from the posts,
+  and repeated hard strikes visibly heat the ordinary ball until it cools.
 - Up to four players rather than two; odd slots play for Blue, even for Red.
 - Possession, pickups and the Enlarger's reach are decided by distance rather
   than colliders, because a Sindri collider does not scale with its entity.

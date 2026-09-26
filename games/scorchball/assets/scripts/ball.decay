@@ -2,9 +2,10 @@
 // scores by crossing a goal mouth.
 //
 // Held, it sits at the holder's feet on the side they face. Loose, it rolls
-// and slows. Touching a held ball steals it, as it always did. On fire it
-// cannot be held: it bounces off whoever touches it, and sets alight anyone
-// on the other team from the player who lit it.
+// and slows. Touching a held ball steals it, as it always did. Hard strikes
+// build heat in the ball, which cools over time and throws increasingly lively
+// flecks. On fire it cannot be held: it bounces off whoever touches it, and
+// sets alight anyone on the other team from the player who lit it.
 //
 // Possession is decided by distance rather than by a collider, so an enlarged
 // player reaches further without a body of a different size.
@@ -15,6 +16,9 @@ script Ball {
     @export let mouth: f32 = 2.1;
     @export let post_radius: f32 = 0.42;
     @export let fire_time: f32 = 20.0;
+    @export let heat_threshold: f32 = 24.0;
+    @export let heat_gain: f32 = 24.0;
+    @export let heat_cool: f32 = 0.055;
 
     var vx: f32 = 0.0;
     var vy: f32 = 0.0;
@@ -25,6 +29,8 @@ script Ball {
     var fire_left: f32 = 0.0;
     var fire_team: f32 = 0.0;
     var fire_clock: f32 = 0.0;
+    var heat: f32 = 0.0;
+    var heat_clock: f32 = 0.0;
     var zone: Entity = null;
     var referee: Entity = null;
 
@@ -50,6 +56,7 @@ script Ball {
             roll(dt);
         }
         burn(dt);
+        scorch(dt);
         scored();
         mark();
     }
@@ -65,7 +72,9 @@ script Ball {
             this.kicked_ago = 0.0;
             this.holder = null;
             let speed = sqrt(this.vx * this.vx + this.vy * this.vy);
-            if speed > 27.0 {
+            if speed > this.heat_threshold {
+                let added = (speed - this.heat_threshold) / this.heat_gain;
+                this.heat = min(1.0, this.heat + added);
                 Effects.burst(this.entity);
                 Camera.add_trauma(min(0.32, (speed - 24.0) / 55.0));
             }
@@ -145,6 +154,21 @@ script Ball {
         }
     }
 
+    // Scorch is deliberately not the Fireball power-up. Repeated hard shots
+    // make the ordinary ball look hotter and more violent, but do not change
+    // possession or hurt players. Stop hammering it and it cools back down.
+    fn scorch(dt: f32) {
+        this.heat = max(0.0, this.heat - this.heat_cool * dt);
+        if this.fire_left > 0.0 || this.heat < 0.2 {
+            return;
+        }
+        this.heat_clock -= dt;
+        if this.heat_clock <= 0.0 {
+            this.heat_clock = 0.22 - this.heat * 0.14;
+            Effects.burst(this.entity);
+        }
+    }
+
     // Across a goal line between the posts is a goal for the side attacking
     // that end. A near miss clips a real post and rebounds instead of being
     // swallowed by the out-of-bounds reset.
@@ -187,6 +211,8 @@ script Ball {
         this.vx = 0.0;
         this.vy = 0.0;
         this.holder = null;
+        this.heat = 0.0;
+        this.heat_clock = 0.0;
         Game.set("holder", 0.0);
         mark();
     }
