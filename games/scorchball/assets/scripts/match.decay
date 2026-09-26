@@ -13,11 +13,15 @@ script Match {
     @export let power_max: f32 = 15.0;
     @export let wind_speed: f32 = 15.0;
     @export let wind_time: f32 = 20.0;
+    @export let sprint_fx_time: f32 = 0.12;
+    @export let goal_fx_time: f32 = 0.1;
 
     var phase: f32 = 0.0;
     var countdown: f32 = 0.0;
     var kickoff_shown: f32 = 0.0;
     var goal_shown: f32 = 0.0;
+    var sprint_fx_clock: f32 = 0.0;
+    var goal_fx_clock: f32 = 0.0;
     var next_power: f32 = 5.0;
     var wind_left: f32 = 0.0;
     var joins: f32 = 0.0;
@@ -69,6 +73,7 @@ script Match {
             goals();
             powerups(dt);
             wind(dt);
+            match_fx(dt);
         }
         this.kickoff_shown = max(0.0, this.kickoff_shown - dt);
         this.goal_shown = max(0.0, this.goal_shown - dt);
@@ -156,8 +161,38 @@ script Match {
         }
         if blue > 0.0 || red > 0.0 {
             this.goal_shown = 2.0;
+            this.goal_fx_clock = 0.0;
             Camera.add_trauma(0.6);
             Audio.play("audio/hit.wav", 1.0);
+        }
+    }
+
+    // Sprinting and scoring should read even before dedicated character action
+    // art exists. Human sprinters throw grass flecks while moving at speed; a
+    // goal briefly turns every player into part of the celebration burst.
+    fn match_fx(dt: f32) {
+        this.sprint_fx_clock -= dt;
+        if this.sprint_fx_clock <= 0.0 {
+            this.sprint_fx_clock = this.sprint_fx_time;
+            for someone in World.with_tag("player") {
+                let slot = World.property_number(someone, "slot", 0.0);
+                let vx = Physics.velocity_x(someone);
+                let vy = Physics.velocity_y(someone);
+                let speed = sqrt(vx * vx + vy * vy);
+                if slot < 10.0 && Gamepad.is_down(slot, "left_bumper") && speed > 11.0 {
+                    Effects.burst(someone);
+                }
+            }
+        }
+        if this.goal_shown <= 0.0 {
+            return;
+        }
+        this.goal_fx_clock -= dt;
+        if this.goal_fx_clock <= 0.0 {
+            this.goal_fx_clock = this.goal_fx_time;
+            for someone in World.with_tag("player") {
+                Effects.burst(someone);
+            }
         }
     }
 
