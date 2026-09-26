@@ -1,5 +1,6 @@
-// One player: walks with the left stick, picks a skin and readies up in the
-// lobby, and kicks with the right bumper, aimed with the right stick.
+// One player: walks with the left stick, sprints with the left bumper, picks a
+// skin and readies up in the lobby, and kicks with the right bumper, aimed with
+// the right stick.
 //
 // A player is made by the match when a pad joins, and told which slot it is.
 // Odd slots play for Blue, who defend the left goal; even slots for Red.
@@ -14,6 +15,8 @@ script Player {
     @export let aim_noise: f32 = 0.7;
     @export let arrow: Prefab;
     @export let speed: f32 = 10.0;
+    @export let sprint_speed: f32 = 1.45;
+    @export let sprint_animation_speed: f32 = 4.0;
     @export let kick_speed: f32 = 22.0;
     @export let boost_kick: f32 = 36.0;
     // How big a player is drawn: an unready player stands tall in the lobby,
@@ -40,6 +43,7 @@ script Player {
     var face_right: bool = true;
     var face_down: bool = true;
     var moving: bool = false;
+    var sprinting: bool = false;
     var referee: Entity = null;
     var ball: Entity = null;
     // A bot's plan: where it is heading, and a kick it has decided on.
@@ -129,6 +133,7 @@ script Player {
     fn move(dt: f32, phase: f32) {
         var tx: f32 = 0.0;
         var ty: f32 = 0.0;
+        this.sprinting = false;
         if this.burn_left > 0.0 {
             tx = this.burn_x * this.speed;
             ty = this.burn_y * this.speed;
@@ -142,9 +147,14 @@ script Player {
             if Gamepad.is_down(this.slot, "dpad_right") { x = 1.0; }
             if Gamepad.is_down(this.slot, "dpad_up") { y = -1.0; }
             if Gamepad.is_down(this.slot, "dpad_down") { y = 1.0; }
+            var pace: f32 = this.speed;
+            if Gamepad.is_down(this.slot, "left_bumper") && (abs(x) > 0.1 || abs(y) > 0.1) {
+                pace = this.speed * this.sprint_speed;
+                this.sprinting = true;
+            }
             // The pad measures down as positive; the pitch measures up.
-            tx = x * this.speed;
-            ty = -y * this.speed;
+            tx = x * pace;
+            ty = -y * pace;
         }
         tx += Game.get("wind", 0.0) * 0.4;
         // Eased towards, as the old forces and drag did, so a player leans
@@ -246,6 +256,11 @@ script Player {
         if Animation.clip(this.entity) != clip {
             Animation.play(this.entity, clip);
         }
+        var animation_speed: f32 = 1.0;
+        if this.sprinting && this.moving {
+            animation_speed = this.sprint_animation_speed;
+        }
+        Animation.set_speed(this.entity, animation_speed);
     }
 
     fn clip_name() -> String {
