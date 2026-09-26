@@ -22,6 +22,8 @@ script Player {
     @export let boost_kick: f32 = 36.0;
     @export let charged_boost_kick: f32 = 48.0;
     @export let charge_time: f32 = 0.85;
+    @export let aftertouch_time: f32 = 0.42;
+    @export let aftertouch_strength: f32 = 8.0;
     // How big a player is drawn: an unready player stands tall in the lobby,
     // and the Enlarger makes one bigger for a while.
     @export let normal: f32 = 3.2;
@@ -49,6 +51,7 @@ script Player {
     var sprinting: bool = false;
     var charge: f32 = 0.0;
     var charge_fx: f32 = 0.0;
+    var aftertouch_left: f32 = 0.0;
     var referee: Entity = null;
     var ball: Entity = null;
     // A bot's plan: where it is heading, and a kick it has decided on.
@@ -99,6 +102,7 @@ script Player {
         }
         move(dt, phase);
         try_kick(dt, phase);
+        aftertouch(dt, phase);
         grow(dt);
         burn(dt);
         show();
@@ -235,7 +239,30 @@ script Player {
         World.send_signal(this.ball, "kick_x", ax * force);
         World.send_signal(this.ball, "kick_y", ay * force);
         World.send_signal(this.ball, "kick", 1.0);
+        if !this.bot {
+            this.aftertouch_left = this.aftertouch_time;
+            World.send_signal(this.ball, "aftertouch_slot", this.slot);
+        }
         Audio.play("audio/hit.wav", min(1.0, 0.72 + shot_charge * 0.28));
+    }
+
+    // For a brief window after a human shot, the right stick can bend its path.
+    // The ball owns the actual velocity change; this script only sends intent.
+    fn aftertouch(dt: f32, phase: f32) {
+        if this.bot || this.aftertouch_left <= 0.0 || phase < 2.0 {
+            this.aftertouch_left = 0.0;
+            return;
+        }
+        this.aftertouch_left = max(0.0, this.aftertouch_left - dt);
+        let x = Gamepad.axis(this.slot, "right_x");
+        let y = -Gamepad.axis(this.slot, "right_y");
+        let length = sqrt(x * x + y * y);
+        if length < 0.2 {
+            return;
+        }
+        let fade = this.aftertouch_left / this.aftertouch_time;
+        World.send_signal(this.ball, "aftertouch_x", x / length * this.aftertouch_strength * fade * dt);
+        World.send_signal(this.ball, "aftertouch_y", y / length * this.aftertouch_strength * fade * dt);
     }
 
     fn grow(dt: f32) {
