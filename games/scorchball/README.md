@@ -30,7 +30,7 @@ then places one bot on the opposing side automatically.
   the ball to take it, even from someone else. Hold the right bumper to charge
   a shot and release to kick where the right stick points, or the way you face
   with the stick at rest. A quick tap is the ordinary kick. For a fraction of
-  a second after a human shot, keep using the right stick to bend its path; the
+  a second after a shot, keep using the right stick to bend its path; the
   influence fades quickly rather than steering the ball indefinitely. Hard
   shots kick up flecks and shake the camera, and a near miss can clatter off a
   goal post and rebound back into play. Repeated hard strikes also heat the
@@ -41,14 +41,16 @@ then places one bot on the opposing side automatically.
   with fewer players, one bot a side. It readies itself.
 
 A bot looks at the pitch about four times a second and acts on what it saw,
-so it reacts a little late and its shots are a little off, as a person's
-are. Each look it decides whether to attack with the ball (towards goal,
-round whoever is in front, and a shot at the far side of the goal once close
-or crowded), support a teammate who has it, defend (goal-side of the ball and
-in to tackle once close, rather than chasing), or go for a loose ball it can
-reach first. It does not yet pass, pick up power-ups on purpose, or vary in
-difficulty. Bots also keep their existing straight shot behavior; aftertouch is
-reserved for human pad input.
+so it reacts a little late and its shots are a little off, as a person's are.
+Each look it decides whether to attack with the ball, support a teammate,
+defend goal-side, or chase a loose ball it can reach first. Bots now choose
+from the same move set as a human rather than receiving AI-only advantages:
+they sprint in short bursts when there is ground to cover, choose how long to
+charge a shot from the situation, and sometimes add imperfect aftertouch. The
+actual movement, kick force, aftertouch window, physics and possession rules
+are shared with human players. They do not read the scorch meter or predict
+post rebounds; those simply happen through normal play. Bots still do not pass,
+pick up power-ups on purpose, or vary in difficulty.
 
 Across a goal line between the posts is a goal; off the pitch anywhere else is
 out, and the ball comes back to the centre spot. A goal keeps the existing
@@ -82,7 +84,7 @@ There is no game code. The game is `assets/`:
 - `scripts/match.decay`: joining and leaving, ready-up, the countdown, the score,
   sprint/goal feedback, power-up spawns, bot-mode handoff and the wind.
 - `scripts/player.decay`: walking, sprinting, skins, readying, charged kicking,
-  short-lived human aftertouch, growing and burning, and the bot's brain.
+  short-lived aftertouch, growing and burning, and the player-like bot brain.
 - `scripts/ball.decay`: possession, kicks, aftertouch, accumulating shot heat,
   hard-shot feedback, goal-post rebounds, fire, goals and out of bounds.
 - `scripts/powerup.decay`: a signpost falling, landing, and what it gives.
@@ -100,11 +102,13 @@ heat, **camera shake** for goals and impacts, **sounds**, and **screen text**.
   straight into the prototype lobby.
 - Players can sprint with the left bumper; it speeds both movement and the
   existing walk animation, deliberately exaggerates the animation speed, and
-  kicks up flecks while a human player is at sprint pace.
-- Kicks can be charged by holding the right bumper. Human players also get a
-  brief fading right-stick aftertouch window after release, strong shots get
-  extra impact feedback, shots just outside the goal mouth rebound from the
-  posts, and repeated hard strikes visibly heat the ordinary ball until it cools.
+  kicks up flecks while at sprint pace. Bots use the same sprint multiplier in
+  short, situation-driven bursts rather than getting a separate AI speed.
+- Kicks can be charged by holding the right bumper. Players also get a brief
+  fading aftertouch window after release; bots choose an imperfect correction
+  through that same window. Strong shots get extra impact feedback, shots just
+  outside the goal mouth rebound from the posts, and repeated hard strikes
+  visibly heat the ordinary ball until it cools.
 - Goals add a short player-centered celebration burst on top of the existing
   GOAL callout, camera hit and score update.
 - Up to four players rather than two; odd slots play for Blue, even for Red.
