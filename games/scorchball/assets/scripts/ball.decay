@@ -13,6 +13,7 @@ script Ball {
     @export let reach: f32 = 0.9;
     @export let goal_line: f32 = 14.9;
     @export let mouth: f32 = 2.1;
+    @export let post_radius: f32 = 0.42;
     @export let fire_time: f32 = 20.0;
 
     var vx: f32 = 0.0;
@@ -63,6 +64,11 @@ script Ball {
             this.kicker = this.holder;
             this.kicked_ago = 0.0;
             this.holder = null;
+            let speed = sqrt(this.vx * this.vx + this.vy * this.vy);
+            if speed > 27.0 {
+                Effects.burst(this.entity);
+                Camera.add_trauma(min(0.32, (speed - 24.0) / 55.0));
+            }
         }
         let lit = World.take_signal("fire");
         if lit > 0.0 {
@@ -140,8 +146,8 @@ script Ball {
     }
 
     // Across a goal line between the posts is a goal for the side attacking
-    // that end; anywhere else off the pitch is out, and the ball comes back to
-    // the centre spot.
+    // that end. A near miss clips a real post and rebounds instead of being
+    // swallowed by the out-of-bounds reset.
     fn scored() {
         let x = this.transform.position.x;
         let y = this.transform.position.y;
@@ -151,9 +157,28 @@ script Ball {
         } else if abs(y) < this.mouth && x < -this.goal_line {
             World.send_signal(this.referee, "goal_red", 1.0);
             reset();
+        } else if abs(x) >= this.goal_line && abs(y) < this.mouth + this.post_radius {
+            hit_post();
         } else if abs(x) > this.goal_line + 0.6 || y > 6.4 || y < -6.6 {
             reset();
         }
+    }
+
+    fn hit_post() {
+        let speed = sqrt(this.vx * this.vx + this.vy * this.vy);
+        if this.transform.position.x > 0.0 {
+            this.transform.position.x = this.goal_line - 0.02;
+            this.vx = -abs(this.vx) * 0.72;
+        } else {
+            this.transform.position.x = 0.02 - this.goal_line;
+            this.vx = abs(this.vx) * 0.72;
+        }
+        // Glancing shots keep some vertical motion, so posts create useful
+        // rebounds instead of reflecting every miss straight backwards.
+        this.vy = this.vy * 0.82;
+        Effects.burst(this.entity);
+        Audio.play("audio/hit.wav", min(1.0, 0.45 + speed / 45.0));
+        Camera.add_trauma(min(0.5, 0.12 + speed / 70.0));
     }
 
     fn reset() {

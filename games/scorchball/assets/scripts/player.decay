@@ -1,6 +1,6 @@
 // One player: walks with the left stick, sprints with the left bumper, picks a
-// skin and readies up in the lobby, and kicks with the right bumper, aimed with
-// the right stick.
+// skin and readies up in the lobby, and charges a kick with the right bumper,
+// aimed with the right stick.
 //
 // A player is made by the match when a pad joins, and told which slot it is.
 // Odd slots play for Blue, who defend the left goal; even slots for Red.
@@ -18,7 +18,10 @@ script Player {
     @export let sprint_speed: f32 = 1.45;
     @export let sprint_animation_speed: f32 = 4.0;
     @export let kick_speed: f32 = 22.0;
+    @export let charged_kick: f32 = 34.0;
     @export let boost_kick: f32 = 36.0;
+    @export let charged_boost_kick: f32 = 48.0;
+    @export let charge_time: f32 = 0.85;
     // How big a player is drawn: an unready player stands tall in the lobby,
     // and the Enlarger makes one bigger for a while.
     @export let normal: f32 = 3.2;
@@ -44,6 +47,8 @@ script Player {
     var face_down: bool = true;
     var moving: bool = false;
     var sprinting: bool = false;
+    var charge: f32 = 0.0;
+    var charge_fx: f32 = 0.0;
     var referee: Entity = null;
     var ball: Entity = null;
     // A bot's plan: where it is heading, and a kick it has decided on.
@@ -93,7 +98,7 @@ script Player {
             World.send_signal(this.referee, "ready", 1.0);
         }
         move(dt, phase);
-        try_kick(phase);
+        try_kick(dt, phase);
         grow(dt);
         burn(dt);
         show();
@@ -176,14 +181,18 @@ script Player {
         this.transform.position.z = 1.0 - this.transform.position.y * 0.01;
     }
 
-    // The right bumper sends the ball where the right stick points, or the
-    // way the player faces with the stick at rest.
-    fn try_kick(phase: f32) {
+    // Hold the right bumper to charge, then release to kick where the right
+    // stick points. A quick tap remains the ordinary kick. Bots keep their
+    // existing immediate shot timing rather than pretending to hold a pad.
+    fn try_kick(dt: f32, phase: f32) {
         if phase < 2.0 || this.burn_left > 0.0 || Game.get("holder", 0.0) != this.slot {
+            this.charge = 0.0;
+            this.charge_fx = 0.0;
             return;
         }
         var ax: f32 = 0.0;
         var ay: f32 = 0.0;
+        var shot_charge: f32 = 0.0;
         if this.bot {
             if !this.kick_now {
                 return;
@@ -192,9 +201,21 @@ script Player {
             ax = this.aim_x;
             ay = this.aim_y;
         } else {
-            if !Gamepad.just_pressed(this.slot, "right_bumper") {
+            if Gamepad.is_down(this.slot, "right_bumper") {
+                this.charge = min(1.0, this.charge + dt / this.charge_time);
+                this.charge_fx -= dt;
+                if this.charge > 0.12 && this.charge_fx <= 0.0 {
+                    this.charge_fx = 0.11 - this.charge * 0.045;
+                    Effects.burst(this.ball);
+                }
                 return;
             }
+            if !Gamepad.just_released(this.slot, "right_bumper") {
+                return;
+            }
+            shot_charge = this.charge;
+            this.charge = 0.0;
+            this.charge_fx = 0.0;
             ax = Gamepad.axis(this.slot, "right_x");
             ay = -Gamepad.axis(this.slot, "right_y");
         }
@@ -207,14 +228,14 @@ script Player {
             ax = ax / length;
             ay = ay / length;
         }
-        var force: f32 = this.kick_speed;
+        var force = this.kick_speed + (this.charged_kick - this.kick_speed) * shot_charge;
         if this.boost_left > 0.0 {
-            force = this.boost_kick;
+            force = this.boost_kick + (this.charged_boost_kick - this.boost_kick) * shot_charge;
         }
         World.send_signal(this.ball, "kick_x", ax * force);
         World.send_signal(this.ball, "kick_y", ay * force);
         World.send_signal(this.ball, "kick", 1.0);
-        Audio.play("audio/hit.wav", 1.0);
+        Audio.play("audio/hit.wav", min(1.0, 0.72 + shot_charge * 0.28));
     }
 
     fn grow(dt: f32) {
