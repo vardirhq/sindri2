@@ -25,14 +25,14 @@ then places one bot on the opposing side automatically.
   ready, a countdown runs to "Kickoff!". A player who joins mid-match readies
   straight into play.
 - **Play:** the left stick (or d-pad) walks. Hold the left bumper while moving
-  to sprint; the player moves faster and the existing walk cycle runs at a
-  deliberately ridiculous speed. Touch the ball to take it, even from someone
-  else. Hold the right bumper to charge a shot and release to kick where the
-  right stick points, or the way you face with the stick at rest. A quick tap
-  is the ordinary kick. Hard shots kick up flecks and shake the camera, and a
-  near miss can clatter off a goal post and rebound back into play. Repeated
-  hard strikes also heat the ordinary ball up: its flecks become more frequent
-  until play calms down and it cools again.
+  to sprint; the player moves faster, the existing walk cycle runs at a
+  deliberately ridiculous speed, and grass flecks kick up at full pace. Touch
+  the ball to take it, even from someone else. Hold the right bumper to charge
+  a shot and release to kick where the right stick points, or the way you face
+  with the stick at rest. A quick tap is the ordinary kick. Hard shots kick up
+  flecks and shake the camera, and a near miss can clatter off a goal post and
+  rebound back into play. Repeated hard strikes also heat the ordinary ball up:
+  its flecks become more frequent until play calms down and it cools again.
 - **Leave:** unplug the pad.
 - **Quick bot:** Select (Back/View) in the lobby still adds a bot to the side
   with fewer players, one bot a side. It readies itself.
@@ -47,7 +47,9 @@ reach first. It does not yet pass, pick up power-ups on purpose, or vary in
 difficulty.
 
 Across a goal line between the posts is a goal; off the pitch anywhere else is
-out, and the ball comes back to the centre spot.
+out, and the ball comes back to the centre spot. A goal keeps the existing
+camera hit and now showers the players with a short celebration burst while the
+GOAL callout is on screen.
 
 ## Power-ups
 
@@ -74,7 +76,7 @@ There is no game code. The game is `assets/`:
 - `prefabs/`: players, the marker over their heads, power-ups, and the title UI.
 - `scripts/title.decay`: title choices and transition into the lobby.
 - `scripts/match.decay`: joining and leaving, ready-up, the countdown, the score,
-  power-up spawns, bot-mode handoff and the wind.
+  sprint/goal feedback, power-up spawns, bot-mode handoff and the wind.
 - `scripts/player.decay`: walking, sprinting, skins, readying, charged kicking,
   growing and burning, and the bot's brain.
 - `scripts/ball.decay`: possession, kicks, accumulating shot heat, hard-shot
@@ -85,18 +87,21 @@ It uses, with no Rust of its own: pads read by **player slot** (`Gamepad`),
 **prefabs**, **Weave** responsive UI, pointer-aware **UI buttons**, **sprite
 animation** for the two characters' four-way walks and silly-fast sprints,
 **2D physics** so players bump into each other, **signals** between scripts,
-**flecks** for fire, hard shots and accumulated ball heat, **camera shake** for
-goals and impacts, **sounds**, and **screen text**.
+**flecks** for sprinting, celebrations, fire, hard shots and accumulated ball
+heat, **camera shake** for goals and impacts, **sounds**, and **screen text**.
 
 ## Changed from the Unity version
 
 - A real title screen now leads into local or bot play instead of dropping
   straight into the prototype lobby.
 - Players can sprint with the left bumper; it speeds both movement and the
-  existing walk animation, deliberately exaggerating the animation speed.
+  existing walk animation, deliberately exaggerates the animation speed, and
+  kicks up flecks while a human player is at sprint pace.
 - Kicks can be charged by holding the right bumper. Strong shots get extra
   impact feedback, shots just outside the goal mouth rebound from the posts,
   and repeated hard strikes visibly heat the ordinary ball until it cools.
+- Goals add a short player-centered celebration burst on top of the existing
+  GOAL callout, camera hit and score update.
 - Up to four players rather than two; odd slots play for Blue, even for Red.
 - Possession, pickups and the Enlarger's reach are decided by distance rather
   than colliders, because a Sindri collider does not scale with its entity.
